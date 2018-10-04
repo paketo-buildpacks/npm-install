@@ -23,8 +23,7 @@ func UpdateBuildPlan(detector *libbuildpackV3.Detect) error {
 	}
 
 	detector.BuildPlan[build.NodeDependency] = libbuildpackV3.BuildPlanDependency{
-		Provider: "org.cloudfoundry.buildpacks.nodejs",
-		Version:  pkgJSON.Engines.Node,
+		Version: pkgJSON.Engines.Node,
 	}
 
 	return nil

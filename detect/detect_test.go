@@ -66,7 +66,6 @@ var _ = Describe("UpdateBuildPlan", func() {
 			err = detect.UpdateBuildPlan(&detectData)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(detectData.BuildPlan["node"].Version).To(Equal(version))
-			Expect(detectData.BuildPlan["node"].Provider).To(Equal("org.cloudfoundry.buildpacks.nodejs"))
 		})
 	})
 

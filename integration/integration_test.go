@@ -55,7 +55,6 @@ var _ = Describe("NPM buildpack", func() {
 
 		Expect(len(detectResult.BuildPlan)).To(Equal(1))
 		Expect(detectResult.BuildPlan).To(HaveKey("node"))
-		Expect(detectResult.BuildPlan["node"].Provider).To(Equal("org.cloudfoundry.buildpacks.nodejs"))
 		Expect(detectResult.BuildPlan["node"].Version).To(Equal("~10"))
 	})
 
