@@ -4,6 +4,7 @@ import (
 	"fmt"
 	libbuildpackV3 "github.com/buildpack/libbuildpack"
 	"github.com/cloudfoundry/libbuildpack"
+	"github.com/cloudfoundry/npm-cnb/build"
 	"github.com/cloudfoundry/npm-cnb/package_json"
 	"path/filepath"
 )
@@ -21,8 +22,9 @@ func UpdateBuildPlan(detector *libbuildpackV3.Detect) error {
 		return err
 	}
 
-	detector.BuildPlan["node"] = libbuildpackV3.BuildPlanDependency{
-		Version: pkgJSON.Engines.Node,
+	detector.BuildPlan[build.NodeDependency] = libbuildpackV3.BuildPlanDependency{
+		Provider: "org.cloudfoundry.buildpacks.nodejs",
+		Version:  pkgJSON.Engines.Node,
 	}
 
 	return nil

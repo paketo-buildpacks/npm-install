@@ -2,6 +2,7 @@ package integration
 
 import (
 	"github.com/buildpack/libbuildpack"
+	"github.com/cloudfoundry/npm-cnb/build"
 	"path/filepath"
 
 	"github.com/cloudfoundry/dagger"
@@ -54,6 +55,34 @@ var _ = Describe("NPM buildpack", func() {
 
 		Expect(len(detectResult.BuildPlan)).To(Equal(1))
 		Expect(detectResult.BuildPlan).To(HaveKey("node"))
+		Expect(detectResult.BuildPlan["node"].Provider).To(Equal("org.cloudfoundry.buildpacks.nodejs"))
 		Expect(detectResult.BuildPlan["node"].Version).To(Equal("~10"))
+	})
+
+	It("should run build", func() {
+		group := dagger.Group{
+			Buildpacks: []libbuildpack.BuildpackInfo{
+				{
+					ID:      "org.cloudfoundry.buildpacks.npm",
+					Version: "2.3.4",
+				},
+			},
+		}
+		plan := libbuildpack.BuildPlan{
+			build.NodeDependency: libbuildpack.BuildPlanDependency{
+				Provider: "org.cloudfoundry.buildpacks.nodejs",
+				Version:  "~10",
+			},
+		}
+		buildResult, err := dagg.Build(filepath.Join(rootDir, "fixtures", "simple_app"), group, plan)
+		Expect(err).ToNot(HaveOccurred())
+
+		metadata, found, err := buildResult.GetLaunchMetadata()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(found).To(Equal(true))
+
+		Expect(len(metadata.Processes)).To(Equal(1))
+		Expect(metadata.Processes[0].Type).To(Equal("web"))
+		Expect(metadata.Processes[0].Command).To(Equal("npm start"))
 	})
 })
