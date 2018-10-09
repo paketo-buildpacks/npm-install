@@ -39,7 +39,7 @@ var _ = Describe("NPM buildpack", func() {
 						[]libbuildpack.BuildpackInfo{
 							{
 								ID:      "org.cloudfoundry.buildpacks.npm",
-								Version: "2.3.4",
+								Version: "0.0.1",
 							},
 						},
 					},
@@ -50,7 +50,7 @@ var _ = Describe("NPM buildpack", func() {
 
 		Expect(len(detectResult.Group.Buildpacks)).To(Equal(1))
 		Expect(detectResult.Group.Buildpacks[0].ID).To(Equal("org.cloudfoundry.buildpacks.npm"))
-		Expect(detectResult.Group.Buildpacks[0].Version).To(Equal("2.3.4"))
+		Expect(detectResult.Group.Buildpacks[0].Version).To(Equal("0.0.1"))
 
 		Expect(len(detectResult.BuildPlan)).To(Equal(1))
 		Expect(detectResult.BuildPlan).To(HaveKey("node"))
@@ -62,7 +62,7 @@ var _ = Describe("NPM buildpack", func() {
 			Buildpacks: []libbuildpack.BuildpackInfo{
 				{
 					ID:      "org.cloudfoundry.buildpacks.npm",
-					Version: "2.3.4",
+					Version: "0.0.1",
 				},
 			},
 		}
