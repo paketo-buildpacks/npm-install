@@ -2,7 +2,7 @@
 [buildpack]
 id = "org.cloudfoundry.buildpacks.npm"
 name = "NPM Buildpack"
-version = "2.3.4"
+version = "0.0.1"
 
 [[stacks]]
 id = "org.cloudfoundry.stacks.cflinuxfs3"

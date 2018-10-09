@@ -2,7 +2,7 @@ package build_test
 
 import (
 	"github.com/buildpack/libbuildpack"
-	"github.com/cloudfoundry/npm-cnb/build"
+	"github.com/cloudfoundry/npm-cnb/internal/build"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

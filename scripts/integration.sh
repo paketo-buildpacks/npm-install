@@ -4,6 +4,11 @@ set -euo pipefail
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
 source  ./scripts/install_tools.sh
 
+# Install Pack CLI
+host=$([ $(uname -s) == 'Darwin' ] &&  printf "macos" || printf "linux")
+version=$(curl --silent "https://api.github.com/repos/buildpack/pack/releases/latest" | jq -r .tag_name)
+wget "https://github.com/buildpack/pack/releases/download/$version/pack-$host.tar.gz" -O $GOBIN/pack && chmod +x $GOBIN/pack
+
 GINKGO_NODES=${GINKGO_NODES:-1}
 GINKGO_ATTEMPTS=${GINKGO_ATTEMPTS:-1}
 

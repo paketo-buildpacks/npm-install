@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/buildpack/libbuildpack"
-	"github.com/cloudfoundry/npm-cnb/detect"
 	"os"
+	
+	"github.com/buildpack/libbuildpack"
+	"github.com/cloudfoundry/npm-cnb/internal/detect"
 )
 
 func main() {

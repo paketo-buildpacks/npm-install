@@ -1,10 +1,9 @@
 package integration
 
 import (
-	"github.com/buildpack/libbuildpack"
-	"github.com/cloudfoundry/npm-cnb/build"
 	"path/filepath"
 
+	"github.com/buildpack/libbuildpack"
 	"github.com/cloudfoundry/dagger"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -68,7 +67,7 @@ var _ = Describe("NPM buildpack", func() {
 			},
 		}
 		plan := libbuildpack.BuildPlan{
-			build.NodeDependency: libbuildpack.BuildPlanDependency{
+			"node": libbuildpack.BuildPlanDependency{
 				Provider: "org.cloudfoundry.buildpacks.nodejs",
 				Version:  "~10",
 			},

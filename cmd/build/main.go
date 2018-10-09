@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/libjavabuildpack"
-	"github.com/cloudfoundry/npm-cnb/build"
 	"os"
+
+	"github.com/cloudfoundry/libjavabuildpack"
+	"github.com/cloudfoundry/npm-cnb/internal/build"
 )
 
 func main() {
