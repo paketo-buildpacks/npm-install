@@ -25,6 +25,10 @@ func UpdateBuildPlan(detector *libbuildpackV3.Detect) error {
 
 	detector.BuildPlan[build.NodeDependency] = libbuildpackV3.BuildPlanDependency{
 		Version: pkgJSON.Engines.Node,
+		Metadata: libbuildpackV3.BuildPlanDependencyMetadata{
+			"build":true,
+			"launch":true,
+		},
 	}
 
 	return nil

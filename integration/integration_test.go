@@ -55,6 +55,9 @@ var _ = Describe("NPM buildpack", func() {
 		Expect(len(detectResult.BuildPlan)).To(Equal(1))
 		Expect(detectResult.BuildPlan).To(HaveKey("node"))
 		Expect(detectResult.BuildPlan["node"].Version).To(Equal("~10"))
+		Expect(len(detectResult.BuildPlan["node"].Metadata)).To(Equal(2))
+		Expect(detectResult.BuildPlan["node"].Metadata["build"]).To(BeTrue())
+		Expect(detectResult.BuildPlan["node"].Metadata["launch"]).To(BeTrue())
 	})
 
 	It("should run build", func() {
