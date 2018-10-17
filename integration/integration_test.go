@@ -3,6 +3,8 @@ package integration
 import (
 	"path/filepath"
 
+	"github.com/cloudfoundry/npm-cnb/detect"
+
 	"github.com/buildpack/libbuildpack"
 	"github.com/cloudfoundry/dagger"
 	. "github.com/onsi/ginkgo"
@@ -52,12 +54,17 @@ var _ = Describe("NPM buildpack", func() {
 		Expect(detectResult.Group.Buildpacks[0].ID).To(Equal("org.cloudfoundry.buildpacks.npm"))
 		Expect(detectResult.Group.Buildpacks[0].Version).To(Equal("0.0.1"))
 
-		Expect(len(detectResult.BuildPlan)).To(Equal(1))
-		Expect(detectResult.BuildPlan).To(HaveKey("node"))
-		Expect(detectResult.BuildPlan["node"].Version).To(Equal("~10"))
-		Expect(len(detectResult.BuildPlan["node"].Metadata)).To(Equal(2))
-		Expect(detectResult.BuildPlan["node"].Metadata["build"]).To(BeTrue())
-		Expect(detectResult.BuildPlan["node"].Metadata["launch"]).To(BeTrue())
+		Expect(len(detectResult.BuildPlan)).To(Equal(2))
+
+		Expect(detectResult.BuildPlan).To(HaveKey(detect.NodeDependency))
+		Expect(detectResult.BuildPlan[detect.NodeDependency].Version).To(Equal("~10"))
+		Expect(len(detectResult.BuildPlan[detect.NodeDependency].Metadata)).To(Equal(2))
+		Expect(detectResult.BuildPlan[detect.NodeDependency].Metadata["build"]).To(BeTrue())
+		Expect(detectResult.BuildPlan[detect.NodeDependency].Metadata["launch"]).To(BeTrue())
+
+		Expect(detectResult.BuildPlan).To(HaveKey(detect.ModulesDependency))
+		Expect(len(detectResult.BuildPlan[detect.ModulesDependency].Metadata)).To(Equal(1))
+		Expect(detectResult.BuildPlan[detect.ModulesDependency].Metadata["launch"]).To(BeTrue())
 	})
 
 	It("should run build", func() {
@@ -69,13 +76,7 @@ var _ = Describe("NPM buildpack", func() {
 				},
 			},
 		}
-		plan := libbuildpack.BuildPlan{
-			"node": libbuildpack.BuildPlanDependency{
-				Provider: "org.cloudfoundry.buildpacks.nodejs",
-				Version:  "~10",
-			},
-		}
-		buildResult, err := dagg.Build(filepath.Join(rootDir, "fixtures", "simple_app"), group, plan)
+		buildResult, err := dagg.Build(filepath.Join(rootDir, "fixtures", "simple_app"), group, libbuildpack.BuildPlan{})
 		Expect(err).ToNot(HaveOccurred())
 
 		metadata, found, err := buildResult.GetLaunchMetadata()

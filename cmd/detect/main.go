@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	
+
 	"github.com/buildpack/libbuildpack"
-	"github.com/cloudfoundry/npm-cnb/internal/detect"
+	"github.com/cloudfoundry/npm-cnb/detect"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 	}
 
 	if err := detect.UpdateBuildPlan(&detector); err != nil {
-		detector.Logger.Debug("failed npm detection: %s", err)
+		detector.Logger.Debug("failed node detection: %s", err)
 		detector.Fail()
 	}
 

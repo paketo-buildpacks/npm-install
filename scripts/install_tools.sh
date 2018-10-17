@@ -10,4 +10,11 @@ fi
 export GOBIN=$PWD/.bin
 export PATH=$GOBIN:$PATH
 
-go install github.com/onsi/ginkgo/ginkgo
+if [[ ! -f $GOBIN/ginkgo ]]; then
+    go install github.com/onsi/ginkgo/ginkgo
+fi
+
+if [[ ! -f $GOBIN/pack ]]; then
+    go get github.com/buildpack/pack@master
+    go install github.com/buildpack/pack/cmd/pack
+fi

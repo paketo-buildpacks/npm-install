@@ -17,7 +17,7 @@ export CNB_RUN_IMAGE=${CNB_RUN_IMAGE:-packs/run}
 docker pull $CNB_BUILD_IMAGE
 docker pull $CNB_RUN_IMAGE
 
-cd integration
+cd acceptance
 
-echo "Run Buildpack Runtime Integration Tests"
+echo "Run Buildpack Acceptance Tests"
 ginkgo -r --flakeAttempts=$GINKGO_ATTEMPTS -nodes $GINKGO_NODES

@@ -11,5 +11,5 @@ var T *testing.T
 func TestBuild(t *testing.T) {
 	T = t
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Build Suite")
+	RunSpecs(t, "Builder Suite")
 }

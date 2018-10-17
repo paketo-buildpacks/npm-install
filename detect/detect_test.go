@@ -3,7 +3,7 @@ package detect_test
 import (
 	"fmt"
 	"github.com/buildpack/libbuildpack"
-	"github.com/cloudfoundry/npm-cnb/internal/detect"
+	"github.com/cloudfoundry/npm-cnb/detect"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io/ioutil"

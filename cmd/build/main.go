@@ -5,7 +5,8 @@ import (
 	"os"
 
 	"github.com/cloudfoundry/libjavabuildpack"
-	"github.com/cloudfoundry/npm-cnb/internal/build"
+	"github.com/cloudfoundry/npm-cnb/build"
+	"github.com/cloudfoundry/npm-cnb/npm"
 )
 
 func main() {
@@ -15,8 +16,24 @@ func main() {
 		os.Exit(100)
 	}
 
-	if err := builder.Launch.WriteMetadata(build.CreateLaunchMetadata()); err != nil {
-		builder.Logger.Info("failed node build: %s", err)
+	modules, ok, err := build.NewModules(builder, &npm.NPM{})
+
+	if err != nil {
+		builder.Logger.Info(err.Error())
+		builder.Failure(102)
+		return
+	}
+
+	if ok {
+		if err := modules.Contribute(); err != nil {
+			builder.Logger.Info(err.Error())
+			builder.Failure(103)
+			return
+		}
+	}
+
+	if err := builder.Launch.WriteMetadata(modules.CreateLaunchMetadata()); err != nil {
+		builder.Logger.Info("failed to write launch.toml: %s", err)
 		builder.Failure(100)
 	}
 
