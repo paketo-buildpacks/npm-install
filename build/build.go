@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/fatih/color"
+
 	"github.com/cloudfoundry/npm-cnb/detect"
 
 	"github.com/cloudfoundry/npm-cnb/utils"
@@ -64,12 +66,14 @@ func (m Modules) Contribute() error {
 	}
 
 	if vendored {
-		m.logger.SubsequentLine("Rebuilding node_modules")
+		m.logger.FirstLine("%s: %s",
+			color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Rebuilding"))
 		if err := m.npm.Rebuild(m.app.Root); err != nil {
 			return fmt.Errorf("failed to rebuild node_modules: %v", err)
 		}
 	} else {
-		m.logger.SubsequentLine("Installing node_modules")
+		m.logger.FirstLine("%s: %s",
+			color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Installing"))
 		if err := m.npm.Install(m.app.Root); err != nil {
 			return fmt.Errorf("failed to install node_modules: %v", err)
 		}
@@ -77,7 +81,8 @@ func (m Modules) Contribute() error {
 
 	cacheDir := filepath.Join(m.cacheLayer.Root, "node_modules")
 	if m.buildContribution {
-		m.logger.SubsequentLine("Copying node_modules to the cache layer")
+		m.logger.FirstLine("%s: %s to cache",
+			color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Contributing"))
 		if err := m.copyModulesToLayer(cacheDir); err != nil {
 			return fmt.Errorf("failed to copy node_modules to the cache layer: %v", err)
 		}
@@ -85,7 +90,8 @@ func (m Modules) Contribute() error {
 
 	launchDir := filepath.Join(m.launchLayer.Root, "node_modules")
 	if m.launchContribution {
-		m.logger.SubsequentLine("Copying node_modules to the launch layer")
+		m.logger.FirstLine("%s: %s to launch",
+			color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Contributing"))
 		if err := m.copyModulesToLayer(launchDir); err != nil {
 			return fmt.Errorf("failed to copy the node_modules to the launch layer: %v", err)
 		}

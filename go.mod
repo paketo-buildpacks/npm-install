@@ -7,6 +7,7 @@ require (
 	github.com/cloudfoundry/dagger v0.0.0-20181017193301-75d1c9becbb4
 	github.com/cloudfoundry/libbuildpack v0.0.0-20180925210746-c4b9f2cc9968
 	github.com/cloudfoundry/libjavabuildpack v0.0.0-20180921193157-e42458f4dcc7
+	github.com/fatih/color v1.7.0
 	github.com/golang/mock v1.1.1
 	github.com/onsi/ginkgo v1.6.0
 	github.com/onsi/gomega v1.4.2
