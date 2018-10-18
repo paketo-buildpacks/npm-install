@@ -106,7 +106,7 @@ func (m Modules) WriteMetadataSha(path string) error {
 }
 
 func (m Modules) Contribute() error {
-	if !m.buildContribution && !m.launchContribution {
+	if !m.launchContribution {
 		return nil
 	}
 
