@@ -1,23 +1,30 @@
 package integration
 
 import (
+	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"path/filepath"
+	"testing"
 
 	"github.com/cloudfoundry/npm-cnb/detect"
 
 	"github.com/buildpack/libbuildpack"
 	"github.com/cloudfoundry/dagger"
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("NPM buildpack", func() {
+func TestIntegration(t *testing.T) {
+	RegisterTestingT(t)
+	spec.Run(t, "integration", testIntegration, spec.Report(report.Terminal{}))
+}
+
+func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	var (
 		rootDir string
 		dagg    *dagger.Dagger
 	)
 
-	BeforeEach(func() {
+	it.Before(func() {
 		var err error
 
 		rootDir, err = dagger.FindRoot()
@@ -28,11 +35,11 @@ var _ = Describe("NPM buildpack", func() {
 
 	})
 
-	AfterEach(func() {
+	it.After(func() {
 		dagg.Destroy()
 	})
 
-	It("should run detect", func() {
+	it("should run detect", func() {
 		detectResult, err := dagg.Detect(
 			filepath.Join(rootDir, "fixtures", "simple_app"),
 			dagger.Order{
@@ -67,7 +74,7 @@ var _ = Describe("NPM buildpack", func() {
 		Expect(detectResult.BuildPlan[detect.ModulesDependency].Metadata["launch"]).To(BeTrue())
 	})
 
-	It("should run build", func() {
+	it("should run build", func() {
 		group := dagger.Group{
 			Buildpacks: []libbuildpack.BuildpackInfo{
 				{
@@ -87,4 +94,4 @@ var _ = Describe("NPM buildpack", func() {
 		Expect(metadata.Processes[0].Type).To(Equal("web"))
 		Expect(metadata.Processes[0].Command).To(Equal("npm start"))
 	})
-})
+}

@@ -4,21 +4,28 @@ import (
 	"fmt"
 	"github.com/buildpack/libbuildpack"
 	"github.com/cloudfoundry/npm-cnb/detect"
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"testing"
 )
 
-var _ = Describe("UpdateBuildPlan", func() {
+func TestUnitDetect(t *testing.T) {
+	RegisterTestingT(t)
+	spec.Run(t, "Detect", testDetect, spec.Report(report.Terminal{}))
+}
+
+func testDetect(t *testing.T, when spec.G, it spec.S) {
 	var (
 		err        error
 		dir        string
 		detectData libbuildpack.Detect
 	)
 
-	BeforeEach(func() {
+	it.Before(func() {
 		dir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -28,15 +35,15 @@ var _ = Describe("UpdateBuildPlan", func() {
 		}
 	})
 
-	AfterEach(func() {
+	it.After(func() {
 		err = os.RemoveAll(dir)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Context("there is a package.json with a node version in engines", func() {
+	when("there is a package.json with a node version in engines", func() {
 		const version string = "1.2.3"
 
-		BeforeEach(func() {
+		it.Before(func() {
 			packageJSONString := fmt.Sprintf(`{
 				"name": "bson-test",
 				"version": "1.0.0",
@@ -62,17 +69,17 @@ var _ = Describe("UpdateBuildPlan", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should create a build plan with the required node version", func() {
+		it("should create a build plan with the required node version", func() {
 			err = detect.UpdateBuildPlan(&detectData)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(detectData.BuildPlan["node"].Version).To(Equal(version))
 		})
 	})
 
-	Context("there is no package.json", func() {
-		It("returns an error", func() {
+	when("there is no package.json", func() {
+		it("returns an error", func() {
 			err = detect.UpdateBuildPlan(&detectData)
 			Expect(err).To(HaveOccurred())
 		})
 	})
-})
+}

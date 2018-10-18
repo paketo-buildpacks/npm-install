@@ -1,15 +1,22 @@
 package acceptance
 
 import (
+	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"path/filepath"
+	"testing"
 
 	"github.com/buildpack/libbuildpack"
 	"github.com/cloudfoundry/dagger"
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("NPM buildpack", func() {
+func TestAcceptance(t *testing.T) {
+	RegisterTestingT(t)
+	spec.Run(t, "Acceptance", testAcceptance, spec.Report(report.Terminal{}))
+}
+
+func testAcceptance(t *testing.T, when spec.G, it spec.S) {
 	var (
 		rootDir    string
 		dagg       *dagger.Dagger
@@ -21,7 +28,7 @@ var _ = Describe("NPM buildpack", func() {
 		builderMetadata dagger.BuilderMetadata
 	)
 
-	BeforeEach(func() {
+	it.Before(func() {
 		var err error
 
 		rootDir, err = dagger.FindRoot()
@@ -67,12 +74,12 @@ var _ = Describe("NPM buildpack", func() {
 		}
 	})
 
-	AfterEach(func() {
+	it.After(func() {
 		dagg.Destroy()
 	})
 
-	Context("when the node_modules are vendored", func() {
-		It("should build a working OCI image for a simple app", func() {
+	when("when the node_modules are vendored", func() {
+		it("should build a working OCI image for a simple app", func() {
 			app, err := dagg.Pack(filepath.Join(rootDir, "fixtures", "simple_app_vendored"), builderMetadata)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -84,8 +91,8 @@ var _ = Describe("NPM buildpack", func() {
 		})
 	})
 
-	Context("when the node_modules are not vendored", func() {
-		It("should build a working OCI image for a simple app", func() {
+	when("when the node_modules are not vendored", func() {
+		it("should build a working OCI image for a simple app", func() {
 			app, err := dagg.Pack(filepath.Join(rootDir, "fixtures", "simple_app"), builderMetadata)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -96,4 +103,4 @@ var _ = Describe("NPM buildpack", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
-})
+}
