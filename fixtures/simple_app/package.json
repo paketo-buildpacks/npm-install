@@ -11,9 +11,9 @@
   "dependencies": {
     "leftpad": "~0.0.1"
   },
-  "repository" : {
-    "type" : "git",
-    "url" : ""
+  "repository": {
+    "type": "git",
+    "url": ""
   },
   "engines": {
     "node": "~10"

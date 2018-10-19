@@ -43,11 +43,11 @@ func NewModules(builder libjavabuildpack.Build, npm ModuleInstaller) (Modules, b
 		return Modules{}, false, nil
 	}
 
-	modules := Modules{}
-	modules.npm = npm
-
-	modules.app = builder.Application
-	modules.logger = builder.Logger
+	modules := Modules{
+		npm:    npm,
+		app:    builder.Application,
+		logger: builder.Logger,
+	}
 
 	if val, ok := bp.Metadata["build"]; ok {
 		modules.buildContribution = val.(bool)
@@ -62,14 +62,83 @@ func NewModules(builder libjavabuildpack.Build, npm ModuleInstaller) (Modules, b
 	return modules, true, nil
 }
 
-func (m Modules) PackageLockMatchesMetadataSha() (bool, error) {
-	packageLockPath := filepath.Join(m.app.Root, "package-lock.json")
-	exists, err := libjavabuildpack.FileExists(packageLockPath)
-	if err != nil {
-		return false, fmt.Errorf("failed to check for package-lock.json: %v", err)
+func (m Modules) Contribute() error {
+	if m.buildContribution {
+		return fmt.Errorf("do not set build to true as part of the build plan when using the npm buildpack")
 	}
 
-	if !exists {
+	if !m.launchContribution {
+		return nil
+	}
+
+	appModulesDir := filepath.Join(m.app.Root, "node_modules")
+	launchModulesDir := filepath.Join(m.launchLayer.Root, "node_modules")
+
+	vendored, err := libjavabuildpack.FileExists(appModulesDir)
+	if err != nil {
+		return fmt.Errorf("failed to check for vendored node_modules: %v", err)
+	}
+
+	sameSHASums, err := m.packageLockMatchesMetadataSha()
+	if err != nil {
+		return fmt.Errorf("failed in checking shas: %v", err)
+	}
+
+	if !sameSHASums {
+		m.logger.FirstLine("%s: %s to launch", color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Contributing"))
+
+		if vendored {
+			m.logger.FirstLine("%s: %s", color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Rebuilding"))
+			if err := m.npm.Rebuild(m.app.Root); err != nil {
+				return fmt.Errorf("failed to rebuild node_modules: %v", err)
+			}
+		} else {
+			m.logger.FirstLine("%s: %s", color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Installing"))
+			if err := m.npm.Install(m.app.Root); err != nil {
+				return fmt.Errorf("failed to install node_modules: %v", err)
+			}
+		}
+
+		if err := m.copyModulesToLayer(launchModulesDir); err != nil {
+			return fmt.Errorf("failed to copy the node_modules to the launch layer: %v", err)
+		}
+
+		if err := m.writeMetadataSha(filepath.Join(m.app.Root, "package-lock.json")); err != nil {
+			return fmt.Errorf("failed to write metadata to package-lock.json: %v", err)
+		}
+	} else {
+		m.logger.FirstLine("%s: %s cached launch layer", color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.GreenString("Reusing"))
+	}
+
+	m.logger.SubsequentLine("Cleaning up node_modules")
+	if err := os.RemoveAll(appModulesDir); err != nil {
+		return fmt.Errorf("failed to clean up the node_modules: %v", err)
+	}
+
+	m.logger.SubsequentLine("Creating symlink for node_modules")
+	if err := os.Symlink(launchModulesDir, appModulesDir); err != nil {
+		return fmt.Errorf("failed to symlink the node_modules to the launch layer: %v", err)
+	}
+
+	return nil
+}
+
+func (m *Modules) CreateLaunchMetadata() libbuildpackV3.LaunchMetadata {
+	return libbuildpackV3.LaunchMetadata{
+		Processes: libbuildpackV3.Processes{
+			libbuildpackV3.Process{
+				Type:    "web",
+				Command: "npm start",
+			},
+		},
+	}
+}
+
+func (m Modules) packageLockMatchesMetadataSha() (bool, error) {
+	packageLockPath := filepath.Join(m.app.Root, "package-lock.json")
+	if exists, err := libjavabuildpack.FileExists(packageLockPath); err != nil {
+		return false, fmt.Errorf("failed to check for package-lock.json: %v", err)
+	} else if !exists {
 		return false, fmt.Errorf("there is no package-lock.json in the app")
 	}
 
@@ -90,7 +159,7 @@ func (m Modules) PackageLockMatchesMetadataSha() (bool, error) {
 	return bytes.Equal(metadataHash, packageLockSha.Sum(nil)), nil
 }
 
-func (m Modules) WriteMetadataSha(path string) error {
+func (m Modules) writeMetadataSha(path string) error {
 	sha := sha256.New()
 	if buf, err := ioutil.ReadFile(path); err != nil {
 		return fmt.Errorf("failed to read %s: %v", path, err)
@@ -103,87 +172,6 @@ func (m Modules) WriteMetadataSha(path string) error {
 	return m.launchLayer.WriteMetadata(Metadata{
 		SHA256: hex.EncodeToString(sha.Sum(nil)),
 	})
-}
-
-func (m Modules) Contribute() error {
-	if !m.launchContribution {
-		return nil
-	}
-
-	appModulesDir := filepath.Join(m.app.Root, "node_modules")
-	vendored, err := libjavabuildpack.FileExists(appModulesDir)
-	if err != nil {
-		return fmt.Errorf("failed to check for vendored node_modules: %v", err)
-	}
-
-	sameShas, err := m.PackageLockMatchesMetadataSha()
-	if err != nil {
-		return fmt.Errorf("failed in checking shas: %v", err)
-	}
-
-	cacheDir := filepath.Join(m.cacheLayer.Root, "node_modules")
-	launchDir := filepath.Join(m.launchLayer.Root, "node_modules")
-
-	if !sameShas {
-		if vendored {
-			m.logger.FirstLine("%s: %s",
-				color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Rebuilding"))
-			if err := m.npm.Rebuild(m.app.Root); err != nil {
-				return fmt.Errorf("failed to rebuild node_modules: %v", err)
-			}
-		} else {
-			m.logger.FirstLine("%s: %s",
-				color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Installing"))
-			if err := m.npm.Install(m.app.Root); err != nil {
-				return fmt.Errorf("failed to install node_modules: %v", err)
-			}
-		}
-
-		if m.buildContribution {
-			m.logger.FirstLine("%s: %s to cache",
-				color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Contributing"))
-			if err := m.copyModulesToLayer(cacheDir); err != nil {
-				return fmt.Errorf("failed to copy node_modules to the cache layer: %v", err)
-			}
-		}
-
-		if m.launchContribution {
-			m.logger.FirstLine("%s: %s to launch",
-				color.New(color.FgBlue, color.Bold).Sprint("Node Modules"), color.YellowString("Contributing"))
-			if err := m.copyModulesToLayer(launchDir); err != nil {
-				return fmt.Errorf("failed to copy the node_modules to the launch layer: %v", err)
-			}
-		}
-
-		if err := m.WriteMetadataSha(filepath.Join(m.app.Root, "package-lock.json")); err != nil {
-			return fmt.Errorf("failed to write metadata to package-lock.json: %v", err)
-		}
-	}
-
-	m.logger.SubsequentLine("Cleaning up node_modules")
-	if err := os.RemoveAll(appModulesDir); err != nil {
-		return fmt.Errorf("failed to clean up the node_modules: %v", err)
-	}
-
-	if m.launchContribution {
-		m.logger.SubsequentLine("Creating symlink for node_modules")
-		if err := os.Symlink(launchDir, appModulesDir); err != nil {
-			return fmt.Errorf("failed to symlink the node_modules to the launch layer: %v", err)
-		}
-	}
-
-	return nil
-}
-
-func (m *Modules) CreateLaunchMetadata() libbuildpackV3.LaunchMetadata {
-	return libbuildpackV3.LaunchMetadata{
-		Processes: libbuildpackV3.Processes{
-			libbuildpackV3.Process{
-				Type:    "web",
-				Command: "npm start",
-			},
-		},
-	}
 }
 
 func (m *Modules) copyModulesToLayer(dest string) error {
