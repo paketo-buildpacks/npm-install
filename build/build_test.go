@@ -46,7 +46,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 
 	when("NewModules", func() {
 		it("returns true if a build plan exists", func() {
-			f.AddBuildPlan(t, detect.ModulesDependency, libbuildpack.BuildPlanDependency{})
+			f.AddBuildPlan(t, detect.NPMDependency, libbuildpack.BuildPlanDependency{})
 
 			_, ok, err := build.NewModules(f.Build, mockNpm)
 			Expect(err).NotTo(HaveOccurred())
@@ -86,7 +86,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 
 		when("when build and launch are not set", func() {
 			it("does not install node modules", func() {
-				f.AddBuildPlan(t, detect.ModulesDependency, libbuildpack.BuildPlanDependency{
+				f.AddBuildPlan(t, detect.NPMDependency, libbuildpack.BuildPlanDependency{
 					Metadata: libbuildpack.BuildPlanDependencyMetadata{},
 				})
 
@@ -102,7 +102,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 
 		when("when launch is set to true", func() {
 			it.Before(func() {
-				f.AddBuildPlan(t, detect.ModulesDependency, libbuildpack.BuildPlanDependency{
+				f.AddBuildPlan(t, detect.NPMDependency, libbuildpack.BuildPlanDependency{
 					Metadata: libbuildpack.BuildPlanDependencyMetadata{
 						"launch": true,
 					},
@@ -126,7 +126,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 						err = modules.Contribute()
 						Expect(err).NotTo(HaveOccurred())
 
-						depLaunchLayer := filepath.Join(f.Build.Launch.Root, "modules")
+						depLaunchLayer := filepath.Join(f.Build.Launch.Root, detect.NPMDependency)
 						Expect(filepath.Join(depLaunchLayer, "node_modules", "some_module")).To(BeAnExistingFile())
 
 						linkPath, err := os.Readlink(filepath.Join(f.Build.Application.Root, "node_modules"))
@@ -134,7 +134,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 						Expect(linkPath).To(Equal(filepath.Join(depLaunchLayer, "node_modules")))
 
 						var metadata build.Metadata
-						f.Build.Launch.Layer(detect.ModulesDependency).ReadMetadata(&metadata)
+						f.Build.Launch.Layer(detect.NPMDependency).ReadMetadata(&metadata)
 						Expect(metadata.SHA256).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 					})
 				})
@@ -142,7 +142,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 				when("and there is layer metadata that is the same", func() {
 					it("does not install node modules", func() {
 						metadata := build.Metadata{SHA256: "152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"}
-						f.Build.Launch.Layer(detect.ModulesDependency).WriteMetadata(metadata)
+						f.Build.Launch.Layer(detect.NPMDependency).WriteMetadata(metadata)
 
 						mockNpm.EXPECT().Install(f.Build.Application.Root).Times(0)
 
@@ -154,7 +154,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 				when("and there is layer metadata that is different", func() {
 					it("installs node modules and writes metadata", func() {
 						metadata := build.Metadata{SHA256: "123456"}
-						f.Build.Launch.Layer(detect.ModulesDependency).WriteMetadata(metadata)
+						f.Build.Launch.Layer(detect.NPMDependency).WriteMetadata(metadata)
 
 						mockNpm.EXPECT().Install(f.Build.Application.Root).Do(func(dir string) {
 							err = os.MkdirAll(filepath.Join(dir, "node_modules"), 0777)
@@ -167,10 +167,10 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 						err = modules.Contribute()
 						Expect(err).NotTo(HaveOccurred())
 
-						depLaunchLayer := filepath.Join(f.Build.Launch.Root, "modules")
+						depLaunchLayer := filepath.Join(f.Build.Launch.Root, detect.NPMDependency)
 						Expect(filepath.Join(depLaunchLayer, "node_modules", "some_module")).To(BeAnExistingFile())
 
-						f.Build.Launch.Layer(detect.ModulesDependency).ReadMetadata(&metadata)
+						f.Build.Launch.Layer(detect.NPMDependency).ReadMetadata(&metadata)
 						Expect(metadata.SHA256).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 					})
 				})
@@ -192,11 +192,11 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 						err = modules.Contribute()
 						Expect(err).NotTo(HaveOccurred())
 
-						depLaunchLayer := filepath.Join(f.Build.Launch.Root, "modules")
+						depLaunchLayer := filepath.Join(f.Build.Launch.Root, detect.NPMDependency)
 						Expect(filepath.Join(depLaunchLayer, "node_modules", "some_module")).To(BeAnExistingFile())
 
 						var metadata build.Metadata
-						f.Build.Launch.Layer(detect.ModulesDependency).ReadMetadata(&metadata)
+						f.Build.Launch.Layer(detect.NPMDependency).ReadMetadata(&metadata)
 						Expect(metadata.SHA256).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 					})
 				})
@@ -204,7 +204,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 				when("and there is layer metadata that is the same", func() {
 					it("does not rebuild the node modules", func() {
 						metadata := build.Metadata{SHA256: "152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"}
-						f.Build.Launch.Layer(detect.ModulesDependency).WriteMetadata(metadata)
+						f.Build.Launch.Layer(detect.NPMDependency).WriteMetadata(metadata)
 
 						mockNpm.EXPECT().Rebuild(f.Build.Application.Root).Times(0)
 
@@ -216,17 +216,17 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 				when("and there is layer metadata that is different", func() {
 					it("rebuilds the node_modules and writes metadata", func() {
 						metadata := build.Metadata{SHA256: "123456"}
-						f.Build.Launch.Layer(detect.ModulesDependency).WriteMetadata(metadata)
+						f.Build.Launch.Layer(detect.NPMDependency).WriteMetadata(metadata)
 
 						mockNpm.EXPECT().Rebuild(f.Build.Application.Root).Times(1)
 
 						err = modules.Contribute()
 						Expect(err).NotTo(HaveOccurred())
 
-						depLaunchLayer := filepath.Join(f.Build.Launch.Root, "modules")
+						depLaunchLayer := filepath.Join(f.Build.Launch.Root, detect.NPMDependency)
 						Expect(filepath.Join(depLaunchLayer, "node_modules", "some_module")).To(BeAnExistingFile())
 
-						f.Build.Launch.Layer(detect.ModulesDependency).ReadMetadata(&metadata)
+						f.Build.Launch.Layer(detect.NPMDependency).ReadMetadata(&metadata)
 						Expect(metadata.SHA256).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 					})
 				})

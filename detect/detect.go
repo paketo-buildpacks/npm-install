@@ -10,7 +10,7 @@ import (
 )
 
 const NodeDependency = "node"
-const ModulesDependency = "modules"
+const NPMDependency = "npm"
 
 func UpdateBuildPlan(libDetect *libbuildpackV3.Detect) error {
 	packageJSONPath := filepath.Join(libDetect.Application.Root, "package.json")
@@ -33,7 +33,7 @@ func UpdateBuildPlan(libDetect *libbuildpackV3.Detect) error {
 		},
 	}
 
-	libDetect.BuildPlan[ModulesDependency] = libbuildpackV3.BuildPlanDependency{
+	libDetect.BuildPlan[NPMDependency] = libbuildpackV3.BuildPlanDependency{
 		Metadata: libbuildpackV3.BuildPlanDependencyMetadata{
 			"launch": true,
 		},

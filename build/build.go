@@ -38,7 +38,7 @@ type Metadata struct {
 }
 
 func NewModules(builder libjavabuildpack.Build, npm ModuleInstaller) (Modules, bool, error) {
-	bp, ok := builder.BuildPlan[detect.ModulesDependency]
+	bp, ok := builder.BuildPlan[detect.NPMDependency]
 	if !ok {
 		return Modules{}, false, nil
 	}
@@ -51,12 +51,12 @@ func NewModules(builder libjavabuildpack.Build, npm ModuleInstaller) (Modules, b
 
 	if val, ok := bp.Metadata["build"]; ok {
 		modules.buildContribution = val.(bool)
-		modules.cacheLayer = builder.Cache.Layer(detect.ModulesDependency)
+		modules.cacheLayer = builder.Cache.Layer(detect.NPMDependency)
 	}
 
 	if val, ok := bp.Metadata["launch"]; ok {
 		modules.launchContribution = val.(bool)
-		modules.launchLayer = builder.Launch.Layer(detect.ModulesDependency)
+		modules.launchLayer = builder.Launch.Layer(detect.NPMDependency)
 	}
 
 	return modules, true, nil

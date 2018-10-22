@@ -69,9 +69,9 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		Expect(detectResult.BuildPlan[detect.NodeDependency].Metadata["build"]).To(BeTrue())
 		Expect(detectResult.BuildPlan[detect.NodeDependency].Metadata["launch"]).To(BeTrue())
 
-		Expect(detectResult.BuildPlan).To(HaveKey(detect.ModulesDependency))
-		Expect(len(detectResult.BuildPlan[detect.ModulesDependency].Metadata)).To(Equal(1))
-		Expect(detectResult.BuildPlan[detect.ModulesDependency].Metadata["launch"]).To(BeTrue())
+		Expect(detectResult.BuildPlan).To(HaveKey(detect.NPMDependency))
+		Expect(len(detectResult.BuildPlan[detect.NPMDependency].Metadata)).To(Equal(1))
+		Expect(detectResult.BuildPlan[detect.NPMDependency].Metadata["launch"]).To(BeTrue())
 	})
 
 	it("should run build", func() {
