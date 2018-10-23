@@ -1,20 +1,19 @@
 package build_test
 
 import (
-	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/cloudfoundry/npm-cnb/detect"
-
 	"github.com/buildpack/libbuildpack"
 	"github.com/cloudfoundry/libjavabuildpack/test"
 	"github.com/cloudfoundry/npm-cnb/build"
+	"github.com/cloudfoundry/npm-cnb/detect"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
+	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 )
 
 //go:generate mockgen -source=build.go -destination=mocks_test.go -package=build_test
@@ -62,9 +61,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 
 	when("CreateLaunchMetadata", func() {
 		it("returns launch metadata for running with npm", func() {
-			modules, _, _ := build.NewModules(f.Build, mockNpm)
-
-			Expect(modules.CreateLaunchMetadata()).To(Equal(libbuildpack.LaunchMetadata{
+			Expect(build.CreateLaunchMetadata()).To(Equal(libbuildpack.LaunchMetadata{
 				Processes: libbuildpack.Processes{
 					libbuildpack.Process{
 						Type:    "web",
@@ -76,11 +73,17 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("Contribute", func() {
+		var cacheLayer string
+
 		it.Before(func() {
 			err = os.MkdirAll(f.Build.Application.Root, 0777)
 			Expect(err).To(BeNil())
 
 			err = ioutil.WriteFile(filepath.Join(f.Build.Application.Root, "package-lock.json"), []byte("package lock"), 0666)
+			Expect(err).To(BeNil())
+
+			cacheLayer = f.Build.Cache.Layer(detect.NPMDependency).Root
+			err = os.MkdirAll(cacheLayer, 0777)
 			Expect(err).To(BeNil())
 		})
 
@@ -93,7 +96,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 				modules, _, err := build.NewModules(f.Build, mockNpm)
 				Expect(err).NotTo(HaveOccurred())
 
-				mockNpm.EXPECT().Install(gomock.Any()).Times(0)
+				mockNpm.EXPECT().Install(gomock.Any(), gomock.Any()).Times(0)
 
 				err = modules.Contribute()
 				Expect(err).NotTo(HaveOccurred())
@@ -113,24 +116,29 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			when("when node_modules are NOT vendored", func() {
-				when("and there is no layer metadata", func() {
+				when("and there is no launch layer metadata", func() {
+					it.Before(func() {
+						err = ioutil.WriteFile(filepath.Join(f.Build.Application.Root, "package.json"), []byte("packageJSONcontents"), 0666)
+						Expect(err).NotTo(HaveOccurred(), "err0")
+					})
+
 					it("installs node modules and writes metadata", func() {
-						mockNpm.EXPECT().Install(f.Build.Application.Root).Do(func(dir string) {
+						mockNpm.EXPECT().Install(f.Build.Application.Root, f.Build.Cache.Layer(detect.NPMDependency).Root).Do(func(src, dir string) {
 							err = os.MkdirAll(filepath.Join(dir, "node_modules"), 0777)
-							Expect(err).ToNot(HaveOccurred())
+							Expect(err).ToNot(HaveOccurred(), "err1")
 
 							err = ioutil.WriteFile(filepath.Join(dir, "node_modules", "some_module"), []byte("module"), 0666)
-							Expect(err).ToNot(HaveOccurred())
+							Expect(err).ToNot(HaveOccurred(), "err2")
 						})
 
 						err = modules.Contribute()
-						Expect(err).NotTo(HaveOccurred())
+						Expect(err).NotTo(HaveOccurred(), "err3")
 
 						depLaunchLayer := filepath.Join(f.Build.Launch.Root, detect.NPMDependency)
 						Expect(filepath.Join(depLaunchLayer, "node_modules", "some_module")).To(BeAnExistingFile())
 
 						linkPath, err := os.Readlink(filepath.Join(f.Build.Application.Root, "node_modules"))
-						Expect(err).NotTo(HaveOccurred())
+						Expect(err).NotTo(HaveOccurred(), "err4")
 						Expect(linkPath).To(Equal(filepath.Join(depLaunchLayer, "node_modules")))
 
 						var metadata build.Metadata
@@ -139,24 +147,38 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 					})
 				})
 
-				when("and there is layer metadata that is the same", func() {
-					it("does not install node modules", func() {
+				when("and there is launch layer metadata that is the same", func() {
+					it("does not install node modules or re-write metadata", func() {
 						metadata := build.Metadata{SHA256: "152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"}
 						f.Build.Launch.Layer(detect.NPMDependency).WriteMetadata(metadata)
 
-						mockNpm.EXPECT().Install(f.Build.Application.Root).Times(0)
+						mockNpm.EXPECT().Install(f.Build.Application.Root, f.Build.Cache.Layer(detect.NPMDependency).Root).Times(0)
 
 						err = modules.Contribute()
 						Expect(err).NotTo(HaveOccurred())
+
+						f.Build.Launch.Layer(detect.NPMDependency).ReadMetadata(&metadata)
+						Expect(metadata.SHA256).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 					})
 				})
 
-				when("and there is layer metadata that is different", func() {
+				when("and there is launch layer metadata that is different", func() {
+					it.Before(func() {
+						err = ioutil.WriteFile(filepath.Join(f.Build.Application.Root, "package.json"), []byte("newPackageJson"), 0666)
+						Expect(err).NotTo(HaveOccurred(), "setup1a")
+
+						err = ioutil.WriteFile(filepath.Join(cacheLayer, "package.json"), []byte("oldPackageJson"), 0666)
+						Expect(err).NotTo(HaveOccurred(), "setup3")
+
+						err = ioutil.WriteFile(filepath.Join(cacheLayer, "package-lock.json"), []byte("old package lock"), 0666)
+						Expect(err).NotTo(HaveOccurred(), "setup4")
+					})
+
 					it("installs node modules and writes metadata", func() {
 						metadata := build.Metadata{SHA256: "123456"}
 						f.Build.Launch.Layer(detect.NPMDependency).WriteMetadata(metadata)
 
-						mockNpm.EXPECT().Install(f.Build.Application.Root).Do(func(dir string) {
+						mockNpm.EXPECT().Install(f.Build.Application.Root, f.Build.Cache.Layer(detect.NPMDependency).Root).Do(func(src, dir string) {
 							err = os.MkdirAll(filepath.Join(dir, "node_modules"), 0777)
 							Expect(err).ToNot(HaveOccurred())
 
@@ -170,8 +192,18 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 						depLaunchLayer := filepath.Join(f.Build.Launch.Root, detect.NPMDependency)
 						Expect(filepath.Join(depLaunchLayer, "node_modules", "some_module")).To(BeAnExistingFile())
 
+						Expect(filepath.Join(cacheLayer, "package.json")).To(BeAnExistingFile())
+						packageContents, err := ioutil.ReadFile(filepath.Join(cacheLayer, "package.json"))
+						Expect(packageContents).To(Equal([]byte("newPackageJson")))
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(filepath.Join(cacheLayer, "package-lock.json")).To(BeAnExistingFile())
+						lockContents, err := ioutil.ReadFile(filepath.Join(cacheLayer, "package-lock.json"))
+						Expect(lockContents).To(Equal([]byte("package lock")))
+						Expect(err).NotTo(HaveOccurred())
+
 						f.Build.Launch.Layer(detect.NPMDependency).ReadMetadata(&metadata)
-						Expect(metadata.SHA256).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
+						Expect(metadata.SHA256).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"), "Sha is differant")
 					})
 				})
 			})
@@ -185,9 +217,9 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 					Expect(err).To(BeNil())
 				})
 
-				when("and there is no layer metadata", func() {
+				when("and there is no launch layer metadata", func() {
 					it("rebuilds the node modules and writes metadata", func() {
-						mockNpm.EXPECT().Rebuild(f.Build.Application.Root).Return(nil).Times(1)
+						mockNpm.EXPECT().Rebuild(f.Build.Cache.Layer(detect.NPMDependency).Root).Return(nil).Times(1)
 
 						err = modules.Contribute()
 						Expect(err).NotTo(HaveOccurred())
@@ -201,30 +233,46 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 					})
 				})
 
-				when("and there is layer metadata that is the same", func() {
-					it("does not rebuild the node modules", func() {
+				when("and there is launch layer metadata that is the same", func() {
+					it("does not rebuild the node modules or re-write metadata", func() {
 						metadata := build.Metadata{SHA256: "152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"}
 						f.Build.Launch.Layer(detect.NPMDependency).WriteMetadata(metadata)
 
-						mockNpm.EXPECT().Rebuild(f.Build.Application.Root).Times(0)
+						mockNpm.EXPECT().Rebuild(f.Build.Cache.Layer(detect.NPMDependency).Root).Times(0)
 
 						err = modules.Contribute()
 						Expect(err).NotTo(HaveOccurred())
+
+						f.Build.Launch.Layer(detect.NPMDependency).ReadMetadata(&metadata)
+						Expect(metadata.SHA256).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 					})
 				})
 
-				when("and there is layer metadata that is different", func() {
-					it("rebuilds the node_modules and writes metadata", func() {
+				when("and there is launch layer metadata that is different", func() {
+					it.Before(func() {
+						err = os.MkdirAll(filepath.Join(f.Build.Cache.Layer(detect.NPMDependency).Root, "node_modules"), 0777)
+						Expect(err).NotTo(HaveOccurred())
+
+						err = ioutil.WriteFile(filepath.Join(f.Build.Cache.Layer(detect.NPMDependency).Root, "node_modules", "old_module"), []byte("module"), 0666)
+						Expect(err).To(BeNil())
+
+					})
+
+					it("copies node_modules to the cache and launch layers, rebuilds them, and writes metadata", func() {
 						metadata := build.Metadata{SHA256: "123456"}
 						f.Build.Launch.Layer(detect.NPMDependency).WriteMetadata(metadata)
 
-						mockNpm.EXPECT().Rebuild(f.Build.Application.Root).Times(1)
+						mockNpm.EXPECT().Rebuild(f.Build.Cache.Layer(detect.NPMDependency).Root).Times(1)
 
 						err = modules.Contribute()
 						Expect(err).NotTo(HaveOccurred())
 
-						depLaunchLayer := filepath.Join(f.Build.Launch.Root, detect.NPMDependency)
-						Expect(filepath.Join(depLaunchLayer, "node_modules", "some_module")).To(BeAnExistingFile())
+						cacheLayer := filepath.Join(f.Build.Cache.Root, detect.NPMDependency)
+						Expect(filepath.Join(cacheLayer, "node_modules", "some_module")).To(BeAnExistingFile())
+						Expect(filepath.Join(cacheLayer, "node_modules", "old_module")).ToNot(BeAnExistingFile())
+
+						launchLayer := filepath.Join(f.Build.Launch.Root, detect.NPMDependency)
+						Expect(filepath.Join(launchLayer, "node_modules", "some_module")).To(BeAnExistingFile())
 
 						f.Build.Launch.Layer(detect.NPMDependency).ReadMetadata(&metadata)
 						Expect(metadata.SHA256).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))

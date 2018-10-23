@@ -3,10 +3,13 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/libjavabuildpack"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/cloudfoundry/libjavabuildpack"
 )
 
 func CopyDirectory(srcDir, destDir string) error {
@@ -55,5 +58,24 @@ func CopyDirectory(srcDir, destDir string) error {
 		}
 	}
 
+	return nil
+}
+
+func CopyFile(srcPath, dstPath string) error {
+	from, err := os.Open(srcPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer from.Close()
+	to, err := os.OpenFile(dstPath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	defer to.Close()
+
+	_, err = io.Copy(to, from)
+	if err != nil {
+		return err
+	}
 	return nil
 }
