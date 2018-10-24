@@ -28,7 +28,7 @@ func CreateLaunchMetadata() libbuildpackV3.LaunchMetadata {
 }
 
 type ModuleInstaller interface {
-	Install(string, string) error
+	InstallInCache(string, string) error
 	Rebuild(string) error
 }
 
@@ -98,6 +98,10 @@ func (m Modules) Contribute() error {
 		m.logger.FirstLine("%s: %s to launch", boldNode, color.YellowString("Contributing"))
 
 		if vendored {
+			// Can we optimize to not do the remove
+			// How can we get into the situation where we have a mismatchaed app -> launch and not app -> cache
+			// Seems like a ruby w/ compiled javascript?
+
 			m.logger.FirstLine("Removing cached node_modules")
 			if err := os.RemoveAll(cacheModulesDir); err != nil {
 				return fmt.Errorf("failed to remove cached node_modules: %v", err)
@@ -112,11 +116,12 @@ func (m Modules) Contribute() error {
 				return fmt.Errorf("failed to rebuild node_modules: %v", err)
 			}
 		} else {
+			// Maybe app and cache are already the same? Optimize?
+
 			m.logger.FirstLine("%s: %s to cache", color.New(color.FgBlue, color.Bold).Sprint("package.json"), color.YellowString("Copying"))
 
 			if err := os.MkdirAll(m.cacheLayer.Root, 0777); err != nil {
 				return fmt.Errorf("failed to create directory %s : %v", m.cacheLayer.Root, err)
-
 			}
 
 			appPackageJsonPath := filepath.Join(m.app.Root, "package.json")
@@ -134,7 +139,7 @@ func (m Modules) Contribute() error {
 			}
 
 			m.logger.FirstLine("%s: %s", boldNode, color.YellowString("Installing"))
-			if err := m.npm.Install(m.app.Root, m.cacheLayer.Root); err != nil {
+			if err := m.npm.InstallInCache(m.app.Root, m.cacheLayer.Root); err != nil {
 				return fmt.Errorf("failed to install node_modules: %v", err)
 			}
 		}
