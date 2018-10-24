@@ -33,15 +33,15 @@ func (m *MockModuleInstaller) EXPECT() *MockModuleInstallerMockRecorder {
 }
 
 // Install mocks base method
-func (m *MockModuleInstaller) Install(arg0, arg1 string) error {
-	ret := m.ctrl.Call(m, "Install", arg0, arg1)
+func (m *MockModuleInstaller) Install(arg0 string) error {
+	ret := m.ctrl.Call(m, "Install", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Install indicates an expected call of Install
-func (mr *MockModuleInstallerMockRecorder) Install(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockModuleInstaller)(nil).Install), arg0, arg1)
+func (mr *MockModuleInstallerMockRecorder) Install(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockModuleInstaller)(nil).Install), arg0)
 }
 
 // Rebuild mocks base method
