@@ -1,6 +1,6 @@
 {
-  "name": "simple_app",
-  "version": "0.0.0",
+  "name": "simple_app_vendored",
+  "version": "0.0.1",
   "description": "some app",
   "main": "server.js",
   "scripts": {

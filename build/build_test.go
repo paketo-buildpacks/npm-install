@@ -1,6 +1,7 @@
 package build_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -82,6 +83,9 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 			err = ioutil.WriteFile(filepath.Join(f.Build.Application.Root, "package-lock.json"), []byte("package lock"), 0666)
 			Expect(err).To(BeNil())
 
+			err = ioutil.WriteFile(filepath.Join(f.Build.Application.Root, "package.json"), []byte("package json"), 0666)
+			Expect(err).To(BeNil())
+
 			cacheLayer = f.Build.Cache.Layer(detect.NPMDependency).Root
 			Expect(err).To(BeNil())
 		})
@@ -114,31 +118,46 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
+			it("should write the NODE_PATH env var to the launch layer", func() {
+				mockNpm.EXPECT().InstallInCache(gomock.Any(), gomock.Any()).Do(func(src, dir string) {
+					err := os.MkdirAll(filepath.Join(dir, "node_modules"), 0777)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				err = modules.Contribute()
+				Expect(err).ToNot(HaveOccurred())
+
+				s := f.Build.Launch.Layer(detect.NPMDependency).Root
+				envPath := filepath.Join(s, "profile.d", "NODE_PATH")
+				Expect(envPath).To(BeAnExistingFile())
+
+				buf, err := ioutil.ReadFile(envPath)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(string(buf)).To(Equal(fmt.Sprintf("export NODE_PATH=%s", filepath.Join(f.Build.Launch.Layer(detect.NPMDependency).Root, "node_modules"))))
+			})
+
 			when("when node_modules are NOT vendored", func() {
 				when("and there is no launch layer metadata", func() {
 					it.Before(func() {
 						err = ioutil.WriteFile(filepath.Join(f.Build.Application.Root, "package.json"), []byte("packageJSONcontents"), 0666)
-						Expect(err).NotTo(HaveOccurred(), "err0")
+						Expect(err).NotTo(HaveOccurred())
 					})
 
 					it("installs node modules and writes metadata", func() {
 						mockNpm.EXPECT().InstallInCache(f.Build.Application.Root, f.Build.Cache.Layer(detect.NPMDependency).Root).Do(func(src, dir string) {
 							err = os.MkdirAll(filepath.Join(dir, "node_modules"), 0777)
-							Expect(err).ToNot(HaveOccurred(), "err1")
+							Expect(err).ToNot(HaveOccurred())
 
 							err = ioutil.WriteFile(filepath.Join(dir, "node_modules", "some_module"), []byte("module"), 0666)
-							Expect(err).ToNot(HaveOccurred(), "err2")
+							Expect(err).ToNot(HaveOccurred())
 						})
 
 						err = modules.Contribute()
-						Expect(err).NotTo(HaveOccurred(), "err3")
+						Expect(err).NotTo(HaveOccurred())
 
 						depLaunchLayer := filepath.Join(f.Build.Launch.Root, detect.NPMDependency)
 						Expect(filepath.Join(depLaunchLayer, "node_modules", "some_module")).To(BeAnExistingFile())
-
-						linkPath, err := os.Readlink(filepath.Join(f.Build.Application.Root, "node_modules"))
-						Expect(err).NotTo(HaveOccurred(), "err4")
-						Expect(linkPath).To(Equal(filepath.Join(depLaunchLayer, "node_modules")))
 
 						var metadata build.Metadata
 						f.Build.Launch.Layer(detect.NPMDependency).ReadMetadata(&metadata)
@@ -164,13 +183,17 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 				when("and there is launch layer metadata that is different", func() {
 					it.Before(func() {
 						err = ioutil.WriteFile(filepath.Join(f.Build.Application.Root, "package.json"), []byte("newPackageJson"), 0666)
-						Expect(err).NotTo(HaveOccurred(), "setup1a")
+						Expect(err).NotTo(HaveOccurred())
+
+						// We have to do this to write the existing files below
+						err = os.MkdirAll(filepath.Join(cacheLayer), 0777)
+						Expect(err).NotTo(HaveOccurred())
 
 						err = ioutil.WriteFile(filepath.Join(cacheLayer, "package.json"), []byte("oldPackageJson"), 0666)
-						Expect(err).NotTo(HaveOccurred(), "setup3")
+						Expect(err).NotTo(HaveOccurred())
 
 						err = ioutil.WriteFile(filepath.Join(cacheLayer, "package-lock.json"), []byte("old package lock"), 0666)
-						Expect(err).NotTo(HaveOccurred(), "setup4")
+						Expect(err).NotTo(HaveOccurred())
 					})
 
 					it("installs node modules and writes metadata", func() {

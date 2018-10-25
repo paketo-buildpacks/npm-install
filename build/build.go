@@ -98,14 +98,11 @@ func (m Modules) Contribute() error {
 		m.logger.FirstLine("%s: %s to launch", boldNode, color.YellowString("Contributing"))
 
 		if vendored {
-			// Can we optimize to not do the remove
-			// How can we get into the situation where we have a mismatchaed app -> launch and not app -> cache
-			// Seems like a ruby w/ compiled javascript?
-
 			m.logger.FirstLine("Removing cached node_modules")
 			if err := os.RemoveAll(cacheModulesDir); err != nil {
 				return fmt.Errorf("failed to remove cached node_modules: %v", err)
 			}
+
 			m.logger.FirstLine("%s: %s to cache", boldNode, color.YellowString("Copying"))
 			if err := m.copyModulesToLayer(appModulesDir, cacheModulesDir); err != nil {
 				return fmt.Errorf("failed to copy node_modules to the cache: %v", err)
@@ -116,8 +113,6 @@ func (m Modules) Contribute() error {
 				return fmt.Errorf("failed to rebuild node_modules: %v", err)
 			}
 		} else {
-			// Maybe app and cache are already the same? Optimize?
-
 			m.logger.FirstLine("%s: %s to cache", color.New(color.FgBlue, color.Bold).Sprint("package.json"), color.YellowString("Copying"))
 
 			if err := os.MkdirAll(m.cacheLayer.Root, 0777); err != nil {
@@ -126,14 +121,12 @@ func (m Modules) Contribute() error {
 
 			appPackageJsonPath := filepath.Join(m.app.Root, "package.json")
 			cachePackageJsonPath := filepath.Join(m.cacheLayer.Root, "package.json")
-
 			if err := utils.CopyFile(appPackageJsonPath, cachePackageJsonPath); err != nil {
 				return fmt.Errorf("failed to copy package.json : %v", err)
 			}
 
 			appPackageLockPath := filepath.Join(m.app.Root, "package-lock.json")
 			cachePackageLockPath := filepath.Join(m.cacheLayer.Root, "package-lock.json")
-
 			if err := utils.CopyFile(appPackageLockPath, cachePackageLockPath); err != nil {
 				return fmt.Errorf("failed to copy package-lock.json: %v", err)
 			}
@@ -160,9 +153,9 @@ func (m Modules) Contribute() error {
 		return fmt.Errorf("failed to clean up the node_modules: %v", err)
 	}
 
-	m.logger.SubsequentLine("Creating symlink for node_modules")
-	if err := os.Symlink(launchModulesDir, appModulesDir); err != nil {
-		return fmt.Errorf("failed to symlink the node_modules to the launch layer: %v", err)
+	m.logger.SubsequentLine("Writing NODE_PATH for node_modules")
+	if err := m.launchLayer.WriteProfile("NODE_PATH", fmt.Sprintf("export NODE_PATH=%s", launchModulesDir)); err != nil {
+		return fmt.Errorf("failed to write NODE_PATH in the launch layer: %v", err)
 	}
 
 	return nil
