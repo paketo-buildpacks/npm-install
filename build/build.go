@@ -98,40 +98,40 @@ func (m Modules) Contribute() error {
 		m.logger.FirstLine("%s: %s to launch", boldNode, color.YellowString("Contributing"))
 
 		if vendored {
-			m.logger.FirstLine("Removing cached node_modules")
+			m.logger.SubsequentLine("%s cached node_modules", color.YellowString("Removing"))
 			if err := os.RemoveAll(cacheModulesDir); err != nil {
 				return fmt.Errorf("failed to remove cached node_modules: %v", err)
 			}
 
-			m.logger.FirstLine("%s: %s to cache", boldNode, color.YellowString("Copying"))
+			m.logger.SubsequentLine("%s node_modules to cache", color.YellowString("Copying"))
 			if err := m.copyModulesToLayer(appModulesDir, cacheModulesDir); err != nil {
 				return fmt.Errorf("failed to copy node_modules to the cache: %v", err)
 			}
 
-			m.logger.FirstLine("%s: %s", boldNode, color.YellowString("Rebuilding"))
+			m.logger.SubsequentLine("%s node_modules", color.YellowString("Rebuilding"))
 			if err := m.npm.Rebuild(m.cacheLayer.Root); err != nil {
 				return fmt.Errorf("failed to rebuild node_modules: %v", err)
 			}
 		} else {
-			m.logger.FirstLine("%s: %s to cache", color.New(color.FgBlue, color.Bold).Sprint("package.json"), color.YellowString("Copying"))
-
 			if err := os.MkdirAll(m.cacheLayer.Root, 0777); err != nil {
 				return fmt.Errorf("failed to create directory %s : %v", m.cacheLayer.Root, err)
 			}
 
+			m.logger.SubsequentLine("%s package.json to cache", color.YellowString("Copying"))
 			appPackageJsonPath := filepath.Join(m.app.Root, "package.json")
 			cachePackageJsonPath := filepath.Join(m.cacheLayer.Root, "package.json")
 			if err := utils.CopyFile(appPackageJsonPath, cachePackageJsonPath); err != nil {
 				return fmt.Errorf("failed to copy package.json : %v", err)
 			}
 
+			m.logger.SubsequentLine("%s package-lock.json to cache", color.YellowString("Copying"))
 			appPackageLockPath := filepath.Join(m.app.Root, "package-lock.json")
 			cachePackageLockPath := filepath.Join(m.cacheLayer.Root, "package-lock.json")
 			if err := utils.CopyFile(appPackageLockPath, cachePackageLockPath); err != nil {
 				return fmt.Errorf("failed to copy package-lock.json: %v", err)
 			}
 
-			m.logger.FirstLine("%s: %s", boldNode, color.YellowString("Installing"))
+			m.logger.SubsequentLine("%s node_modules", color.YellowString("Installing"))
 			if err := m.npm.InstallInCache(m.app.Root, m.cacheLayer.Root); err != nil {
 				return fmt.Errorf("failed to install node_modules: %v", err)
 			}
@@ -148,12 +148,12 @@ func (m Modules) Contribute() error {
 		m.logger.FirstLine("%s: %s cached launch layer", boldNode, color.GreenString("Reusing"))
 	}
 
-	m.logger.SubsequentLine("Cleaning up node_modules")
+	m.logger.SubsequentLine("Removing node_modules from app")
 	if err := os.RemoveAll(appModulesDir); err != nil {
 		return fmt.Errorf("failed to clean up the node_modules: %v", err)
 	}
 
-	m.logger.SubsequentLine("Writing NODE_PATH for node_modules")
+	m.logger.SubsequentLine("Writing profile.d/NODE_PATH")
 	if err := m.launchLayer.WriteProfile("NODE_PATH", fmt.Sprintf("export NODE_PATH=%s", launchModulesDir)); err != nil {
 		return fmt.Errorf("failed to write NODE_PATH in the launch layer: %v", err)
 	}

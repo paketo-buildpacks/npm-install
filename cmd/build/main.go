@@ -32,7 +32,7 @@ func main() {
 		}
 	}
 
-	if err := builder.Launch.WriteMetadata(modules.CreateLaunchMetadata()); err != nil {
+	if err := builder.Launch.WriteMetadata(build.CreateLaunchMetadata()); err != nil {
 		builder.Logger.Info("failed to write launch.toml: %s", err)
 		builder.Failure(100)
 	}
