@@ -3,33 +3,86 @@ package npm
 import (
 	"fmt"
 	"os"
-	"os/exec"
+	"path/filepath"
+
+	"github.com/cloudfoundry/libjavabuildpack"
+	"github.com/cloudfoundry/npm-cnb/utils"
 )
 
-type NPM struct{}
+type NPM struct {
+	Runner Runner
+}
 
-func (n *NPM) InstallInCache(src, dest string) error {
-	return n.runCommand(src,
+func NewNPM() *NPM {
+	return &NPM{
+		Runner: &npmCmd{},
+	}
+}
+
+// Install node_mdules from a src layer to a target
+func (n *NPM) InstallInLayer(src, dst string) error {
+	if err := os.MkdirAll(dst, 0777); err != nil {
+		return fmt.Errorf("failed to create directory %s : %v", dst, err)
+	}
+
+	appPackageJsonPath := filepath.Join(src, "package.json")
+	cachePackageJsonPath := filepath.Join(dst, "package.json")
+	if err := utils.CopyFile(appPackageJsonPath, cachePackageJsonPath); err != nil {
+		return fmt.Errorf("failed to copy package.json : %v", err)
+	}
+
+	appPackageLockPath := filepath.Join(src, "package-lock.json")
+	cachePackageLockPath := filepath.Join(dst, "package-lock.json")
+	if err := utils.CopyFile(appPackageLockPath, cachePackageLockPath); err != nil {
+		return fmt.Errorf("failed to copy package-lock.json : %v", err)
+	}
+
+	return n.Runner.Run(src,
 		"--prefix",
-		dest,
+		dst,
 		"install",
 		"--unsafe-perm",
 		"--cache",
-		fmt.Sprintf("%s/npm-cache", dest),
+		fmt.Sprintf("%s/npm-cache", dst),
 	)
 }
 
-func (n *NPM) Rebuild(dir string) error {
-	return n.runCommand(dir, "rebuild")
+func (n *NPM) CopyToDst(src, dst string) error {
+	if err := os.RemoveAll(dst); err != nil {
+		return fmt.Errorf("failed to remove modules in %s : %v", dst, err)
+	}
+
+	if err := n.copyModules(src, dst); err != nil {
+		return fmt.Errorf("failed to copy the src modules from %s to %s %v", src, dst, err)
+	}
+	return nil
 }
 
-func (n *NPM) runCommand(dir string, args ...string) error {
-	cmd := exec.Command("npm", args...)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+// RebuildLayer copies node_modules from a source layer to a target layer and
+// runs a `npm rebuild`
+func (n *NPM) RebuildLayer(srcLayer, dstLayer string) error {
+	srcModulesDir := filepath.Join(srcLayer, "node_modules")
+	dstModulesDir := filepath.Join(dstLayer, "node_modules")
+
+	if err := n.CopyToDst(srcModulesDir, dstModulesDir); err != nil {
+		return fmt.Errorf("failed to rebuild : %v", err)
+	}
+
+	return n.Runner.Run(dstLayer, "rebuild")
+}
+
+func (n *NPM) copyModules(src, dst string) error {
+	if exist, err := libjavabuildpack.FileExists(dst); err != nil {
+		return err
+	} else if !exist {
+		if err := os.MkdirAll(dst, 0777); err != nil {
+			return err
+		}
+	}
+
+	if err := utils.CopyDirectory(src, dst); err != nil {
 		return err
 	}
+
 	return nil
 }

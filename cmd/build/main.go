@@ -16,7 +16,7 @@ func main() {
 		os.Exit(100)
 	}
 
-	modules, ok, err := build.NewModules(builder, &npm.NPM{})
+	modules, ok, err := build.NewModules(builder, npm.NewNPM())
 
 	if err != nil {
 		builder.Logger.Info(err.Error())

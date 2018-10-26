@@ -32,26 +32,38 @@ func (m *MockModuleInstaller) EXPECT() *MockModuleInstallerMockRecorder {
 	return m.recorder
 }
 
-// InstallInCache mocks base method
-func (m *MockModuleInstaller) InstallInCache(arg0, arg1 string) error {
-	ret := m.ctrl.Call(m, "InstallInCache", arg0, arg1)
+// InstallInLayer mocks base method
+func (m *MockModuleInstaller) InstallInLayer(arg0, arg1 string) error {
+	ret := m.ctrl.Call(m, "InstallInLayer", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// InstallInCache indicates an expected call of InstallInCache
-func (mr *MockModuleInstallerMockRecorder) InstallInCache(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallInCache", reflect.TypeOf((*MockModuleInstaller)(nil).InstallInCache), arg0, arg1)
+// InstallInLayer indicates an expected call of InstallInLayer
+func (mr *MockModuleInstallerMockRecorder) InstallInLayer(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallInLayer", reflect.TypeOf((*MockModuleInstaller)(nil).InstallInLayer), arg0, arg1)
 }
 
-// Rebuild mocks base method
-func (m *MockModuleInstaller) Rebuild(arg0 string) error {
-	ret := m.ctrl.Call(m, "Rebuild", arg0)
+// RebuildLayer mocks base method
+func (m *MockModuleInstaller) RebuildLayer(arg0, arg1 string) error {
+	ret := m.ctrl.Call(m, "RebuildLayer", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Rebuild indicates an expected call of Rebuild
-func (mr *MockModuleInstallerMockRecorder) Rebuild(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockModuleInstaller)(nil).Rebuild), arg0)
+// RebuildLayer indicates an expected call of RebuildLayer
+func (mr *MockModuleInstallerMockRecorder) RebuildLayer(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebuildLayer", reflect.TypeOf((*MockModuleInstaller)(nil).RebuildLayer), arg0, arg1)
+}
+
+// CopyToDst mocks base method
+func (m *MockModuleInstaller) CopyToDst(arg0, arg1 string) error {
+	ret := m.ctrl.Call(m, "CopyToDst", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CopyToDst indicates an expected call of CopyToDst
+func (mr *MockModuleInstallerMockRecorder) CopyToDst(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyToDst", reflect.TypeOf((*MockModuleInstaller)(nil).CopyToDst), arg0, arg1)
 }

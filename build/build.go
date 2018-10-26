@@ -28,8 +28,11 @@ func CreateLaunchMetadata() libbuildpackV3.LaunchMetadata {
 }
 
 type ModuleInstaller interface {
-	InstallInCache(string, string) error
-	Rebuild(string) error
+	InstallInLayer(string, string) error
+	RebuildLayer(string, string) error
+	CopyToDst(string, string) error
+	// WriteProfileD(string) error
+	// WriteENV(string) error
 }
 
 type Modules struct {
@@ -71,91 +74,37 @@ func NewModules(builder libjavabuildpack.Build, npm ModuleInstaller) (Modules, b
 }
 
 func (m Modules) Contribute() error {
-	if m.buildContribution {
-		return fmt.Errorf("do not set build to true as part of the build plan when using the npm buildpack")
-	}
-
-	if !m.launchContribution {
+	if !m.buildContribution && !m.launchContribution {
 		return nil
 	}
 
+	if m.buildContribution {
+		m.cacheLayer.AppendPathEnv("NODE_PATH", filepath.Join(m.cacheLayer.Root, "node_modules"))
+
+		if err := m.installInCache(); err != nil {
+			return fmt.Errorf("Failed to install in cache for build : %v", err)
+		}
+	}
+
+	if m.launchContribution {
+
+		if err := m.installInCache(); err != nil {
+			return fmt.Errorf("Failed to install in cache for launch : %v", err)
+		}
+
+		if err := m.installInLaunch(); err != nil {
+			return fmt.Errorf("Failed to install in launch : %v", err)
+		}
+
+		if err := m.writeProfile(); err != nil {
+			return fmt.Errorf("Failed to write profile.d : %v", err)
+		}
+	}
+
 	appModulesDir := filepath.Join(m.app.Root, "node_modules")
-	cacheModulesDir := filepath.Join(m.cacheLayer.Root, "node_modules")
-	launchModulesDir := filepath.Join(m.launchLayer.Root, "node_modules")
-
-	vendored, err := libjavabuildpack.FileExists(appModulesDir)
-	if err != nil {
-		return fmt.Errorf("failed to check for vendored node_modules: %v", err)
-	}
-
-	sameSHASums, err := m.packageLockMatchesMetadataSha()
-	if err != nil {
-		return fmt.Errorf("failed in checking shas: %v", err)
-	}
-
-	boldNode := color.New(color.FgBlue, color.Bold).Sprint("Node Modules")
-	if !sameSHASums {
-		m.logger.FirstLine("%s: %s to launch", boldNode, color.YellowString("Contributing"))
-
-		if vendored {
-			m.logger.SubsequentLine("%s cached node_modules", color.YellowString("Removing"))
-			if err := os.RemoveAll(cacheModulesDir); err != nil {
-				return fmt.Errorf("failed to remove cached node_modules: %v", err)
-			}
-
-			m.logger.SubsequentLine("%s node_modules to cache", color.YellowString("Copying"))
-			if err := m.copyModulesToLayer(appModulesDir, cacheModulesDir); err != nil {
-				return fmt.Errorf("failed to copy node_modules to the cache: %v", err)
-			}
-
-			m.logger.SubsequentLine("%s node_modules", color.YellowString("Rebuilding"))
-			if err := m.npm.Rebuild(m.cacheLayer.Root); err != nil {
-				return fmt.Errorf("failed to rebuild node_modules: %v", err)
-			}
-		} else {
-			if err := os.MkdirAll(m.cacheLayer.Root, 0777); err != nil {
-				return fmt.Errorf("failed to create directory %s : %v", m.cacheLayer.Root, err)
-			}
-
-			m.logger.SubsequentLine("%s package.json to cache", color.YellowString("Copying"))
-			appPackageJsonPath := filepath.Join(m.app.Root, "package.json")
-			cachePackageJsonPath := filepath.Join(m.cacheLayer.Root, "package.json")
-			if err := utils.CopyFile(appPackageJsonPath, cachePackageJsonPath); err != nil {
-				return fmt.Errorf("failed to copy package.json : %v", err)
-			}
-
-			m.logger.SubsequentLine("%s package-lock.json to cache", color.YellowString("Copying"))
-			appPackageLockPath := filepath.Join(m.app.Root, "package-lock.json")
-			cachePackageLockPath := filepath.Join(m.cacheLayer.Root, "package-lock.json")
-			if err := utils.CopyFile(appPackageLockPath, cachePackageLockPath); err != nil {
-				return fmt.Errorf("failed to copy package-lock.json: %v", err)
-			}
-
-			m.logger.SubsequentLine("%s node_modules", color.YellowString("Installing"))
-			if err := m.npm.InstallInCache(m.app.Root, m.cacheLayer.Root); err != nil {
-				return fmt.Errorf("failed to install node_modules: %v", err)
-			}
-		}
-
-		if err := m.copyModulesToLayer(cacheModulesDir, launchModulesDir); err != nil {
-			return fmt.Errorf("failed to copy the node_modules to the launch layer: %v", err)
-		}
-
-		if err := m.writeMetadataSha(filepath.Join(m.app.Root, "package-lock.json")); err != nil {
-			return fmt.Errorf("failed to write metadata to package-lock.json: %v", err)
-		}
-	} else {
-		m.logger.FirstLine("%s: %s cached launch layer", boldNode, color.GreenString("Reusing"))
-	}
-
 	m.logger.SubsequentLine("Removing node_modules from app")
 	if err := os.RemoveAll(appModulesDir); err != nil {
 		return fmt.Errorf("failed to clean up the node_modules: %v", err)
-	}
-
-	m.logger.SubsequentLine("Writing profile.d/NODE_PATH")
-	if err := m.launchLayer.WriteProfile("NODE_PATH", fmt.Sprintf("export NODE_PATH=%s", launchModulesDir)); err != nil {
-		return fmt.Errorf("failed to write NODE_PATH in the launch layer: %v", err)
 	}
 
 	return nil
@@ -212,6 +161,74 @@ func (m *Modules) copyModulesToLayer(src, dest string) error {
 
 	if err := utils.CopyDirectory(src, dest); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (m Modules) installInCache() error {
+	sameSHASums, err := m.packageLockMatchesMetadataSha()
+	if err != nil {
+		return err
+	}
+
+	if sameSHASums {
+		return nil
+	}
+
+	appModulesDir := filepath.Join(m.app.Root, "node_modules")
+
+	vendored, err := libjavabuildpack.FileExists(appModulesDir)
+	if err != nil {
+		return fmt.Errorf("could not locate app modules directory : %s", err)
+	}
+
+	if vendored {
+		m.logger.SubsequentLine("%s cached node_modules", color.YellowString("Rebuilding"))
+		if err := m.npm.RebuildLayer(m.app.Root, m.cacheLayer.Root); err != nil {
+			return fmt.Errorf("failed to rebuild node_modules: %v", err)
+		}
+	} else {
+		m.logger.SubsequentLine("%s node_modules", color.YellowString("Installing"))
+		if err := m.npm.InstallInLayer(m.app.Root, m.cacheLayer.Root); err != nil {
+			return fmt.Errorf("failed to install node_modules: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (m Modules) installInLaunch() error {
+	sameSHASums, err := m.packageLockMatchesMetadataSha()
+	if err != nil {
+		return err
+	}
+
+	if sameSHASums {
+		m.logger.SubsequentLine("app and launch layers match.")
+		return nil
+	}
+
+	cacheModulesDir := filepath.Join(m.cacheLayer.Root, "node_modules")
+	launchModulesDir := filepath.Join(m.launchLayer.Root, "node_modules")
+
+	if err := m.npm.CopyToDst(cacheModulesDir, launchModulesDir); err != nil {
+		return fmt.Errorf("failed to copy the node_modules to the launch layer: %v", err)
+	}
+
+	if err := m.writeMetadataSha(filepath.Join(m.app.Root, "package-lock.json")); err != nil {
+		return fmt.Errorf("failed to write metadata to package-lock.json: %v", err)
+	}
+
+	return nil
+}
+
+func (m Modules) writeProfile() error {
+	launchModulesDir := filepath.Join(m.launchLayer.Root, "node_modules")
+
+	m.logger.SubsequentLine("Writing profile.d/NODE_PATH")
+	if err := m.launchLayer.WriteProfile("NODE_PATH", fmt.Sprintf("export NODE_PATH=%s", launchModulesDir)); err != nil {
+		return fmt.Errorf("failed to write NODE_PATH in the launch layer: %v", err)
 	}
 
 	return nil
