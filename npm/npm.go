@@ -19,35 +19,28 @@ func NewNPM() *NPM {
 	}
 }
 
-// Install node_mdules from a src layer to a target
-func (n *NPM) InstallInLayer(src, dst string) error {
-	if err := os.MkdirAll(dst, 0777); err != nil {
-		return fmt.Errorf("failed to create directory %s : %v", dst, err)
+func (n *NPM) InstallToLayer(srcLayer, dstLayer string) error {
+
+	srcPackageJsonPath := filepath.Join(srcLayer, "package.json")
+	_, err := os.Stat(srcPackageJsonPath)
+	if err != nil {
+		return fmt.Errorf("package.json file not found at %s with error %s", srcPackageJsonPath, err)
 	}
 
-	appPackageJsonPath := filepath.Join(src, "package.json")
-	cachePackageJsonPath := filepath.Join(dst, "package.json")
-	if err := utils.CopyFile(appPackageJsonPath, cachePackageJsonPath); err != nil {
-		return fmt.Errorf("failed to copy package.json : %v", err)
-	}
-
-	appPackageLockPath := filepath.Join(src, "package-lock.json")
-	cachePackageLockPath := filepath.Join(dst, "package-lock.json")
-	if err := utils.CopyFile(appPackageLockPath, cachePackageLockPath); err != nil {
-		return fmt.Errorf("failed to copy package-lock.json : %v", err)
-	}
-
-	return n.Runner.Run(src,
-		"--prefix",
-		dst,
+	if err = n.Runner.Run(
+		srcLayer,
 		"install",
 		"--unsafe-perm",
 		"--cache",
-		fmt.Sprintf("%s/npm-cache", dst),
-	)
+		fmt.Sprintf("%s/npm-cache", srcLayer),
+	); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (n *NPM) CopyToDst(src, dst string) error {
+func (n *NPM) CleanAndCopyToDst(src, dst string) error {
 	if err := os.RemoveAll(dst); err != nil {
 		return fmt.Errorf("failed to remove modules in %s : %v", dst, err)
 	}
@@ -58,17 +51,24 @@ func (n *NPM) CopyToDst(src, dst string) error {
 	return nil
 }
 
-// RebuildLayer copies node_modules from a source layer to a target layer and
-// runs a `npm rebuild`
 func (n *NPM) RebuildLayer(srcLayer, dstLayer string) error {
+	srcPackageJsonPath := filepath.Join(srcLayer, "package.json")
+	_, err := os.Stat(srcPackageJsonPath)
+	if err != nil {
+		return fmt.Errorf("package.json file not found at %s with error %s", srcPackageJsonPath, err)
+	}
+
 	srcModulesDir := filepath.Join(srcLayer, "node_modules")
 	dstModulesDir := filepath.Join(dstLayer, "node_modules")
 
-	if err := n.CopyToDst(srcModulesDir, dstModulesDir); err != nil {
-		return fmt.Errorf("failed to rebuild : %v", err)
+	if err := n.Runner.Run(dstLayer, "rebuild"); err != nil {
+		return err
 	}
 
-	return n.Runner.Run(dstLayer, "rebuild")
+	if err := n.CleanAndCopyToDst(srcModulesDir, dstModulesDir); err != nil {
+		return fmt.Errorf("failed to rebuild : %v", err)
+	}
+	return nil
 }
 
 func (n *NPM) copyModules(src, dst string) error {

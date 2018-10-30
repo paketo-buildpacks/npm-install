@@ -28,9 +28,9 @@ func CreateLaunchMetadata() libbuildpackV3.LaunchMetadata {
 }
 
 type ModuleInstaller interface {
-	InstallInLayer(string, string) error
+	InstallToLayer(string, string) error
 	RebuildLayer(string, string) error
-	CopyToDst(string, string) error
+	CleanAndCopyToDst(string, string) error
 	// WriteProfileD(string) error
 	// WriteENV(string) error
 }
@@ -80,13 +80,26 @@ func (m Modules) Contribute() error {
 
 	if m.buildContribution {
 		m.cacheLayer.AppendPathEnv("NODE_PATH", filepath.Join(m.cacheLayer.Root, "node_modules"))
-
-		if err := m.installInCache(); err != nil {
-			return fmt.Errorf("Failed to install in cache for build : %v", err)
+		if !m.launchContribution {
+			if err := m.installInCache(); err != nil {
+				return fmt.Errorf("Failed to install in cache for build : %v", err)
+			}
 		}
 	}
 
 	if m.launchContribution {
+		if err := m.writeProfile(); err != nil {
+			return fmt.Errorf("Failed to write profile.d : %v", err)
+		}
+
+		sameSHASums, err := m.packageLockMatchesMetadataSha()
+		if err != nil {
+			return err
+		}
+
+		if sameSHASums {
+			return nil
+		}
 
 		if err := m.installInCache(); err != nil {
 			return fmt.Errorf("Failed to install in cache for launch : %v", err)
@@ -94,10 +107,6 @@ func (m Modules) Contribute() error {
 
 		if err := m.installInLaunch(); err != nil {
 			return fmt.Errorf("Failed to install in launch : %v", err)
-		}
-
-		if err := m.writeProfile(); err != nil {
-			return fmt.Errorf("Failed to write profile.d : %v", err)
 		}
 	}
 
@@ -167,17 +176,7 @@ func (m *Modules) copyModulesToLayer(src, dest string) error {
 }
 
 func (m Modules) installInCache() error {
-	sameSHASums, err := m.packageLockMatchesMetadataSha()
-	if err != nil {
-		return err
-	}
-
-	if sameSHASums {
-		return nil
-	}
-
 	appModulesDir := filepath.Join(m.app.Root, "node_modules")
-
 	vendored, err := libjavabuildpack.FileExists(appModulesDir)
 	if err != nil {
 		return fmt.Errorf("could not locate app modules directory : %s", err)
@@ -190,9 +189,31 @@ func (m Modules) installInCache() error {
 		}
 	} else {
 		m.logger.SubsequentLine("%s node_modules", color.YellowString("Installing"))
-		if err := m.npm.InstallInLayer(m.app.Root, m.cacheLayer.Root); err != nil {
-			return fmt.Errorf("failed to install node_modules: %v", err)
+
+		cacheModulesDir := filepath.Join(m.cacheLayer.Root, "node_modules")
+
+		if exist, err := libjavabuildpack.FileExists(cacheModulesDir); err != nil {
+			return err
+		} else if !exist {
+			if err := os.MkdirAll(cacheModulesDir, 0777); err != nil {
+				return fmt.Errorf("could not make node modules directory : %s", err)
+			}
 		}
+
+		if err := os.Symlink(cacheModulesDir, appModulesDir); err != nil {
+			return fmt.Errorf("could not symlink node modules directory : %s", err)
+		}
+		defer func() error {
+			if err := os.Remove(appModulesDir); err != nil {
+				return err
+			}
+			return nil
+		}()
+
+		if err := m.npm.InstallToLayer(m.app.Root, m.cacheLayer.Root); err != nil {
+			return fmt.Errorf("failed to install and copy node_modules: %v", err)
+		}
+
 	}
 
 	return nil
@@ -212,7 +233,7 @@ func (m Modules) installInLaunch() error {
 	cacheModulesDir := filepath.Join(m.cacheLayer.Root, "node_modules")
 	launchModulesDir := filepath.Join(m.launchLayer.Root, "node_modules")
 
-	if err := m.npm.CopyToDst(cacheModulesDir, launchModulesDir); err != nil {
+	if err := m.npm.CleanAndCopyToDst(cacheModulesDir, launchModulesDir); err != nil {
 		return fmt.Errorf("failed to copy the node_modules to the launch layer: %v", err)
 	}
 
