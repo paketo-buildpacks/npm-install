@@ -168,24 +168,6 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})
-
-			//when("launch layer metadata is different", func() {
-			//	it.Before(func() {
-			//
-			//	})
-			//	it("installs node_modules in cache layer", func() {
-			//
-			//	})
-			//})
-			//
-			//when("launch layer metadata is the same", func() {
-			//	it.Before(func() {
-			//
-			//	})
-			//	it("installs node_modules in cache layer", func() {
-			//
-			//	})
-			//})
 		})
 
 		when("when launch is set to true", func() {
