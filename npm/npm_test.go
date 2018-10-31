@@ -90,7 +90,7 @@ func testNpm(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("rebuilds in dst", func() {
-			mockRunner.EXPECT().Run(cacheLayer, "rebuild").Times(1)
+			mockRunner.EXPECT().Run(appRoot, "rebuild").Times(1)
 
 			err = Npm.RebuildLayer(appRoot, cacheLayer)
 			Expect(err).To(BeNil())
