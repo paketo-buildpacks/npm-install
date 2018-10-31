@@ -61,7 +61,7 @@ func (n *NPM) RebuildLayer(srcLayer, dstLayer string) error {
 	srcModulesDir := filepath.Join(srcLayer, "node_modules")
 	dstModulesDir := filepath.Join(dstLayer, "node_modules")
 
-	if err := n.Runner.Run(dstLayer, "rebuild"); err != nil {
+	if err := n.Runner.Run(srcLayer, "rebuild"); err != nil {
 		return err
 	}
 
