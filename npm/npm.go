@@ -23,7 +23,7 @@ func (n *NPM) InstallToLayer(srcLayer, dstLayer string) error {
 		return fmt.Errorf("failed to find file %s ", srcPackageJsonPath)
 	}
 
-	return n.Runner.Run(srcLayer, "install", "--unsafe-perm", "--cache", filepath.Join(dstLayer, "npm-cache"))
+	return n.Runner.Run(srcLayer, "install", "--unsafe-perm", "--cache", filepath.Join(srcLayer, "npm-cache"))
 }
 
 func (n *NPM) RebuildLayer(srcLayer, dstLayer string) error {

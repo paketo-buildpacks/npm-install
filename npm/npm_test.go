@@ -109,7 +109,7 @@ func testNpm(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("run NPM install in the app dir", func() {
-			installCommand := []string{"install", "--unsafe-perm", "--cache", filepath.Join(cacheLayer, "npm-cache")}
+			installCommand := []string{"install", "--unsafe-perm", "--cache", filepath.Join(appRoot, "npm-cache")}
 			mockRunner.EXPECT().Run(appRoot, installCommand).Times(1)
 
 			err = Npm.InstallToLayer(appRoot, cacheLayer)
