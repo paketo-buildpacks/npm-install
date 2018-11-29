@@ -10,7 +10,7 @@ import (
 )
 
 const NodeDependency = "node"
-const NPMDependency = "npm"
+const NPMDependency = "modules"
 
 func UpdateBuildPlan(libDetect *libbuildpackV3.Detect) error {
 	packageJSONPath := filepath.Join(libDetect.Application.Root, "package.json")
