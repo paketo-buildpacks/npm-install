@@ -1,97 +1,108 @@
 package integration
 
 import (
-	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
-	"path/filepath"
 	"testing"
 
-	"github.com/cloudfoundry/npm-cnb/detect"
+	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 
-	"github.com/buildpack/libbuildpack"
-	"github.com/cloudfoundry/dagger"
 	. "github.com/onsi/gomega"
 )
 
 func TestIntegration(t *testing.T) {
 	RegisterTestingT(t)
-	spec.Run(t, "integration", testIntegration, spec.Report(report.Terminal{}))
+	spec.Run(t, "Integration", testIntegration, spec.Report(report.Terminal{}))
 }
 
 func testIntegration(t *testing.T, when spec.G, it spec.S) {
-	var (
-		rootDir string
-		dagg    *dagger.Dagger
-	)
+	//var (
+	//	rootDir    string
+	//	dagg       *dagger.Dagger
+	//	buildpacks []struct {
+	//		ID  string
+	//		URI string
+	//	}
+	//	groups          []dagger.Group
+	//	builderMetadata dagger.BuilderMetadata
+	//)
+	//
+	//it.Before(func() {
+	//	var err error
+	//
+	//	rootDir, err = dagger.FindRoot()
+	//	Expect(err).ToNot(HaveOccurred())
+	//
+	//	dagg, err = dagger.NewDagger(rootDir)
+	//	Expect(err).ToNot(HaveOccurred())
+	//
+	//	buildpacks = []struct {
+	//		ID  string
+	//		URI string
+	//	}{
+	//		{
+	//			ID:  "org.cloudfoundry.buildpacks.nodejs",
+	//			URI: "https://github.com/cloudfoundry/nodejs-cnb/releases/download/v0.0.1-alpha/nodejs-cnb.tgz",
+	//		},
+	//		{
+	//			ID:  "org.cloudfoundry.buildpacks.old_npm",
+	//			URI: "file://" + dagg.BuildpackDir,
+	//		},
+	//	}
+	//
+	//	groups = []dagger.Group{
+	//		{
+	//			Buildpacks: []buildpack.Info{
+	//				{
+	//					ID:      "org.cloudfoundry.buildpacks.nodejs",
+	//					Name:    "nodejs",
+	//					Version: "0.0.1",
+	//				},
+	//				{
+	//					ID:      "org.cloudfoundry.buildpacks.old_npm",
+	//					Name:    "old_npm",
+	//					Version: "0.0.1",
+	//				},
+	//			},
+	//		},
+	//	}
+	//
+	//	builderMetadata = dagger.BuilderMetadata{
+	//		Buildpacks: buildpacks,
+	//		Groups:     groups,
+	//	}
+	//})
+	//
+	//it.After(func() {
+	//	dagg.Destroy()
+	//})
+	//
+	//when("when the node_modules are vendored", func() {
+	//	it("should build a working OCI image for a simple app", func() {
+	//		app, err := dagg.Pack(filepath.Join(rootDir, "fixtures", "simple_app_vendored"), builderMetadata)
+	//		Expect(err).ToNot(HaveOccurred())
+	//
+	//		err = app.Start()
+	//		Expect(err).ToNot(HaveOccurred())
+	//
+	//		err = app.HTTPGet("/")
+	//		Expect(err).ToNot(HaveOccurred())
+	//	})
+	//})
+	//
+	//when("when the node_modules are not vendored", func() {
+	//	it("should build a working OCI image for a simple app", func() {
+	//		app, err := dagg.Pack(filepath.Join(rootDir, "fixtures", "simple_app"), builderMetadata)
+	//		Expect(err).ToNot(HaveOccurred())
+	//
+	//		err = app.Start()
+	//		Expect(err).ToNot(HaveOccurred())
+	//
+	//		err = app.HTTPGet("/")
+	//		Expect(err).ToNot(HaveOccurred())
+	//	})
+	//})
 
-	it.Before(func() {
-		var err error
-
-		rootDir, err = dagger.FindRoot()
-		Expect(err).ToNot(HaveOccurred())
-
-		dagg, err = dagger.NewDagger(rootDir)
-		Expect(err).ToNot(HaveOccurred())
-
-	})
-
-	it.After(func() {
-		dagg.Destroy()
-	})
-
-	it("should run detect", func() {
-		detectResult, err := dagg.Detect(
-			filepath.Join(rootDir, "fixtures", "simple_app"),
-			dagger.Order{
-				Groups: []dagger.Group{
-					{
-						[]libbuildpack.BuildpackInfo{
-							{
-								ID:      "org.cloudfoundry.buildpacks.npm",
-								Version: "0.0.1",
-							},
-						},
-					},
-				},
-			})
-
-		Expect(err).ToNot(HaveOccurred())
-
-		Expect(len(detectResult.Group.Buildpacks)).To(Equal(1))
-		Expect(detectResult.Group.Buildpacks[0].ID).To(Equal("org.cloudfoundry.buildpacks.npm"))
-		Expect(detectResult.Group.Buildpacks[0].Version).To(Equal("0.0.1"))
-
-		Expect(len(detectResult.BuildPlan)).To(Equal(2))
-
-		Expect(detectResult.BuildPlan).To(HaveKey(detect.NodeDependency))
-		Expect(detectResult.BuildPlan[detect.NodeDependency].Version).To(Equal("~10"))
-		Expect(len(detectResult.BuildPlan[detect.NodeDependency].Metadata)).To(Equal(2))
-		Expect(detectResult.BuildPlan[detect.NodeDependency].Metadata["build"]).To(BeTrue())
-		Expect(detectResult.BuildPlan[detect.NodeDependency].Metadata["launch"]).To(BeTrue())
-
-		Expect(detectResult.BuildPlan).To(HaveKey(detect.NPMDependency))
-		Expect(len(detectResult.BuildPlan[detect.NPMDependency].Metadata)).To(Equal(1))
-		Expect(detectResult.BuildPlan[detect.NPMDependency].Metadata["launch"]).To(BeTrue())
-	})
-
-	it("should run build", func() {
-		group := dagger.Group{
-			Buildpacks: []libbuildpack.BuildpackInfo{
-				{
-					ID:      "org.cloudfoundry.buildpacks.npm",
-					Version: "0.0.1",
-				},
-			},
-		}
-		buildResult, err := dagg.Build(filepath.Join(rootDir, "fixtures", "simple_app"), group, libbuildpack.BuildPlan{})
-		Expect(err).ToNot(HaveOccurred())
-
-		metadata, found, err := buildResult.GetLaunchMetadata()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(found).To(Equal(true))
-
-		Expect(len(metadata.Processes)).To(Equal(1))
-		Expect(metadata.Processes[0].Type).To(Equal("web"))
-		Expect(metadata.Processes[0].Command).To(Equal("npm start"))
+	it("should fail until the V3 lifecycle is updated", func() {
+		Expect(true).To(BeFalse())
 	})
 }
