@@ -11,33 +11,33 @@ import (
 )
 
 func main() {
-	builder, err := build.DefaultBuild()
+	context, err := build.DefaultBuild()
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to create default builder: %s", err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to create default build context: %s", err)
 		os.Exit(100)
 	}
 
-	code, err := runBuild(builder)
+	code, err := runBuild(context)
 	if err != nil {
-		builder.Logger.Info(err.Error())
+		context.Logger.Info(err.Error())
 	}
 
 	os.Exit(code)
 }
 
-func runBuild(builder build.Build) (int, error) {
-	builder.Logger.FirstLine(builder.Logger.PrettyIdentity(builder.Buildpack))
+func runBuild(context build.Build) (int, error) {
+	context.Logger.FirstLine(context.Logger.PrettyIdentity(context.Buildpack))
 
-	contributor, willContribute, err := modules.NewContributor(builder, npm.NPM{})
+	contributor, willContribute, err := modules.NewContributor(context, npm.NPM{})
 	if err != nil {
-		return builder.Failure(102), err
+		return context.Failure(102), err
 	}
 
 	if willContribute {
 		if err := contributor.Contribute(); err != nil {
-			return builder.Failure(103), err
+			return context.Failure(103), err
 		}
 	}
 
-	return builder.Success(buildplan.BuildPlan{})
+	return context.Success(buildplan.BuildPlan{})
 }
