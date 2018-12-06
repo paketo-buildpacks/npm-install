@@ -1,12 +1,12 @@
 package modules_test
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/buildpack/libbuildpack/buildplan"
+	"github.com/cloudfoundry/libcfbuildpack/layers"
 	"github.com/cloudfoundry/libcfbuildpack/test"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/golang/mock/gomock"
@@ -35,8 +35,6 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			mockPkgManager = NewMockPackageManager(mockCtrl)
 
 			factory = test.NewBuildFactory(t)
-
-			Expect(os.Mkdir(factory.Build.Application.Root, 0777)).To(Succeed())
 		})
 
 		it.After(func() {
@@ -54,8 +52,11 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 		when("there is a package-lock.json", func() {
 			it.Before(func() {
-				lockFile := filepath.Join(factory.Build.Application.Root, "package-lock.json")
-				Expect(ioutil.WriteFile(lockFile, []byte("package lock"), 0666)).To(Succeed())
+				layers.WriteToFile(
+					strings.NewReader("package lock"),
+					filepath.Join(factory.Build.Application.Root, "package-lock.json"),
+					0666,
+				)
 			})
 
 			it("returns true if a build plan exists", func() {
@@ -83,12 +84,13 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 			when("the app is vendored", func() {
 				it.Before(func() {
-					nodeModules := filepath.Join(factory.Build.Application.Root, "node_modules")
-					Expect(os.Mkdir(nodeModules, 0777)).To(Succeed())
+					layers.WriteToFile(
+						strings.NewReader("some module"),
+						filepath.Join(factory.Build.Application.Root, "node_modules", "test_module"),
+						0666,
+					)
 
-					mockPkgManager.EXPECT().Rebuild(factory.Build.Application.Root).Do(func(location string) {
-						Expect(ioutil.WriteFile(filepath.Join(nodeModules, "test_module"), []byte("some module"), 0666)).To(Succeed())
-					})
+					mockPkgManager.EXPECT().Rebuild(factory.Build.Application.Root)
 				})
 
 				it("contributes modules to the cache layer when included in the build plan", func() {
@@ -131,9 +133,11 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			when("the app is not vendored", func() {
 				it.Before(func() {
 					mockPkgManager.EXPECT().Install(factory.Build.Application.Root).Do(func(location string) {
-						nodeModules := filepath.Join(factory.Build.Application.Root, "node_modules")
-						Expect(os.Mkdir(nodeModules, 0777)).To(Succeed())
-						Expect(ioutil.WriteFile(filepath.Join(nodeModules, "test_module"), []byte("some module"), 0666)).To(Succeed())
+						layers.WriteToFile(
+							strings.NewReader("some module"),
+							filepath.Join(factory.Build.Application.Root, "node_modules", "test_module"),
+							0666,
+						)
 					})
 				})
 

@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/buildpack/libbuildpack/buildplan"
 	"github.com/cloudfoundry/libcfbuildpack/detect"
+	"github.com/cloudfoundry/libcfbuildpack/layers"
 	"github.com/cloudfoundry/libcfbuildpack/test"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/cloudfoundry/npm-cnb/node"
@@ -23,22 +23,10 @@ func TestUnitDetect(t *testing.T) {
 }
 
 func testDetect(t *testing.T, when spec.G, it spec.S) {
-	var (
-		err     error
-		dir     string
-		factory *test.DetectFactory
-	)
+	var factory *test.DetectFactory
 
 	it.Before(func() {
-		dir, err = ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
-
 		factory = test.NewDetectFactory(t)
-		factory.Detect.Application.Root = dir
-	})
-
-	it.After(func() {
-		Expect(os.RemoveAll(dir)).To(Succeed())
 	})
 
 	when("there is a package.json with a node version in engines", func() {
@@ -46,7 +34,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 
 		it.Before(func() {
 			packageJSONString := fmt.Sprintf(`{"engines": {"node" : "%s"}}`, version)
-			Expect(ioutil.WriteFile(filepath.Join(dir, "package.json"), []byte(packageJSONString), 0666)).To(Succeed())
+			layers.WriteToFile(strings.NewReader(packageJSONString), filepath.Join(factory.Detect.Application.Root, "package.json"), 0666)
 		})
 
 		it("should pass", func() {
@@ -70,7 +58,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 
 	when("there is a package.json", func() {
 		it.Before(func() {
-			Expect(ioutil.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0666)).To(Succeed())
+			layers.WriteToFile(strings.NewReader("{}"), filepath.Join(factory.Detect.Application.Root, "package.json"), 0666)
 		})
 
 		it("should pass with the default version of node", func() {
