@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/cloudfoundry/libcfbuildpack/helper"
 	"os"
 	"path/filepath"
 
 	"github.com/buildpack/libbuildpack/buildplan"
 	"github.com/cloudfoundry/libcfbuildpack/detect"
-	"github.com/cloudfoundry/libcfbuildpack/layers"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/cloudfoundry/npm-cnb/node"
 )
@@ -30,7 +30,7 @@ func main() {
 func runDetect(context detect.Detect) (int, error) {
 	packageJSON := filepath.Join(context.Application.Root, "package.json")
 
-	if exists, err := layers.FileExists(packageJSON); err != nil {
+	if exists, err := helper.FileExists(packageJSON); err != nil {
 		return context.Fail(), fmt.Errorf("error checking filepath: %s", packageJSON)
 	} else if !exists {
 		return context.Fail(), fmt.Errorf(`no "package.json" found at: %s`, packageJSON)
