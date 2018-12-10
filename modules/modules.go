@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/cloudfoundry/libcfbuildpack/helper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -37,7 +38,7 @@ func NewContributor(builder build.Build, pkgManager PackageManager) (Contributor
 	}
 
 	lockFile := filepath.Join(builder.Application.Root, "package-lock.json")
-	if exists, err := layers.FileExists(lockFile); err != nil {
+	if exists, err := helper.FileExists(lockFile); err != nil {
 		return Contributor{}, false, err
 	} else if !exists {
 		return Contributor{}, false, fmt.Errorf(`unable to find "package-lock.json"`)
@@ -73,7 +74,7 @@ func (c Contributor) Contribute() error {
 	return c.layer.Contribute(c, func(layer layers.Layer) error {
 		nodeModules := filepath.Join(c.app.Root, "node_modules")
 
-		vendored, err := layers.FileExists(nodeModules)
+		vendored, err := helper.FileExists(nodeModules)
 		if err != nil {
 			return fmt.Errorf("unable to stat node_modules: %s", err.Error())
 		}
@@ -92,7 +93,7 @@ func (c Contributor) Contribute() error {
 			return fmt.Errorf("unable make layer: %s", err.Error())
 		}
 
-		if err := layers.CopyDirectory(nodeModules, layer.Root); err != nil {
+		if err := helper.CopyDirectory(nodeModules, layer.Root); err != nil {
 			return fmt.Errorf(`unable to copy "%s" to "%s": %s`, nodeModules, layer.Root, err.Error())
 		}
 

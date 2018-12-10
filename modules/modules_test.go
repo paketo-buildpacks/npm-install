@@ -2,11 +2,9 @@ package modules_test
 
 import (
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/buildpack/libbuildpack/buildplan"
-	"github.com/cloudfoundry/libcfbuildpack/layers"
 	"github.com/cloudfoundry/libcfbuildpack/test"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/golang/mock/gomock"
@@ -43,7 +41,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 		when("there is no package-lock.json", func() {
 			it("fails", func() {
-				factory.AddBuildPlan(t, modules.Dependency, buildplan.Dependency{})
+				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
 
 				_, _, err := modules.NewContributor(factory.Build, mockPkgManager)
 				Expect(err).To(HaveOccurred())
@@ -52,15 +50,15 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 		when("there is a package-lock.json", func() {
 			it.Before(func() {
-				layers.WriteToFile(
-					strings.NewReader("package lock"),
+				test.WriteFile(
+					t,
 					filepath.Join(factory.Build.Application.Root, "package-lock.json"),
-					0666,
+					"package lock",
 				)
 			})
 
 			it("returns true if a build plan exists", func() {
-				factory.AddBuildPlan(t, modules.Dependency, buildplan.Dependency{})
+				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
 
 				_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
 				Expect(err).NotTo(HaveOccurred())
@@ -74,7 +72,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			it("uses package-lock.json for identity", func() {
-				factory.AddBuildPlan(t, modules.Dependency, buildplan.Dependency{})
+				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
 
 				contributor, _, _ := modules.NewContributor(factory.Build, mockPkgManager)
 				name, version := contributor.Identity()
@@ -84,17 +82,17 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 			when("the app is vendored", func() {
 				it.Before(func() {
-					layers.WriteToFile(
-						strings.NewReader("some module"),
+					test.WriteFile(
+						t,
 						filepath.Join(factory.Build.Application.Root, "node_modules", "test_module"),
-						0666,
+						"some module",
 					)
 
 					mockPkgManager.EXPECT().Rebuild(factory.Build.Application.Root)
 				})
 
 				it("contributes modules to the cache layer when included in the build plan", func() {
-					factory.AddBuildPlan(t, modules.Dependency, buildplan.Dependency{
+					factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
 						Metadata: buildplan.Metadata{"build": true},
 					})
 
@@ -104,15 +102,15 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 					Expect(contributor.Contribute()).To(Succeed())
 
 					layer := factory.Build.Layers.Layer(modules.Dependency)
-					test.BeLayerLike(t, layer, true, true, false)
-					test.BeFileLike(t, filepath.Join(layer.Root, "test_module"), 0644, "some module")
-					test.BeOverrideSharedEnvLike(t, layer, "NODE_PATH", layer.Root)
+					Expect(layer).To(test.HaveLayerMetadata(true, true, false))
+					Expect(filepath.Join(layer.Root, "test_module")).To(BeARegularFile())
+					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", layer.Root))
 
 					Expect(filepath.Join(factory.Build.Application.Root, "node_modules")).NotTo(BeADirectory())
 				})
 
 				it("contributes modules to the launch layer when included in the build plan", func() {
-					factory.AddBuildPlan(t, modules.Dependency, buildplan.Dependency{
+					factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
 						Metadata: buildplan.Metadata{"launch": true},
 					})
 
@@ -122,9 +120,9 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 					Expect(contributor.Contribute()).To(Succeed())
 
 					layer := factory.Build.Layers.Layer(modules.Dependency)
-					test.BeLayerLike(t, layer, false, true, true)
-					test.BeFileLike(t, filepath.Join(layer.Root, "test_module"), 0644, "some module")
-					test.BeOverrideSharedEnvLike(t, layer, "NODE_PATH", layer.Root)
+					Expect(layer).To(test.HaveLayerMetadata(false, true, true))
+					Expect(filepath.Join(layer.Root, "test_module")).To(BeARegularFile())
+					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", layer.Root))
 
 					Expect(filepath.Join(factory.Build.Application.Root, "node_modules")).NotTo(BeADirectory())
 				})
@@ -133,16 +131,16 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			when("the app is not vendored", func() {
 				it.Before(func() {
 					mockPkgManager.EXPECT().Install(factory.Build.Application.Root).Do(func(location string) {
-						layers.WriteToFile(
-							strings.NewReader("some module"),
+						test.WriteFile(
+							t,
 							filepath.Join(factory.Build.Application.Root, "node_modules", "test_module"),
-							0666,
+							"some module",
 						)
 					})
 				})
 
 				it("contributes modules to the cache layer when included in the build plan", func() {
-					factory.AddBuildPlan(t, modules.Dependency, buildplan.Dependency{
+					factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
 						Metadata: buildplan.Metadata{"build": true},
 					})
 
@@ -152,15 +150,15 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 					Expect(contributor.Contribute()).To(Succeed())
 
 					layer := factory.Build.Layers.Layer(modules.Dependency)
-					test.BeLayerLike(t, layer, true, true, false)
-					test.BeFileLike(t, filepath.Join(layer.Root, "test_module"), 0644, "some module")
-					test.BeOverrideSharedEnvLike(t, layer, "NODE_PATH", layer.Root)
+					Expect(layer).To(test.HaveLayerMetadata(true, true, false))
+					Expect(filepath.Join(layer.Root, "test_module")).To(BeARegularFile())
+					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", layer.Root))
 
 					Expect(filepath.Join(factory.Build.Application.Root, "node_modules")).NotTo(BeADirectory())
 				})
 
 				it("contributes modules to the launch layer when included in the build plan", func() {
-					factory.AddBuildPlan(t, modules.Dependency, buildplan.Dependency{
+					factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
 						Metadata: buildplan.Metadata{"launch": true},
 					})
 
@@ -170,9 +168,9 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 					Expect(contributor.Contribute()).To(Succeed())
 
 					layer := factory.Build.Layers.Layer(modules.Dependency)
-					test.BeLayerLike(t, layer, false, true, true)
-					test.BeFileLike(t, filepath.Join(layer.Root, "test_module"), 0644, "some module")
-					test.BeOverrideSharedEnvLike(t, layer, "NODE_PATH", layer.Root)
+					Expect(layer).To(test.HaveLayerMetadata(false, true, true))
+					Expect(filepath.Join(layer.Root, "test_module")).To(BeARegularFile())
+					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", layer.Root))
 
 					Expect(filepath.Join(factory.Build.Application.Root, "node_modules")).NotTo(BeADirectory())
 				})

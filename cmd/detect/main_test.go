@@ -3,12 +3,10 @@ package main
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/buildpack/libbuildpack/buildplan"
 	"github.com/cloudfoundry/libcfbuildpack/detect"
-	"github.com/cloudfoundry/libcfbuildpack/layers"
 	"github.com/cloudfoundry/libcfbuildpack/test"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/cloudfoundry/npm-cnb/node"
@@ -34,7 +32,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 
 		it.Before(func() {
 			packageJSONString := fmt.Sprintf(`{"engines": {"node" : "%s"}}`, version)
-			layers.WriteToFile(strings.NewReader(packageJSONString), filepath.Join(factory.Detect.Application.Root, "package.json"), 0666)
+			test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, "package.json"), packageJSONString)
 		})
 
 		it("should pass", func() {
@@ -43,7 +41,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 
 			Expect(code).To(Equal(detect.PassStatusCode))
 
-			test.BeBuildPlanLike(t, factory.Output, buildplan.BuildPlan{
+			Expect(factory.Output).To(Equal(buildplan.BuildPlan{
 				node.Dependency: buildplan.Dependency{
 					Version:  version,
 					Metadata: buildplan.Metadata{"build": true, "launch": true},
@@ -51,14 +49,14 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 				modules.Dependency: buildplan.Dependency{
 					Metadata: buildplan.Metadata{"launch": true},
 				},
-			})
+			}))
 
 		})
 	})
 
 	when("there is a package.json", func() {
 		it.Before(func() {
-			layers.WriteToFile(strings.NewReader("{}"), filepath.Join(factory.Detect.Application.Root, "package.json"), 0666)
+			test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, "package.json"), "{}")
 		})
 
 		it("should pass with the default version of node", func() {
@@ -67,7 +65,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 
 			Expect(code).To(Equal(detect.PassStatusCode))
 
-			test.BeBuildPlanLike(t, factory.Output, buildplan.BuildPlan{
+			Expect(factory.Output).To(Equal(buildplan.BuildPlan{
 				node.Dependency: buildplan.Dependency{
 					Version:  "",
 					Metadata: buildplan.Metadata{"build": true, "launch": true},
@@ -75,7 +73,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 				modules.Dependency: buildplan.Dependency{
 					Metadata: buildplan.Metadata{"launch": true},
 				},
-			})
+			}))
 
 		})
 	})
