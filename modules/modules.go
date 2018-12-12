@@ -4,10 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/cloudfoundry/libcfbuildpack/helper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/cloudfoundry/libcfbuildpack/helper"
 
 	"github.com/buildpack/libbuildpack/application"
 	"github.com/cloudfoundry/libcfbuildpack/build"
@@ -21,23 +22,31 @@ type PackageManager interface {
 	Rebuild(location string) error
 }
 
+type Metadata struct {
+	Hash string
+}
+
+func (m Metadata) Identity() (name string, version string) {
+	return Dependency, m.Hash
+}
+
 type Contributor struct {
+	Metadata           Metadata
 	buildContribution  bool
 	launchContribution bool
 	pkgManager         PackageManager
 	app                application.Application
 	layer              layers.Layer
 	launch             layers.Layers
-	id                 string
 }
 
-func NewContributor(builder build.Build, pkgManager PackageManager) (Contributor, bool, error) {
-	plan, shouldUseNPM := builder.BuildPlan[Dependency]
+func NewContributor(context build.Build, pkgManager PackageManager) (Contributor, bool, error) {
+	plan, shouldUseNPM := context.BuildPlan[Dependency]
 	if !shouldUseNPM {
 		return Contributor{}, false, nil
 	}
 
-	lockFile := filepath.Join(builder.Application.Root, "package-lock.json")
+	lockFile := filepath.Join(context.Application.Root, "package-lock.json")
 	if exists, err := helper.FileExists(lockFile); err != nil {
 		return Contributor{}, false, err
 	} else if !exists {
@@ -52,11 +61,11 @@ func NewContributor(builder build.Build, pkgManager PackageManager) (Contributor
 	hash := sha256.Sum256(buf)
 
 	contributor := Contributor{
-		app:        builder.Application,
+		app:        context.Application,
 		pkgManager: pkgManager,
-		layer:      builder.Layers.Layer(Dependency),
-		launch:     builder.Layers,
-		id:         hex.EncodeToString(hash[:]),
+		layer:      context.Layers.Layer(Dependency),
+		launch:     context.Layers,
+		Metadata:   Metadata{hex.EncodeToString(hash[:])},
 	}
 
 	if _, ok := plan.Metadata["build"]; ok {
@@ -71,7 +80,7 @@ func NewContributor(builder build.Build, pkgManager PackageManager) (Contributor
 }
 
 func (c Contributor) Contribute() error {
-	return c.layer.Contribute(c, func(layer layers.Layer) error {
+	return c.layer.Contribute(c.Metadata, func(layer layers.Layer) error {
 		nodeModules := filepath.Join(c.app.Root, "node_modules")
 
 		vendored, err := helper.FileExists(nodeModules)
@@ -80,10 +89,12 @@ func (c Contributor) Contribute() error {
 		}
 
 		if vendored {
+			c.layer.Logger.Info("Rebuilding node_modules")
 			if err := c.pkgManager.Rebuild(c.app.Root); err != nil {
 				return fmt.Errorf("unable to rebuild node_modules: %s", err.Error())
 			}
 		} else {
+			c.layer.Logger.Info("Installing node_modules")
 			if err := c.pkgManager.Install(c.app.Root); err != nil {
 				return fmt.Errorf("unable to install node_modules: %s", err.Error())
 			}
@@ -109,10 +120,6 @@ func (c Contributor) Contribute() error {
 			Processes: []layers.Process{{"web", "npm start"}},
 		})
 	}, c.flags()...)
-}
-
-func (c Contributor) Identity() (name string, version string) {
-	return Dependency, c.id
 }
 
 func (c Contributor) flags() []layers.Flag {

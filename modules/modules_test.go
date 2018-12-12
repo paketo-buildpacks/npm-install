@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/cloudfoundry/libcfbuildpack/layers"
+
 	"github.com/buildpack/libbuildpack/buildplan"
 	"github.com/cloudfoundry/libcfbuildpack/test"
 	"github.com/cloudfoundry/npm-cnb/modules"
@@ -75,7 +77,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
 
 				contributor, _, _ := modules.NewContributor(factory.Build, mockPkgManager)
-				name, version := contributor.Identity()
+				name, version := contributor.Metadata.Identity()
 				Expect(name).To(Equal(modules.Dependency))
 				Expect(version).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 			})
@@ -118,6 +120,8 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(contributor.Contribute()).To(Succeed())
+
+					Expect(factory.Build.Layers).To(test.HaveLaunchMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}}))
 
 					layer := factory.Build.Layers.Layer(modules.Dependency)
 					Expect(layer).To(test.HaveLayerMetadata(false, true, true))
@@ -166,6 +170,8 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(contributor.Contribute()).To(Succeed())
+
+					Expect(factory.Build.Layers).To(test.HaveLaunchMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}}))
 
 					layer := factory.Build.Layers.Layer(modules.Dependency)
 					Expect(layer).To(test.HaveLayerMetadata(false, true, true))
