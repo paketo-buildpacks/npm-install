@@ -8,7 +8,7 @@ install_pack() {
 
     if [[ $OS == "Darwin" ]]; then
         OS="macos"
-    elif [[ $OS == "linux" ]]; then
+    elif [[ $OS == "Linux" ]]; then
         OS="linux"
     else
         echo "Unsupported operating system"
