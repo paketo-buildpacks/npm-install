@@ -26,6 +26,7 @@ install_pack() {
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
 
 mkdir -p .bin
+export PATH=$(pwd)/.bin:$PATH
 
 if [[ ! -f .bin/pack ]]; then
     install_pack
