@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
-source  ./scripts/install_tools.sh
+./scripts/install_tools.sh
 
 export CNB_BUILD_IMAGE=${CNB_BUILD_IMAGE:-cfbuildpacks/cflinuxfs3-cnb-experimental:build}
 

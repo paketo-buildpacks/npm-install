@@ -1,16 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+PACK_VERSION="0.0.8"
+
+install_pack() {
+    OS=$(uname -s)
+
+    if [[ $OS == "Darwin" ]]; then
+        OS="macos"
+    elif [[ $OS == "linux" ]]; then
+        OS="linux"
+    else
+        echo "Unsupported operating system"
+        exit 1
+    fi
+
+    PACK_ARTIFACT=pack-$PACK_VERSION-$OS.tar.gz
+
+    wget https://github.com/buildpack/pack/releases/download/v$PACK_VERSION/$PACK_ARTIFACT
+    tar xzvf $PACK_ARTIFACT -C .bin
+    rm $PACK_ARTIFACT
+}
+
+
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
 
-if [ ! -d .bin ]; then
-  mkdir .bin
-fi
+mkdir -p .bin
 
-export GOBIN=$PWD/.bin
-export PATH=$GOBIN:$PATH
-
-if [[ ! -f $GOBIN/pack ]]; then
-    go get github.com/buildpack/pack@a0f5edb5d97d9ac20c15386e64d7c75168758736
-    go install github.com/buildpack/pack/cmd/pack
+if [[ ! -f .bin/pack ]]; then
+    install_pack
+elif [[ $(.bin/pack version | cut -d ' ' -f 2) != "v$PACK_VERSION" ]]; then
+    rm .bin/pack
+    install_pack
 fi
