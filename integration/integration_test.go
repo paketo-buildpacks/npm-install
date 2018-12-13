@@ -30,12 +30,9 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 			defer app.Destroy()
 
-			err = app.Start()
-			Expect(err).ToNot(HaveOccurred())
+			Expect(app.Start()).To(Succeed())
 
-			err = app.HTTPGet("/")
-			Expect(err).ToNot(HaveOccurred())
-
+			Expect(app.HTTPGet("/")).To(Succeed())
 		})
 	})
 
@@ -51,11 +48,9 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 			defer app.Destroy()
 
-			err = app.Start()
-			Expect(err).ToNot(HaveOccurred())
+			Expect(app.Start()).To(Succeed())
 
-			err = app.HTTPGet("/")
-			Expect(err).ToNot(HaveOccurred())
+			Expect(app.HTTPGet("/")).To(Succeed())
 		})
 	})
 }

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
-./scripts/install_tools.sh
+source ./scripts/install_tools.sh
 
 # TODO: change default to `cfbuildpacks/cflinuxfs3-cnb-experimental:build` when pack cli can use it
 export CNB_BUILD_IMAGE=${CNB_BUILD_IMAGE:-packs/samples:v3alpha2}
