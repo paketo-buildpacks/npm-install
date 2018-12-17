@@ -9,8 +9,8 @@ import (
 
 	"github.com/buildpack/libbuildpack/buildplan"
 	"github.com/cloudfoundry/libcfbuildpack/detect"
+	"github.com/cloudfoundry/nodejs-cnb/node"
 	"github.com/cloudfoundry/npm-cnb/modules"
-	"github.com/cloudfoundry/npm-cnb/node"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func runDetect(context detect.Detect) (int, error) {
 		return context.Fail(), fmt.Errorf(`no "package.json" found at: %s`, packageJSON)
 	}
 
-	version, err := node.GetNodeVersion(packageJSON)
+	version, err := node.GetVersion(packageJSON)
 	if err != nil {
 		return context.Fail(), fmt.Errorf(`unable to parse "package.json": %s`, err.Error())
 	}
