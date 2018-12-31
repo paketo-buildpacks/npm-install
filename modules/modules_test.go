@@ -1,12 +1,18 @@
 package modules_test
 
 import (
+	"bytes"
+	"fmt"
 	"path/filepath"
 	"testing"
+
+	"github.com/buildpack/libbuildpack/logger"
+	cflogger "github.com/cloudfoundry/libcfbuildpack/logger"
 
 	"github.com/cloudfoundry/libcfbuildpack/layers"
 
 	"github.com/buildpack/libbuildpack/buildplan"
+	bp "github.com/buildpack/libbuildpack/layers"
 	"github.com/cloudfoundry/libcfbuildpack/test"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/golang/mock/gomock"
@@ -135,11 +141,48 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			when("the app is not vendored", func() {
 				it.Before(func() {
 					mockPkgManager.EXPECT().Install(factory.Build.Application.Root).Do(func(location string) {
-						test.WriteFile(
-							t,
-							filepath.Join(factory.Build.Application.Root, "node_modules", "test_module"),
-							"some module",
+						module := filepath.Join(factory.Build.Application.Root, "node_modules", "test_module")
+						test.WriteFile(t, module, "some module")
+
+						cache := filepath.Join(factory.Build.Application.Root, "npm-cache", "test_cache_item")
+						test.WriteFile(t, cache, "some cache contents")
+					})
+				})
+
+				when("we get back node_modules and npm-cache", func() {
+					it("re-uses cached node_modules", func() {
+						debug := &bytes.Buffer{}
+						info := &bytes.Buffer{}
+
+						factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
+							Metadata: buildplan.Metadata{"launch": true},
+						})
+
+						root := factory.Build.Application.Root
+
+						factory.Build.Layers = layers.NewLayers(
+							bp.Layers{Root: filepath.Join(root, "layers")},
+							bp.Layers{Root: filepath.Join(root, "buildpack-cache")},
+							cflogger.Logger{Logger: logger.NewLogger(debug, info)},
 						)
+
+						layer := factory.Build.Layers.Layer(modules.Dependency)
+						nodeModules := filepath.Join(layer.Root, "node_modules", "test_module")
+						test.WriteFile(t, nodeModules, "some module")
+						fmt.Println("NodeModules from test ", nodeModules)
+
+						npmCache := filepath.Join(layer.Root, "npm-cache", "test_cache_item")
+						fmt.Println("npmCache from test ", npmCache)
+						test.WriteFile(t, npmCache, "some cache contents")
+
+						contributor, _, err := modules.NewContributor(factory.Build, mockPkgManager)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(contributor.Contribute()).To(Succeed())
+
+						Expect(info.String()).To(ContainSubstring("Reusing existing node_modules"))
+						Expect(info.String()).To(ContainSubstring("Reusing existing npm-cache"))
+
 					})
 				})
 
