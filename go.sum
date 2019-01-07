@@ -6,6 +6,8 @@ github.com/buildpack/libbuildpack v1.6.0 h1:bR/G4OywhtvDTVLUxUCSfi1OYFUemj4MJDyp
 github.com/buildpack/libbuildpack v1.6.0/go.mod h1:e8ntux4xFtNE7ewYCq0B5Q9xZxt3JrQlsPHVPA1Ciws=
 github.com/buildpack/libbuildpack v1.7.0 h1:/c7kIWeolQK05fx8pIFwxRd6qWjETD/3LdX6IBOqBHU=
 github.com/buildpack/libbuildpack v1.7.0/go.mod h1:KT8bhFJEjjr+EhnDoZn4FIU+UGVhRNBnJtXBrg+tYyw=
+github.com/buildpack/libbuildpack v1.8.0 h1:m7Pxgw9NkNXV34yh0EHAX9d1Pdnbl6AW+eH4ARDsb1I=
+github.com/buildpack/libbuildpack v1.8.0/go.mod h1:5YC4KNbppjwmsX561s0rS+4rtuJA++AnzUvcKc6lexc=
 github.com/cloudfoundry/dagger v0.0.0-20181227205011-17d2820befbf h1:+ZiqEn/BVy0xX+C3/gZeCdx3mtextHLnaX4vY1a90ys=
 github.com/cloudfoundry/dagger v0.0.0-20181227205011-17d2820befbf/go.mod h1:lew8J5SVLq1xe9PXy+38XTiuuW31NWHU92oP6YRkn1w=
 github.com/cloudfoundry/libcfbuildpack v1.29.0 h1:xpLACqzfFXiHIoc9Bflb+qO5GV70lqcQGs6ZbDkCP80=
@@ -14,6 +16,8 @@ github.com/cloudfoundry/libcfbuildpack v1.35.0 h1:4LKb8EdS/D6xO1KIAfARKRxlefr2iX
 github.com/cloudfoundry/libcfbuildpack v1.35.0/go.mod h1:Od/f96JLxPktN9s5pm3CiR4G1YYYD5HW2YKPeZIuYH4=
 github.com/cloudfoundry/libcfbuildpack v1.36.0 h1:2pbRnWZ2MFjW9TKMbNkRPHxuHBBpjJ2uRHJYFgdxz7o=
 github.com/cloudfoundry/libcfbuildpack v1.36.0/go.mod h1:Od/f96JLxPktN9s5pm3CiR4G1YYYD5HW2YKPeZIuYH4=
+github.com/cloudfoundry/libcfbuildpack v1.37.0 h1:/jeSWneCY2QD0n91OgaEHJrv9FUTZV+uoorSAdPg0Ik=
+github.com/cloudfoundry/libcfbuildpack v1.37.0/go.mod h1:WqW/cPLKqNnxhBt0JLTCQGpcKlFfC1T6vLHg0gNRtAA=
 github.com/cloudfoundry/nodejs-cnb v0.0.3-0.20181217224909-e1533a296e07 h1:o1rOurj5HLkRABMapPeXwlxUtwwLZlHcuurSDdMtH2U=
 github.com/cloudfoundry/nodejs-cnb v0.0.3-0.20181217224909-e1533a296e07/go.mod h1:jIMmJN7byxXmRCqlTmhZ9IB2lZU3MpyVcWDIx6PGiVo=
 github.com/fatih/color v1.7.0 h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=
@@ -65,6 +69,7 @@ golang.org/x/sys v0.0.0-20181212120007-b05ddf57801d/go.mod h1:STP8DvDyc/dI5b8T5h
 golang.org/x/sys v0.0.0-20181221143128-b4a75ba826a6/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20181228144115-9a3f9b0469bb h1:pf3XwC90UUdNPYWZdFjhGBE7DUFuK3Ct1zWmZ65QN30=
 golang.org/x/sys v0.0.0-20181228144115-9a3f9b0469bb/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+golang.org/x/sys v0.0.0-20190102155601-82a175fd1598/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
