@@ -18,7 +18,7 @@ import (
 const Dependency = "modules"
 
 type PackageManager interface {
-	Install(location string) error
+	Install(cache, location string) error
 	Rebuild(location string) error
 }
 
@@ -81,11 +81,7 @@ func NewContributor(context build.Build, pkgManager PackageManager) (Contributor
 
 func (c Contributor) Contribute() error {
 	return c.layer.Contribute(c.Metadata, func(layer layers.Layer) error {
-		existingNodeModules := filepath.Join(layer.Root, "node_modules")
-		existingNPMCache := filepath.Join(layer.Root, "npm-cache")
-
 		nodeModules := filepath.Join(c.app.Root, "node_modules")
-		npmCache := filepath.Join(c.app.Root, "npm-cache")
 
 		vendored, err := helper.FileExists(nodeModules)
 		if err != nil {
@@ -98,32 +94,8 @@ func (c Contributor) Contribute() error {
 				return fmt.Errorf("unable to rebuild node_modules: %s", err.Error())
 			}
 		} else {
-			nodeModulesExist, err := helper.FileExists(existingNodeModules)
-			if err != nil {
-				return err
-			}
-
-			if nodeModulesExist {
-				if err := helper.CopyDirectory(existingNodeModules, nodeModules); err != nil {
-					return err
-				}
-				c.layer.Logger.Info("Reusing existing node_modules")
-			}
-
-			npmCacheExists, err := helper.FileExists(existingNPMCache)
-			if err != nil {
-				return err
-			}
-
-			if npmCacheExists {
-				if err := helper.CopyDirectory(existingNPMCache, npmCache); err != nil {
-					return err
-				}
-				c.layer.Logger.Info("Reusing existing npm-cache")
-			}
-
 			c.layer.Logger.Info("Installing node_modules")
-			if err := c.pkgManager.Install(c.app.Root); err != nil {
+			if err := c.pkgManager.Install(layer.Root, c.app.Root); err != nil {
 				return fmt.Errorf("unable to install node_modules: %s", err.Error())
 			}
 		}
@@ -132,11 +104,7 @@ func (c Contributor) Contribute() error {
 			return fmt.Errorf("unable make layer: %s", err.Error())
 		}
 
-		if err := os.RemoveAll(existingNodeModules); err != nil {
-			return fmt.Errorf("unable to remove existing node_modules: %s", err.Error())
-		}
-
-		if err := helper.CopyDirectory(nodeModules, layer.Root); err != nil {
+		if err := helper.CopyDirectory(nodeModules, filepath.Join(layer.Root, "node_modules")); err != nil {
 			return fmt.Errorf(`unable to copy "%s" to "%s": %s`, nodeModules, layer.Root, err.Error())
 		}
 
@@ -144,26 +112,21 @@ func (c Contributor) Contribute() error {
 			return fmt.Errorf("unable to remove node_modules from the app dir: %s", err.Error())
 		}
 
-		if err := os.RemoveAll(existingNPMCache); err != nil {
-			return fmt.Errorf("unable to remove existing npn-cache: %s", err.Error())
-		}
+		npmCache := filepath.Join(c.app.Root, "npm-cache")
 
-		npmCacheExists, err := helper.FileExists(npmCache)
-		if err != nil {
+		if exists, err := helper.FileExists(npmCache); err != nil {
 			return err
-		}
-
-		if npmCacheExists {
-			if err := helper.CopyDirectory(npmCache, layer.Root); err != nil {
+		} else if exists {
+			if err := helper.CopyDirectory(npmCache, filepath.Join(layer.Root, "npm-cache")); err != nil {
 				return fmt.Errorf(`unable to copy "%s" to "%s": %s`, npmCache, layer.Root, err.Error())
+			}
+
+			if err := os.RemoveAll(npmCache); err != nil {
+				return fmt.Errorf("unable to remove existing npm-cache: %s", err.Error())
 			}
 		}
 
-		if err := os.RemoveAll(npmCache); err != nil {
-			return fmt.Errorf("unable to remove existing npm-cache: %s", err.Error())
-		}
-
-		if err := layer.OverrideSharedEnv("NODE_PATH", layer.Root); err != nil {
+		if err := layer.OverrideSharedEnv("NODE_PATH", filepath.Join(layer.Root, "node_modules")); err != nil {
 			return err
 		}
 

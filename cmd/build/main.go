@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/libcfbuildpack/build"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/cloudfoundry/npm-cnb/npm"
+	"github.com/cloudfoundry/npm-cnb/utils"
 )
 
 func main() {
@@ -28,7 +29,12 @@ func main() {
 func runBuild(context build.Build) (int, error) {
 	context.Logger.FirstLine(context.Logger.PrettyIdentity(context.Buildpack))
 
-	contributor, willContribute, err := modules.NewContributor(context, npm.NPM{})
+	packageManager := npm.NPM{
+		Runner: utils.CommandRunner{},
+		Logger: context.Logger,
+	}
+
+	contributor, willContribute, err := modules.NewContributor(context, packageManager)
 	if err != nil {
 		return context.Failure(102), err
 	}
