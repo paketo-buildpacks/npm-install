@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PACK_VERSION="0.0.8"
+PACK_VERSION="0.0.9"
 
 install_pack() {
     OS=$(uname -s)
