@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/cloudfoundry/npm-cnb/npm"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
@@ -32,6 +33,9 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 		mockCtrl = gomock.NewController(t)
 		mockRunner = NewMockRunner(mockCtrl)
 		mockLogger = NewMockLogger(mockCtrl)
+
+		mockLogger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+
 		pkgManager = npm.NPM{Runner: mockRunner, Logger: mockLogger}
 	})
 
@@ -44,10 +48,7 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 			it("should run npm install and npm cache verify", func() {
 				location := filepath.Join("some", "fake", "dir")
 
-				mockLogger.EXPECT().Info("Reusing existing node_modules").Times(0)
-				mockLogger.EXPECT().Info("Reusing existing npm-cache").Times(0)
-
-				npmCache := filepath.Join(location, "npm-cache")
+				npmCache := filepath.Join(location, modules.CacheDir)
 				mockRunner.EXPECT().Run("npm", location, "install", "--unsafe-perm", "--cache", npmCache)
 				mockRunner.EXPECT().Run("npm", location, "cache", "verify", "--cache", npmCache)
 
@@ -65,20 +66,23 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 				defer os.RemoveAll(location)
 
-				Expect(os.MkdirAll(filepath.Join(cache, "node_modules"), os.ModePerm)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(cache, "node_modules", "module"), []byte(""), os.ModePerm)).To(Succeed())
+				Expect(os.MkdirAll(filepath.Join(cache, modules.ModulesDir), os.ModePerm)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(cache, modules.ModulesDir, "module"), []byte(""), os.ModePerm)).To(Succeed())
 
-				Expect(os.MkdirAll(filepath.Join(cache, "npm-cache"), os.ModePerm)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(cache, "npm-cache", "cache-item"), []byte(""), os.ModePerm)).To(Succeed())
+				Expect(os.MkdirAll(filepath.Join(cache, modules.CacheDir), os.ModePerm)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(cache, modules.CacheDir, "cache-item"), []byte(""), os.ModePerm)).To(Succeed())
 
-				mockLogger.EXPECT().Info("Reusing existing node_modules")
-				mockLogger.EXPECT().Info("Reusing existing npm-cache")
-
-				npmCache := filepath.Join(location, "npm-cache")
+				npmCache := filepath.Join(location, modules.CacheDir)
 				mockRunner.EXPECT().Run("npm", location, "install", "--unsafe-perm", "--cache", npmCache)
 				mockRunner.EXPECT().Run("npm", location, "cache", "verify", "--cache", npmCache)
 
 				Expect(pkgManager.Install(cache, location)).To(Succeed())
+
+				Expect(filepath.Join(location, modules.ModulesDir, "module")).To(BeARegularFile())
+				Expect(filepath.Join(cache, modules.ModulesDir, "module")).NotTo(BeARegularFile())
+
+				Expect(filepath.Join(location, modules.CacheDir, "cache-item")).To(BeARegularFile())
+				Expect(filepath.Join(cache, modules.CacheDir, "cache-item")).NotTo(BeARegularFile())
 			})
 		})
 	})

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/cloudfoundry/libcfbuildpack/helper"
+	"github.com/cloudfoundry/npm-cnb/modules"
 )
 
 type Runner interface {
@@ -21,27 +22,15 @@ type NPM struct {
 }
 
 func (n NPM) Install(cache, location string) error {
-	nodeModules, existingNodeModules := filepath.Join(location, "node_modules"), filepath.Join(cache, "node_modules")
-	if exists, err := helper.FileExists(existingNodeModules); err != nil {
+	if err := n.moveDir(modules.ModulesDir, cache, location); err != nil {
 		return err
-	} else if exists {
-		n.Logger.Info("Reusing existing node_modules")
-		if err := helper.CopyDirectory(existingNodeModules, nodeModules); err != nil {
-			return err
-		}
-		defer os.RemoveAll(existingNodeModules)
 	}
 
-	npmCache, existingNPMCache := filepath.Join(location, "npm-cache"), filepath.Join(cache, "npm-cache")
-	if exists, err := helper.FileExists(existingNPMCache); err != nil {
+	if err := n.moveDir(modules.CacheDir, cache, location); err != nil {
 		return err
-	} else if exists {
-		n.Logger.Info("Reusing existing npm-cache")
-		if err := helper.CopyDirectory(existingNPMCache, npmCache); err != nil {
-			return err
-		}
-		defer os.RemoveAll(existingNPMCache)
 	}
+
+	npmCache := filepath.Join(location, modules.CacheDir)
 
 	if err := n.Runner.Run("npm", location, "install", "--unsafe-perm", "--cache", npmCache); err != nil {
 		return err
@@ -52,4 +41,20 @@ func (n NPM) Install(cache, location string) error {
 
 func (n NPM) Rebuild(location string) error {
 	return n.Runner.Run("npm", location, "rebuild")
+}
+
+func (n NPM) moveDir(name, cache, location string) error {
+	dir := filepath.Join(cache, name)
+	if exists, err := helper.FileExists(dir); err != nil {
+		return err
+	} else if !exists {
+		return nil
+	}
+
+	n.Logger.Info("Reusing existing %s", name)
+	if err := helper.CopyDirectory(dir, filepath.Join(location, name)); err != nil {
+		return err
+	}
+
+	return os.RemoveAll(dir)
 }

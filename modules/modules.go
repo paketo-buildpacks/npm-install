@@ -15,7 +15,11 @@ import (
 	"github.com/cloudfoundry/libcfbuildpack/layers"
 )
 
-const Dependency = "modules"
+const (
+	Dependency = "modules"
+	ModulesDir = "node_modules"
+	CacheDir   = "npm-cache"
+)
 
 type PackageManager interface {
 	Install(cache, location string) error

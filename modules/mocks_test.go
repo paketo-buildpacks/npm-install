@@ -5,8 +5,9 @@
 package modules_test
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockPackageManager is a mock of PackageManager interface
