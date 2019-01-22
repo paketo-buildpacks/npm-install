@@ -102,18 +102,26 @@ func (c Contributor) Contribute() error {
 			if err := c.pkgManager.Install(layer.Root, c.app.Root); err != nil {
 				return fmt.Errorf("unable to install node_modules: %s", err.Error())
 			}
+
 		}
 
 		if err := os.MkdirAll(layer.Root, 0777); err != nil {
 			return fmt.Errorf("unable make layer: %s", err.Error())
 		}
 
-		if err := helper.CopyDirectory(nodeModules, filepath.Join(layer.Root, "node_modules")); err != nil {
-			return fmt.Errorf(`unable to copy "%s" to "%s": %s`, nodeModules, layer.Root, err.Error())
+		nodeModsExist, err := helper.FileExists(nodeModules)
+		if err != nil {
+			return fmt.Errorf("unable to stat node_modules: %s", err.Error())
 		}
 
-		if err := os.RemoveAll(nodeModules); err != nil {
-			return fmt.Errorf("unable to remove node_modules from the app dir: %s", err.Error())
+		if nodeModsExist {
+			if err := helper.CopyDirectory(nodeModules, filepath.Join(layer.Root, "node_modules")); err != nil {
+				return fmt.Errorf(`unable to copy "%s" to "%s": %s`, nodeModules, layer.Root, err.Error())
+			}
+
+			if err := os.RemoveAll(nodeModules); err != nil {
+				return fmt.Errorf("unable to remove node_modules from the app dir: %s", err.Error())
+			}
 		}
 
 		npmCache := filepath.Join(c.app.Root, "npm-cache")
