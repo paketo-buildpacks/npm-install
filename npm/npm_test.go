@@ -17,7 +17,6 @@ import (
 //go:generate mockgen -source=npm.go -destination=mocks_test.go -package=npm_test
 
 func TestUnitNPM(t *testing.T) {
-	RegisterTestingT(t)
 	spec.Run(t, "Modules", testNPM, spec.Report(report.Terminal{}))
 }
 
@@ -30,6 +29,7 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 	)
 
 	it.Before(func() {
+		RegisterTestingT(t)
 		mockCtrl = gomock.NewController(t)
 		mockRunner = NewMockRunner(mockCtrl)
 		mockLogger = NewMockLogger(mockCtrl)

@@ -13,11 +13,14 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
-	RegisterTestingT(t)
 	spec.Run(t, "Integration", testIntegration, spec.Report(report.Terminal{}))
 }
 
 func testIntegration(t *testing.T, when spec.G, it spec.S) {
+	it.Before(func() {
+		RegisterTestingT(t)
+	})
+
 	when("when the node_modules are vendored", func() {
 		it("should build a working OCI image for a simple app", func() {
 			bp, err := dagger.PackageBuildpack()

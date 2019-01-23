@@ -18,11 +18,14 @@ import (
 //go:generate mockgen -source=modules.go -destination=mocks_test.go -package=modules_test
 
 func TestUnitModules(t *testing.T) {
-	RegisterTestingT(t)
 	spec.Run(t, "Modules", testModules, spec.Report(report.Terminal{}))
 }
 
 func testModules(t *testing.T, when spec.G, it spec.S) {
+	it.Before(func() {
+		RegisterTestingT(t)
+	})
+
 	when("modules.NewContributor", func() {
 		var (
 			mockCtrl       *gomock.Controller
