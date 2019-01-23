@@ -21,12 +21,12 @@ type NPM struct {
 	Logger Logger
 }
 
-func (n NPM) Install(cache, location string) error {
-	if err := n.moveDir(modules.ModulesDir, cache, location); err != nil {
+func (n NPM) Install(modulesLayer, cacheLayer, location string) error {
+	if err := n.moveDir(modulesLayer, location, modules.ModulesDir); err != nil {
 		return err
 	}
 
-	if err := n.moveDir(modules.CacheDir, cache, location); err != nil {
+	if err := n.moveDir(cacheLayer, location, modules.CacheDir); err != nil {
 		return err
 	}
 
@@ -43,8 +43,8 @@ func (n NPM) Rebuild(location string) error {
 	return n.Runner.Run("npm", location, "rebuild")
 }
 
-func (n NPM) moveDir(name, cache, location string) error {
-	dir := filepath.Join(cache, name)
+func (n NPM) moveDir(source, target, name string) error {
+	dir := filepath.Join(source, name)
 	if exists, err := helper.FileExists(dir); err != nil {
 		return err
 	} else if !exists {
@@ -52,7 +52,7 @@ func (n NPM) moveDir(name, cache, location string) error {
 	}
 
 	n.Logger.Info("Reusing existing %s", name)
-	if err := helper.CopyDirectory(dir, filepath.Join(location, name)); err != nil {
+	if err := helper.CopyDirectory(dir, filepath.Join(target, name)); err != nil {
 		return err
 	}
 

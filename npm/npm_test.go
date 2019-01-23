@@ -52,37 +52,41 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 				mockRunner.EXPECT().Run("npm", location, "install", "--unsafe-perm", "--cache", npmCache)
 				mockRunner.EXPECT().Run("npm", location, "cache", "verify", "--cache", npmCache)
 
-				Expect(pkgManager.Install("", location)).To(Succeed())
+				Expect(pkgManager.Install("", "", location)).To(Succeed())
 			})
 		})
 
 		when("node_modules and npm-cache already exist", func() {
 			it("should run npm install, npm cache verify, and reuse the existing modules + cache", func() {
-				cache, err := ioutil.TempDir("", "")
+				modulesLayer, err := ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
-				defer os.RemoveAll(cache)
+				defer os.RemoveAll(modulesLayer)
+
+				cacheLayer, err := ioutil.TempDir("", "")
+				Expect(err).NotTo(HaveOccurred())
+				defer os.RemoveAll(cacheLayer)
 
 				location, err := ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
 				defer os.RemoveAll(location)
 
-				Expect(os.MkdirAll(filepath.Join(cache, modules.ModulesDir), os.ModePerm)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(cache, modules.ModulesDir, "module"), []byte(""), os.ModePerm)).To(Succeed())
+				Expect(os.MkdirAll(filepath.Join(modulesLayer, modules.ModulesDir), os.ModePerm)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(modulesLayer, modules.ModulesDir, "module"), []byte(""), os.ModePerm)).To(Succeed())
 
-				Expect(os.MkdirAll(filepath.Join(cache, modules.CacheDir), os.ModePerm)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(cache, modules.CacheDir, "cache-item"), []byte(""), os.ModePerm)).To(Succeed())
+				Expect(os.MkdirAll(filepath.Join(cacheLayer, modules.CacheDir), os.ModePerm)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(cacheLayer, modules.CacheDir, "cache-item"), []byte(""), os.ModePerm)).To(Succeed())
 
 				npmCache := filepath.Join(location, modules.CacheDir)
 				mockRunner.EXPECT().Run("npm", location, "install", "--unsafe-perm", "--cache", npmCache)
 				mockRunner.EXPECT().Run("npm", location, "cache", "verify", "--cache", npmCache)
 
-				Expect(pkgManager.Install(cache, location)).To(Succeed())
+				Expect(pkgManager.Install(modulesLayer, cacheLayer, location)).To(Succeed())
 
 				Expect(filepath.Join(location, modules.ModulesDir, "module")).To(BeARegularFile())
-				Expect(filepath.Join(cache, modules.ModulesDir, "module")).NotTo(BeARegularFile())
+				Expect(filepath.Join(modulesLayer, modules.ModulesDir, "module")).NotTo(BeARegularFile())
 
 				Expect(filepath.Join(location, modules.CacheDir, "cache-item")).To(BeARegularFile())
-				Expect(filepath.Join(cache, modules.CacheDir, "cache-item")).NotTo(BeARegularFile())
+				Expect(filepath.Join(cacheLayer, modules.CacheDir, "cache-item")).NotTo(BeARegularFile())
 			})
 		})
 	})

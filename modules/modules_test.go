@@ -52,11 +52,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 		when("there is a package-lock.json", func() {
 			it.Before(func() {
-				test.WriteFile(
-					t,
-					filepath.Join(factory.Build.Application.Root, "package-lock.json"),
-					"package lock",
-				)
+				test.WriteFile(t, filepath.Join(factory.Build.Application.Root, "package-lock.json"), "package lock")
 			})
 
 			it("returns true if a build plan exists with the dep", func() {
@@ -77,19 +73,14 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
 
 				contributor, _, _ := modules.NewContributor(factory.Build, mockPkgManager)
-				name, version := contributor.Metadata.Identity()
+				name, version := contributor.NodeModulesMetadata.Identity()
 				Expect(name).To(Equal(modules.Dependency))
 				Expect(version).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 			})
 
 			when("the app is vendored", func() {
 				it.Before(func() {
-					test.WriteFile(
-						t,
-						filepath.Join(factory.Build.Application.Root, modules.ModulesDir, "test_module"),
-						"some module",
-					)
-
+					test.WriteFile(t, filepath.Join(factory.Build.Application.Root, modules.ModulesDir, "test_module"), "some module")
 					mockPkgManager.EXPECT().Rebuild(factory.Build.Application.Root)
 				})
 
@@ -105,9 +96,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 					layer := factory.Build.Layers.Layer(modules.Dependency)
 					Expect(layer).To(test.HaveLayerMetadata(true, true, false))
-
 					Expect(filepath.Join(layer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
-
 					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(layer.Root, modules.ModulesDir)))
 
 					Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
@@ -127,9 +116,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 					layer := factory.Build.Layers.Layer(modules.Dependency)
 					Expect(layer).To(test.HaveLayerMetadata(false, true, true))
-
 					Expect(filepath.Join(layer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
-
 					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(layer.Root, modules.ModulesDir)))
 
 					Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
@@ -138,10 +125,11 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 			when("the app is not vendored", func() {
 				it.Before(func() {
-					layerRoot := factory.Build.Layers.Layer(modules.Dependency).Root
+					nodeModulesLayerRoot := factory.Build.Layers.Layer(modules.Dependency).Root
+					npmCacheLayerRoot := factory.Build.Layers.Layer(modules.Cache).Root
 					appRoot := factory.Build.Application.Root
 
-					mockPkgManager.EXPECT().Install(layerRoot, appRoot).Do(func(_, location string) {
+					mockPkgManager.EXPECT().Install(nodeModulesLayerRoot, npmCacheLayerRoot, appRoot).Do(func(_, _, location string) {
 						module := filepath.Join(location, modules.ModulesDir, "test_module")
 						test.WriteFile(t, module, "some module")
 
@@ -160,13 +148,14 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 					Expect(contributor.Contribute()).To(Succeed())
 
-					layer := factory.Build.Layers.Layer(modules.Dependency)
-					Expect(layer).To(test.HaveLayerMetadata(true, true, false))
+					nodeModulesLayer := factory.Build.Layers.Layer(modules.Dependency)
+					Expect(nodeModulesLayer).To(test.HaveLayerMetadata(true, true, false))
+					Expect(filepath.Join(nodeModulesLayer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
+					Expect(nodeModulesLayer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(nodeModulesLayer.Root, modules.ModulesDir)))
 
-					Expect(filepath.Join(layer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
-					Expect(filepath.Join(layer.Root, modules.CacheDir, "test_cache_item")).To(BeARegularFile())
-
-					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(layer.Root, modules.ModulesDir)))
+					npmCacheLayer := factory.Build.Layers.Layer(modules.Cache)
+					Expect(npmCacheLayer).To(test.HaveLayerMetadata(false, true, false))
+					Expect(filepath.Join(npmCacheLayer.Root, modules.CacheDir, "test_cache_item")).To(BeARegularFile())
 
 					Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
 					Expect(filepath.Join(factory.Build.Application.Root, modules.CacheDir)).NotTo(BeADirectory())
@@ -184,13 +173,14 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 					Expect(factory.Build.Layers).To(test.HaveLaunchMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}}))
 
-					layer := factory.Build.Layers.Layer(modules.Dependency)
-					Expect(layer).To(test.HaveLayerMetadata(false, true, true))
+					nodeModulesLayer := factory.Build.Layers.Layer(modules.Dependency)
+					Expect(nodeModulesLayer).To(test.HaveLayerMetadata(false, true, true))
+					Expect(filepath.Join(nodeModulesLayer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
+					Expect(nodeModulesLayer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(nodeModulesLayer.Root, modules.ModulesDir)))
 
-					Expect(filepath.Join(layer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
-					Expect(filepath.Join(layer.Root, modules.CacheDir, "test_cache_item")).To(BeARegularFile())
-
-					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(layer.Root, modules.ModulesDir)))
+					npmCacheLayer := factory.Build.Layers.Layer(modules.Cache)
+					Expect(npmCacheLayer).To(test.HaveLayerMetadata(false, true, false))
+					Expect(filepath.Join(npmCacheLayer.Root, modules.CacheDir, "test_cache_item")).To(BeARegularFile())
 
 					Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
 					Expect(filepath.Join(factory.Build.Application.Root, modules.CacheDir)).NotTo(BeADirectory())

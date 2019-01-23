@@ -34,22 +34,19 @@ func (m *MockPackageManager) EXPECT() *MockPackageManagerMockRecorder {
 }
 
 // Install mocks base method
-func (m *MockPackageManager) Install(cache, location string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Install", cache, location)
+func (m *MockPackageManager) Install(nodeModules, npmCache, location string) error {
+	ret := m.ctrl.Call(m, "Install", nodeModules, npmCache, location)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Install indicates an expected call of Install
-func (mr *MockPackageManagerMockRecorder) Install(cache, location interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockPackageManager)(nil).Install), cache, location)
+func (mr *MockPackageManagerMockRecorder) Install(nodeModules, npmCache, location interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockPackageManager)(nil).Install), nodeModules, npmCache, location)
 }
 
 // Rebuild mocks base method
 func (m *MockPackageManager) Rebuild(location string) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Rebuild", location)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -57,6 +54,5 @@ func (m *MockPackageManager) Rebuild(location string) error {
 
 // Rebuild indicates an expected call of Rebuild
 func (mr *MockPackageManagerMockRecorder) Rebuild(location interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockPackageManager)(nil).Rebuild), location)
 }
