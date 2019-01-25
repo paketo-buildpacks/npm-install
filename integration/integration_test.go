@@ -56,4 +56,17 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			Expect(app.HTTPGet("/")).To(Succeed())
 		})
 	})
+
+	when("when there are no node modules", func() {
+		it("should build a working OCI image for an app without dependencies", func() {
+			bp, err := dagger.PackageBuildpack()
+			Expect(err).ToNot(HaveOccurred())
+
+			nodeBP, err := dagger.GetRemoteBuildpack("https://github.com/cloudfoundry/nodejs-cnb/releases/download/v0.0.2/nodejs-cnb.tgz")
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = dagger.PackBuild(filepath.Join("fixtures", "no_node_modules"), nodeBP, bp)
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
 }
