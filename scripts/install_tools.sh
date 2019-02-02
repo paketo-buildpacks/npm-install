@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PACK_VERSION="0.0.9"
-
 install_pack() {
     OS=$(uname -s)
 
@@ -15,22 +13,33 @@ install_pack() {
         exit 1
     fi
 
-    PACK_ARTIFACT=pack-$PACK_VERSION-$OS.tar.gz
+    if [[ $OS == "macos" ]]; then
+        ARTIFACT_URL=$(curl -s https://api.github.com/repos/buildpack/pack/releases/latest |   jq --raw-output '.assets[1] | .browser_download_url')
+    else
+        ARTIFACT_URL=$(curl -s https://api.github.com/repos/buildpack/pack/releases/latest |   jq --raw-output '.assets[0] | .browser_download_url')
+    fi
+ 
+    PACK_ARTIFACT=$(echo $ARTIFACT_URL | sed "s/.*\///")
+    PACK_VERSION=v$(echo $PACK_ARTIFACT | sed 's/pack-//' | sed 's/-.*//')
 
-    wget https://github.com/buildpack/pack/releases/download/v$PACK_VERSION/$PACK_ARTIFACT
+    if [[ ! -f .bin/pack ]]; then
+        echo "Installing Pack"
+    elif [[ "$(.bin/pack version | cut -d ' ' -f 1)" != *$PACK_VERSION* ]]; then
+        rm .bin/pack
+        echo "Updating Pack"
+    else
+        echo "The latest version of pack is already installed"
+        exit 0
+    fi
+
+    wget $ARTIFACT_URL
     tar xzvf $PACK_ARTIFACT -C .bin
     rm $PACK_ARTIFACT
 }
-
 
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
 
 mkdir -p .bin
 export PATH=$(pwd)/.bin:$PATH
 
-if [[ ! -f .bin/pack ]]; then
-    install_pack
-elif [[ $(.bin/pack version | cut -d ' ' -f 2) != "v$PACK_VERSION" ]]; then
-    rm .bin/pack
-    install_pack
-fi
+install_pack
