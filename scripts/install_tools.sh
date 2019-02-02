@@ -29,7 +29,7 @@ install_pack() {
         echo "Updating Pack"
     else
         echo "The latest version of pack is already installed"
-        exit 0
+        return 0
     fi
 
     wget $ARTIFACT_URL
