@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	Dependency = "modules"
+	Dependency = "node_modules"
 	Cache      = "cache"
 	ModulesDir = "node_modules"
 	CacheDir   = "npm-cache"
