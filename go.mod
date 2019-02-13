@@ -3,9 +3,9 @@ module github.com/cloudfoundry/npm-cnb
 require (
 	github.com/Masterminds/semver v1.4.2
 	github.com/buildpack/libbuildpack v1.10.0
-	github.com/cloudfoundry/dagger v0.0.0-20190211213328-5a14d6d7438f
+	github.com/cloudfoundry/dagger v0.0.0-20190213192159-4348188594f6
 	github.com/cloudfoundry/libcfbuildpack v1.42.0
-	github.com/cloudfoundry/nodejs-cnb v0.0.3-0.20181217224909-e1533a296e07
+	github.com/cloudfoundry/nodejs-cnb v0.0.4
 	github.com/golang/mock v1.2.0
 	github.com/kr/pty v1.1.3 // indirect
 	github.com/onsi/gomega v1.4.3

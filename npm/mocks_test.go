@@ -33,8 +33,8 @@ func (m *MockRunner) EXPECT() *MockRunnerMockRecorder {
 }
 
 // Run mocks base method
-func (m *MockRunner) Run(bin, dir string, args ...string) error {
-	varargs := []interface{}{bin, dir}
+func (m *MockRunner) Run(bin, dir string, quiet bool, args ...string) error {
+	varargs := []interface{}{bin, dir, quiet}
 	for _, a := range args {
 		varargs = append(varargs, a)
 	}
@@ -44,14 +44,14 @@ func (m *MockRunner) Run(bin, dir string, args ...string) error {
 }
 
 // Run indicates an expected call of Run
-func (mr *MockRunnerMockRecorder) Run(bin, dir interface{}, args ...interface{}) *gomock.Call {
-	varargs := append([]interface{}{bin, dir}, args...)
+func (mr *MockRunnerMockRecorder) Run(bin, dir, quiet interface{}, args ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{bin, dir, quiet}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockRunner)(nil).Run), varargs...)
 }
 
 // RunWithOutput mocks base method
-func (m *MockRunner) RunWithOutput(bin, dir string, args ...string) (string, error) {
-	varargs := []interface{}{bin, dir}
+func (m *MockRunner) RunWithOutput(bin, dir string, quiet bool, args ...string) (string, error) {
+	varargs := []interface{}{bin, dir, quiet}
 	for _, a := range args {
 		varargs = append(varargs, a)
 	}
@@ -62,8 +62,8 @@ func (m *MockRunner) RunWithOutput(bin, dir string, args ...string) (string, err
 }
 
 // RunWithOutput indicates an expected call of RunWithOutput
-func (mr *MockRunnerMockRecorder) RunWithOutput(bin, dir interface{}, args ...interface{}) *gomock.Call {
-	varargs := append([]interface{}{bin, dir}, args...)
+func (mr *MockRunnerMockRecorder) RunWithOutput(bin, dir, quiet interface{}, args ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{bin, dir, quiet}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunWithOutput", reflect.TypeOf((*MockRunner)(nil).RunWithOutput), varargs...)
 }
 

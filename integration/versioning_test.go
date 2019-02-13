@@ -42,7 +42,7 @@ func testVersioningIntegration(t *testing.T, when spec.G, it spec.S) {
 			defer app.Destroy()
 
 			Expect(app.Start()).To(Succeed())
-			Expect(app.BuildStdout.String()).To(MatchRegexp(`NodeJS[^\.\n]*6\.`)) //Allows it to ignore the control characters for color
+			Expect(app.BuildLogs()).To(MatchRegexp(`NodeJS 6\.`))
 			Expect(app.HTTPGetBody("/")).To(ContainSubstring("Hello, World!"))
 		})
 	})

@@ -13,6 +13,8 @@ github.com/cloudfoundry/dagger v0.0.0-20190204200826-d194e96e09ab h1:jx7sikzaAZA
 github.com/cloudfoundry/dagger v0.0.0-20190204200826-d194e96e09ab/go.mod h1:lew8J5SVLq1xe9PXy+38XTiuuW31NWHU92oP6YRkn1w=
 github.com/cloudfoundry/dagger v0.0.0-20190211213328-5a14d6d7438f h1:xhUh7luzCWNnXQqj3JtJ+gO+iFWoK4nTEW+y/x24Jc8=
 github.com/cloudfoundry/dagger v0.0.0-20190211213328-5a14d6d7438f/go.mod h1:lew8J5SVLq1xe9PXy+38XTiuuW31NWHU92oP6YRkn1w=
+github.com/cloudfoundry/dagger v0.0.0-20190213192159-4348188594f6 h1:aT5ZbNHQdfqQKwq8aH93Z/57m2UgkKYxMc5dhCTd+vA=
+github.com/cloudfoundry/dagger v0.0.0-20190213192159-4348188594f6/go.mod h1:lew8J5SVLq1xe9PXy+38XTiuuW31NWHU92oP6YRkn1w=
 github.com/cloudfoundry/libcfbuildpack v1.29.0/go.mod h1:OEwAwCqppAMwWrcrnxE0j0llq5HcvQHrUa6J5n8XMMc=
 github.com/cloudfoundry/libcfbuildpack v1.37.0 h1:/jeSWneCY2QD0n91OgaEHJrv9FUTZV+uoorSAdPg0Ik=
 github.com/cloudfoundry/libcfbuildpack v1.37.0/go.mod h1:WqW/cPLKqNnxhBt0JLTCQGpcKlFfC1T6vLHg0gNRtAA=
@@ -22,6 +24,8 @@ github.com/cloudfoundry/libcfbuildpack v1.42.0 h1:vHVF9t0Px4p0WsgCG2EkUTTyXxI3Qg
 github.com/cloudfoundry/libcfbuildpack v1.42.0/go.mod h1:C2AOm63Ca1GIBP7NdVhd8Q2gKenz600PVWqtOAbrN4o=
 github.com/cloudfoundry/nodejs-cnb v0.0.3-0.20181217224909-e1533a296e07 h1:o1rOurj5HLkRABMapPeXwlxUtwwLZlHcuurSDdMtH2U=
 github.com/cloudfoundry/nodejs-cnb v0.0.3-0.20181217224909-e1533a296e07/go.mod h1:jIMmJN7byxXmRCqlTmhZ9IB2lZU3MpyVcWDIx6PGiVo=
+github.com/cloudfoundry/nodejs-cnb v0.0.4 h1:1iet2dfSC+fZ/qNQKGkI2kMCb9QbEAUoHjNm4HdGjvU=
+github.com/cloudfoundry/nodejs-cnb v0.0.4/go.mod h1:BkYMGwKyuBpqJMaxgipXOJctYRWtc4yutQVID/CGzeg=
 github.com/fatih/color v1.7.0 h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=

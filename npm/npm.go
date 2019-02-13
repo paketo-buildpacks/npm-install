@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cloudfoundry/libcfbuildpack/buildpack"
 
@@ -13,8 +14,8 @@ import (
 )
 
 type Runner interface {
-	Run(bin, dir string, args ...string) error
-	RunWithOutput(bin, dir string, args ...string) (string, error)
+	Run(bin, dir string, quiet bool, args ...string) error
+	RunWithOutput(bin, dir string, quiet bool, args ...string) (string, error)
 }
 
 type Logger interface {
@@ -44,7 +45,7 @@ func (n NPM) Install(modulesLayer, cacheLayer, location string) error {
 }
 
 func (n NPM) Rebuild(cacheLayer, location string) error {
-	if err := n.Runner.Run("npm", location, "rebuild"); err != nil {
+	if err := n.Runner.Run("npm", location, false, "rebuild"); err != nil {
 		return fmt.Errorf("failed running npm rebuild %s", err.Error())
 	}
 
@@ -85,7 +86,7 @@ func (n NPM) moveDir(source, target, name string) error {
 }
 
 func (n NPM) getNPMVersion(location string) (buildpack.Version, error) {
-	out, err := n.Runner.RunWithOutput("npm", location, "-v")
+	out, err := n.Runner.RunWithOutput("npm", location, true, "-v")
 	if err != nil {
 		return buildpack.Version{}, err
 	}
@@ -97,7 +98,13 @@ func (n NPM) getNPMVersion(location string) (buildpack.Version, error) {
 }
 
 func (n NPM) runInstall(location string, cacheLocation string) error {
-	return n.Runner.Run("npm", location, "install", "--unsafe-perm", "--cache", cacheLocation)
+	installLogs, err := n.Runner.RunWithOutput("npm", location, false, "install", "--unsafe-perm", "--cache", cacheLocation)
+	if err != nil {
+		return err
+	}
+	n.warnUnmetDependencies(installLogs)
+
+	return nil
 }
 
 func (n NPM) runCacheVerify(location, cacheLocation string) error {
@@ -115,5 +122,15 @@ func (n NPM) runCacheVerify(location, cacheLocation string) error {
 		return nil
 	}
 
-	return n.Runner.Run("npm", location, "cache", "verify", "--cache", cacheLocation)
+	return n.Runner.Run("npm", location, false, "cache", "verify", "--cache", cacheLocation)
+}
+
+func (n NPM) warnUnmetDependencies(installLog string) {
+	installLog = strings.ToLower(installLog)
+	unmet := strings.Contains(installLog, "unmet dependency") || strings.Contains(installLog, "unmet peer dependency")
+	if unmet {
+		warning := "Unmet dependencies don't fail npm install but may cause runtime issues\n"
+		warning += "See: https://github.com/npm/npm/issues/7494"
+		n.Logger.Info(warning)
+	}
 }

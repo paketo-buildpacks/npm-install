@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"bytes"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -9,17 +12,32 @@ import (
 type CommandRunner struct {
 }
 
-func (r CommandRunner) Run(bin, dir string, args ...string) error {
+func (r CommandRunner) Run(bin, dir string, quiet bool, args ...string) error {
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	if quiet {
+		cmd.Stdout = ioutil.Discard
+		cmd.Stderr = ioutil.Discard
+	} else {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 	return cmd.Run()
 }
 
-func (r CommandRunner) RunWithOutput(bin, dir string, args ...string) (string, error) {
+func (r CommandRunner) RunWithOutput(bin, dir string, quiet bool, args ...string) (string, error) {
+	logs := &bytes.Buffer{}
+
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
-	return strings.TrimSpace(string(out)), err
+	if quiet {
+		cmd.Stdout = io.MultiWriter(ioutil.Discard, logs)
+		cmd.Stderr = io.MultiWriter(ioutil.Discard, logs)
+	} else {
+		cmd.Stdout = io.MultiWriter(os.Stdout, logs)
+		cmd.Stderr = io.MultiWriter(os.Stderr, logs)
+	}
+	err := cmd.Run()
+
+	return strings.TrimSpace(logs.String()), err
 }
