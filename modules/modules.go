@@ -24,7 +24,11 @@ const (
 
 type PackageManager interface {
 	Install(modulesLayer, cacheLayer, location string) error
-	Rebuild(location string) error
+	Rebuild(cacheLayer, location string) error
+}
+
+type MetadataInterface interface {
+	Identity() (name string, version string)
 }
 
 type Metadata struct {
@@ -37,8 +41,8 @@ func (m Metadata) Identity() (name string, version string) {
 }
 
 type Contributor struct {
-	NodeModulesMetadata Metadata
-	NPMCacheMetadata    Metadata
+	NodeModulesMetadata MetadataInterface
+	NPMCacheMetadata    MetadataInterface
 	buildContribution   bool
 	launchContribution  bool
 	pkgManager          PackageManager
@@ -54,28 +58,25 @@ func NewContributor(context build.Build, pkgManager PackageManager) (Contributor
 		return Contributor{}, false, nil
 	}
 
+	contributor := Contributor{
+		app:              context.Application,
+		pkgManager:       pkgManager,
+		nodeModulesLayer: context.Layers.Layer(Dependency),
+		npmCacheLayer:    context.Layers.Layer(Cache),
+		launch:           context.Layers,
+	}
+
 	lockFile := filepath.Join(context.Application.Root, "package-lock.json")
 	if exists, err := helper.FileExists(lockFile); err != nil {
 		return Contributor{}, false, err
-	} else if !exists {
-		return Contributor{}, false, fmt.Errorf(`unable to find "package-lock.json"`)
-	}
-
-	buf, err := ioutil.ReadFile(lockFile)
-	if err != nil {
-		return Contributor{}, false, err
-	}
-
-	hash := sha256.Sum256(buf)
-
-	contributor := Contributor{
-		app:                 context.Application,
-		pkgManager:          pkgManager,
-		nodeModulesLayer:    context.Layers.Layer(Dependency),
-		npmCacheLayer:       context.Layers.Layer(Cache),
-		launch:              context.Layers,
-		NodeModulesMetadata: Metadata{Dependency, hex.EncodeToString(hash[:])},
-		NPMCacheMetadata:    Metadata{Cache, hex.EncodeToString(hash[:])},
+	} else if exists {
+		buf, err := ioutil.ReadFile(lockFile)
+		if err != nil {
+			return Contributor{}, false, err
+		}
+		hash := sha256.Sum256(buf)
+		contributor.NodeModulesMetadata = Metadata{Dependency, hex.EncodeToString(hash[:])}
+		contributor.NPMCacheMetadata = Metadata{Cache, hex.EncodeToString(hash[:])}
 	}
 
 	if _, ok := plan.Metadata["build"]; ok {
@@ -106,7 +107,7 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 
 	if vendored {
 		c.nodeModulesLayer.Logger.Info("Rebuilding node_modules")
-		if err := c.pkgManager.Rebuild(c.app.Root); err != nil {
+		if err := c.pkgManager.Rebuild(c.npmCacheLayer.Root, c.app.Root); err != nil {
 			return fmt.Errorf("unable to rebuild node_modules: %s", err.Error())
 		}
 	} else {

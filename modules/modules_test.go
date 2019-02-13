@@ -44,15 +44,6 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			mockCtrl.Finish()
 		})
 
-		when("there is no package-lock.json", func() {
-			it("fails", func() {
-				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
-
-				_, _, err := modules.NewContributor(factory.Build, mockPkgManager)
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
 		when("there is a package-lock.json", func() {
 			it.Before(func() {
 				test.WriteFile(t, filepath.Join(factory.Build.Application.Root, "package-lock.json"), "package lock")
@@ -84,7 +75,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			when("the app is vendored", func() {
 				it.Before(func() {
 					test.WriteFile(t, filepath.Join(factory.Build.Application.Root, modules.ModulesDir, "test_module"), "some module")
-					mockPkgManager.EXPECT().Rebuild(factory.Build.Application.Root)
+					mockPkgManager.EXPECT().Rebuild(gomock.Any(), factory.Build.Application.Root)
 				})
 
 				it("contributes for the build phase", func() {
@@ -188,6 +179,16 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 					Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
 					Expect(filepath.Join(factory.Build.Application.Root, modules.CacheDir)).NotTo(BeADirectory())
 				})
+			})
+		})
+
+		when("there is no package-lock.json", func() {
+			it("should create a contributor", func() {
+				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
+				contributor, _, err := modules.NewContributor(factory.Build, mockPkgManager)
+				Expect(contributor.NodeModulesMetadata).To(BeNil())
+				Expect(contributor.NPMCacheMetadata).To(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

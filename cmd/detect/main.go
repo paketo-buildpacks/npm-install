@@ -37,9 +37,26 @@ func runDetect(context detect.Detect) (int, error) {
 		return context.Fail(), fmt.Errorf(`no "package.json" found at: %s`, packageJSON)
 	}
 
-	version, err := node.GetVersion(packageJSON)
+	nvmrcNodeVersion, err := LoadNvmrc(context)
+	if err != nil {
+		return context.Fail(), fmt.Errorf(`unable to parse ".nvmrc": %s`, err.Error())
+	}
+
+	packageJSONVersion, err := node.GetVersion(packageJSON)
 	if err != nil {
 		return context.Fail(), fmt.Errorf(`unable to parse "package.json": %s`, err.Error())
+	}
+
+	logs := WarnNodeEngine(nvmrcNodeVersion, packageJSONVersion)
+	for _, line := range logs {
+		context.Logger.Info(line)
+	}
+
+	version := ""
+	if packageJSONVersion != "" {
+		version = packageJSONVersion
+	} else if nvmrcNodeVersion != "" {
+		version = nvmrcNodeVersion
 	}
 
 	return context.Pass(buildplan.BuildPlan{

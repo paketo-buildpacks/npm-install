@@ -45,13 +45,22 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 
 	when("installing", func() {
 		when("node_modules and npm-cache do not already exist", func() {
-			it("should run npm install and npm cache verify", func() {
+			it("should run npm install and npm cache verify if npm version after 5.0.0", func() {
 				location := filepath.Join("some", "fake", "dir")
 
 				npmCache := filepath.Join(location, modules.CacheDir)
 				mockRunner.EXPECT().Run("npm", location, "install", "--unsafe-perm", "--cache", npmCache)
 				mockRunner.EXPECT().Run("npm", location, "cache", "verify", "--cache", npmCache)
+				mockRunner.EXPECT().RunWithOutput("npm", location, "-v").Return("5.0.0", nil)
+				Expect(pkgManager.Install("", "", location)).To(Succeed())
+			})
 
+			it("should run npm install and skip npm cache verify if npm version before 5.0.0", func() {
+				location := filepath.Join("some", "fake", "dir")
+
+				npmCache := filepath.Join(location, modules.CacheDir)
+				mockRunner.EXPECT().Run("npm", location, "install", "--unsafe-perm", "--cache", npmCache)
+				mockRunner.EXPECT().RunWithOutput("npm", location, "-v").Return("4.3.2", nil)
 				Expect(pkgManager.Install("", "", location)).To(Succeed())
 			})
 		})
@@ -79,6 +88,7 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 				npmCache := filepath.Join(location, modules.CacheDir)
 				mockRunner.EXPECT().Run("npm", location, "install", "--unsafe-perm", "--cache", npmCache)
 				mockRunner.EXPECT().Run("npm", location, "cache", "verify", "--cache", npmCache)
+				mockRunner.EXPECT().RunWithOutput("npm", location, "-v").Return("5.0.1", nil)
 
 				Expect(pkgManager.Install(modulesLayer, cacheLayer, location)).To(Succeed())
 
@@ -93,11 +103,17 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 
 	when("rebuilding", func() {
 		it("should run npm rebuild", func() {
-			location := filepath.Join("some", "fake", "dir")
+			location, err := ioutil.TempDir("", "")
+			Expect(err).ToNot(HaveOccurred())
+
+			npmCache := filepath.Join(location, modules.CacheDir)
+			cacheLayer, err := ioutil.TempDir("", "")
+			Expect(err).ToNot(HaveOccurred())
 
 			mockRunner.EXPECT().Run("npm", location, "rebuild")
+			mockRunner.EXPECT().Run("npm", location, "install", "--unsafe-perm", "--cache", npmCache)
 
-			Expect(pkgManager.Rebuild(location)).To(Succeed())
+			Expect(pkgManager.Rebuild(cacheLayer, location)).To(Succeed())
 		})
 	})
 }

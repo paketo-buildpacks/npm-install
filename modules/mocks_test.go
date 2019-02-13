@@ -5,9 +5,8 @@
 package modules_test
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockPackageManager is a mock of PackageManager interface
@@ -34,25 +33,61 @@ func (m *MockPackageManager) EXPECT() *MockPackageManagerMockRecorder {
 }
 
 // Install mocks base method
-func (m *MockPackageManager) Install(nodeModules, npmCache, location string) error {
-	ret := m.ctrl.Call(m, "Install", nodeModules, npmCache, location)
+func (m *MockPackageManager) Install(modulesLayer, cacheLayer, location string) error {
+	ret := m.ctrl.Call(m, "Install", modulesLayer, cacheLayer, location)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Install indicates an expected call of Install
-func (mr *MockPackageManagerMockRecorder) Install(nodeModules, npmCache, location interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockPackageManager)(nil).Install), nodeModules, npmCache, location)
+func (mr *MockPackageManagerMockRecorder) Install(modulesLayer, cacheLayer, location interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockPackageManager)(nil).Install), modulesLayer, cacheLayer, location)
 }
 
 // Rebuild mocks base method
-func (m *MockPackageManager) Rebuild(location string) error {
-	ret := m.ctrl.Call(m, "Rebuild", location)
+func (m *MockPackageManager) Rebuild(cacheLayer, location string) error {
+	ret := m.ctrl.Call(m, "Rebuild", cacheLayer, location)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Rebuild indicates an expected call of Rebuild
-func (mr *MockPackageManagerMockRecorder) Rebuild(location interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockPackageManager)(nil).Rebuild), location)
+func (mr *MockPackageManagerMockRecorder) Rebuild(cacheLayer, location interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockPackageManager)(nil).Rebuild), cacheLayer, location)
+}
+
+// MockMetadataInterface is a mock of MetadataInterface interface
+type MockMetadataInterface struct {
+	ctrl     *gomock.Controller
+	recorder *MockMetadataInterfaceMockRecorder
+}
+
+// MockMetadataInterfaceMockRecorder is the mock recorder for MockMetadataInterface
+type MockMetadataInterfaceMockRecorder struct {
+	mock *MockMetadataInterface
+}
+
+// NewMockMetadataInterface creates a new mock instance
+func NewMockMetadataInterface(ctrl *gomock.Controller) *MockMetadataInterface {
+	mock := &MockMetadataInterface{ctrl: ctrl}
+	mock.recorder = &MockMetadataInterfaceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockMetadataInterface) EXPECT() *MockMetadataInterfaceMockRecorder {
+	return m.recorder
+}
+
+// Identity mocks base method
+func (m *MockMetadataInterface) Identity() (string, string) {
+	ret := m.ctrl.Call(m, "Identity")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	return ret0, ret1
+}
+
+// Identity indicates an expected call of Identity
+func (mr *MockMetadataInterfaceMockRecorder) Identity() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Identity", reflect.TypeOf((*MockMetadataInterface)(nil).Identity))
 }
