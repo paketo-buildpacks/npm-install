@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -59,23 +58,17 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("When .nvmrc is present", func() {
-		when("nvmrc is empty", func() {
-			it("should fail", func() {
-				test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, ".nvmrc"), "")
-				code, err := runDetect(factory.Detect)
-				Expect(err).To(HaveOccurred())
-				Expect(code).To(Equal(detect.FailStatusCode))
-			})
-		})
-
 		when("nvmrc is present and engines field in package.json is present", func() {
 			it("selects the version from the engines field in packages.json", func() {
 				packageJSONVersion := "10.0.0"
 				packageJSONString := fmt.Sprintf(`{"engines": {"node" : "%s"}}`, packageJSONVersion)
 				test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, "package.json"), packageJSONString)
 
-				nvmrcString := "10.2.3"
-				test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, ".nvmrc"), nvmrcString)
+				nvmrcVersion := "10.2.3"
+				factory.AddBuildPlan(node.Dependency, buildplan.Dependency{
+					Version:  nvmrcVersion,
+					Metadata: buildplan.Metadata{"launch": true},
+				})
 
 				buildplan := getStandardBuildplanWithNodeVersion(packageJSONVersion)
 				runDetectAndExpectBuildplan(factory, buildplan)
@@ -87,68 +80,14 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 				packageJSONString := fmt.Sprintf(`{"engines": {"node" : "%s"}}`, "")
 				test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, "package.json"), packageJSONString)
 
-				nvmrcString := "10.2.3"
-				test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, ".nvmrc"), nvmrcString)
+				nvmrcVersion := "10.2.3"
+				factory.AddBuildPlan(node.Dependency, buildplan.Dependency{
+					Version:  nvmrcVersion,
+					Metadata: buildplan.Metadata{"launch": true},
+				})
 
-				buildplan := getStandardBuildplanWithNodeVersion(nvmrcString)
+				buildplan := getStandardBuildplanWithNodeVersion(nvmrcVersion)
 				runDetectAndExpectBuildplan(factory, buildplan)
-			})
-		})
-	})
-
-	when("there are .nvmrc contents", func() {
-		when("the .nvmrc contains only digits", func() {
-			it("will trim and transform nvmrc to appropriate semver for Masterminds semver library", func() {
-				testCases := [][]string{
-					{"10", "10.*.*"},
-					{"10.2", "10.2.*"},
-					{"v10", "10.*.*"},
-					{"10.2.3", "10.2.3"},
-					{"v10.2.3", "10.2.3"},
-					{"10.1.1", "10.1.1"},
-				}
-
-				for _, testCase := range testCases {
-					test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, ".nvmrc"), testCase[0])
-					Expect(LoadNvmrc(factory.Detect)).To(Equal(testCase[1]), fmt.Sprintf("failed for test case %s : %s", testCase[0], testCase[1]))
-				}
-			})
-		})
-
-		when("the .nvmrc contains lts/something", func() {
-			it("will read and trim lts versions to appropriate semver for Masterminds semver library", func() {
-				testCases := [][]string{
-					{"lts/*", "10.*.*"},
-					{"lts/argon", "4.*.*"},
-					{"lts/boron", "6.*.*"},
-					{"lts/carbon", "8.*.*"},
-					{"lts/dubnium", "10.*.*"},
-				}
-
-				for _, testCase := range testCases {
-					test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, ".nvmrc"), testCase[0])
-					Expect(LoadNvmrc(factory.Detect)).To(Equal(testCase[1]), fmt.Sprintf("failed for test case %s : %s", testCase[0], testCase[1]))
-				}
-			})
-		})
-
-		when("the .nvmrc contains 'node'", func() {
-			it("should read and trim lts versions", func() {
-				test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, ".nvmrc"), "node")
-				Expect(LoadNvmrc(factory.Detect)).To(Equal("*"))
-			})
-		})
-
-		when("given an invalid .nvmrc", func() {
-			it("validate should be fail", func() {
-				invalidVersions := []string{"11.4.x", "invalid", "~1.1.2", ">11.0", "< 11.4.2", "^1.2.3", "11.*.*", "10.1.X", "lts/invalidname"}
-				InvalidVersionError := errors.New("invalid version Invalid Semantic Version specified in .nvmrc")
-				for _, version := range invalidVersions {
-					test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, ".nvmrc"), version)
-					parsedVersion, err := LoadNvmrc(factory.Detect)
-					Expect(err).To(Equal(InvalidVersionError))
-					Expect(parsedVersion).To(BeEmpty())
-				}
 			})
 		})
 	})
