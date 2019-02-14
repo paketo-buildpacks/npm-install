@@ -1,1 +1,12 @@
+v0.0.4 Feb 14, 2019
+====================
 
+* Update pack to version 0.0.9
+
+* Write node_modules and npm-cache to sub dirs within the module layer
+  (https://www.pivotaltracker.com/story/show/163059049)
+
+* Incorperate changes to libcfbuildpack, Layer does not delete contents before contributing
+   - manually build Layers object in cache tests in order to get access to logger
+   - only copy npm_cache into layer if it is present, vendored apps may not have this even after rebuilding
+  (https://www.pivotaltracker.com/story/show/162511205)
