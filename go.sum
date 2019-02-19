@@ -7,6 +7,8 @@ github.com/buildpack/libbuildpack v1.8.0 h1:m7Pxgw9NkNXV34yh0EHAX9d1Pdnbl6AW+eH4
 github.com/buildpack/libbuildpack v1.8.0/go.mod h1:5YC4KNbppjwmsX561s0rS+4rtuJA++AnzUvcKc6lexc=
 github.com/buildpack/libbuildpack v1.10.0 h1:xwgXTulLRU2zCFbYy35azMsHOjy8uQVyw9xm88Xm2b8=
 github.com/buildpack/libbuildpack v1.10.0/go.mod h1:5YC4KNbppjwmsX561s0rS+4rtuJA++AnzUvcKc6lexc=
+github.com/cloudfoundry/cnb-tools v0.0.0-20190219172305-154ea1cc62b2 h1:28ef8Q5X8QmcGGXVcp1MyBtyV6kzKChnhEuyXRUiyr4=
+github.com/cloudfoundry/cnb-tools v0.0.0-20190219172305-154ea1cc62b2/go.mod h1:4/XXo++Se0dkBKJIHUJcQBQqwZsSiEmUxd84Su8ER3E=
 github.com/cloudfoundry/dagger v0.0.0-20190108154828-8e5ab63c9f02 h1:XIdQDaX36eRQqW6opY55OCWLsFLICjpGY/y8iN3Uq6g=
 github.com/cloudfoundry/dagger v0.0.0-20190108154828-8e5ab63c9f02/go.mod h1:lew8J5SVLq1xe9PXy+38XTiuuW31NWHU92oP6YRkn1w=
 github.com/cloudfoundry/dagger v0.0.0-20190204200826-d194e96e09ab h1:jx7sikzaAZAzDJJXdo1gr6yPyX9NCoLveUJ5ttk3+I4=
@@ -15,6 +17,8 @@ github.com/cloudfoundry/dagger v0.0.0-20190211213328-5a14d6d7438f h1:xhUh7luzCWN
 github.com/cloudfoundry/dagger v0.0.0-20190211213328-5a14d6d7438f/go.mod h1:lew8J5SVLq1xe9PXy+38XTiuuW31NWHU92oP6YRkn1w=
 github.com/cloudfoundry/dagger v0.0.0-20190213192159-4348188594f6 h1:aT5ZbNHQdfqQKwq8aH93Z/57m2UgkKYxMc5dhCTd+vA=
 github.com/cloudfoundry/dagger v0.0.0-20190213192159-4348188594f6/go.mod h1:lew8J5SVLq1xe9PXy+38XTiuuW31NWHU92oP6YRkn1w=
+github.com/cloudfoundry/dagger v0.0.0-20190219165033-d9b29e00cb50 h1:q7jpaXNSkqoKSKerNTazVRig8bXBDqKx8Q+0AEmJZl4=
+github.com/cloudfoundry/dagger v0.0.0-20190219165033-d9b29e00cb50/go.mod h1:KYnuvu2XJXZCM7FHvRzALsYWGC5uSgEnx3MXwFWahT0=
 github.com/cloudfoundry/libcfbuildpack v1.29.0/go.mod h1:OEwAwCqppAMwWrcrnxE0j0llq5HcvQHrUa6J5n8XMMc=
 github.com/cloudfoundry/libcfbuildpack v1.37.0 h1:/jeSWneCY2QD0n91OgaEHJrv9FUTZV+uoorSAdPg0Ik=
 github.com/cloudfoundry/libcfbuildpack v1.37.0/go.mod h1:WqW/cPLKqNnxhBt0JLTCQGpcKlFfC1T6vLHg0gNRtAA=
@@ -55,6 +59,8 @@ github.com/onsi/ginkgo v1.7.0 h1:WSHQ+IS43OoUrWtD1/bbclrwK8TTH5hzp+umCiuxHgs=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.3 h1:RE1xgDvH7imwFD45h+u2SgIfERHlS2yNG4DObb5BSKU=
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
+github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
+github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/sclevine/spec v1.2.0 h1:1Jwdf9jSfDl9NVmt8ndHqbTZ7XCCPbh1jI3hkDBHVYA=
 github.com/sclevine/spec v1.2.0/go.mod h1:W4J29eT/Kzv7/b9IWLB055Z+qvVC9vt0Arko24q7p+U=
 golang.org/x/net v0.0.0-20180906233101-161cd47e91fd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
@@ -78,6 +84,7 @@ golang.org/x/sys v0.0.0-20190102155601-82a175fd1598/go.mod h1:STP8DvDyc/dI5b8T5h
 golang.org/x/sys v0.0.0-20190129075346-302c3dd5f1cc/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190204103248-980327fe3c65/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190204203706-41f3e6584952/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+golang.org/x/sys v0.0.0-20190213121743-983097b1a8a3 h1:+KlxhGbYkFs8lMfwKn+2ojry1ID5eBSMXprS2u/wqCE=
 golang.org/x/sys v0.0.0-20190213121743-983097b1a8a3/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
