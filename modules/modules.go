@@ -127,12 +127,8 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 	}
 
 	if nodeModulesExist {
-		if err := helper.CopyDirectory(nodeModules, filepath.Join(layer.Root, ModulesDir)); err != nil {
-			return fmt.Errorf(`unable to copy "%s" to "%s": %s`, nodeModules, layer.Root, err.Error())
-		}
-
-		if err := os.RemoveAll(nodeModules); err != nil {
-			return fmt.Errorf("unable to remove node_modules from the app dir: %s", err.Error())
+		if err := os.Rename(nodeModules, filepath.Join(layer.Root, ModulesDir)); err != nil {
+			return fmt.Errorf(`unable to move "%s" to "%s": %s`, nodeModules, layer.Root, err.Error())
 		}
 	}
 
