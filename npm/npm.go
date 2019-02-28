@@ -13,6 +13,8 @@ import (
 	"github.com/cloudfoundry/npm-cnb/modules"
 )
 
+const UNMET_DEP_WARNING = "Unmet dependencies don't fail npm install but may cause runtime issues\nSee: https://github.com/npm/npm/issues/7494"
+
 type Runner interface {
 	Run(bin, dir string, quiet bool, args ...string) error
 	RunWithOutput(bin, dir string, quiet bool, args ...string) (string, error)
@@ -38,7 +40,7 @@ func (n NPM) Install(modulesLayer, cacheLayer, location string) error {
 
 	npmCache := filepath.Join(location, modules.CacheDir)
 
-	if err := n.runInstall(location, npmCache); err != nil {
+	if err := n.runInstall(location, npmCache, false); err != nil {
 		return err
 	}
 	return n.runCacheVerify(location, npmCache)
@@ -49,9 +51,9 @@ func (n NPM) Rebuild(cacheLayer, location string) error {
 		return fmt.Errorf("failed running npm rebuild %s", err.Error())
 	}
 
-	n.Logger.Info("Installing additional un-vendored modules")
+	n.Logger.Info("Installing the additional un-vendored modules listed below:")
 	npmCache := filepath.Join(location, modules.CacheDir)
-	return n.runInstall(location, npmCache)
+	return n.runInstall(location, npmCache, true)
 }
 
 func (n NPM) moveDir(source, target, name string) error {
@@ -97,8 +99,13 @@ func (n NPM) getNPMVersion(location string) (buildpack.Version, error) {
 	return buildpack.Version{Version: versionLimit}, nil
 }
 
-func (n NPM) runInstall(location string, cacheLocation string) error {
-	installLogs, err := n.Runner.RunWithOutput("npm", location, false, "install", "--unsafe-perm", "--cache", cacheLocation)
+func (n NPM) runInstall(location string, cacheLocation string, skipAudit bool) error {
+	args := []string{"install", "--unsafe-perm", "--cache", cacheLocation}
+	if skipAudit {
+		args = append(args, "--no-audit")
+	}
+
+	installLogs, err := n.Runner.RunWithOutput("npm", location, false, args...)
 	if err != nil {
 		return err
 	}
@@ -129,8 +136,6 @@ func (n NPM) warnUnmetDependencies(installLog string) {
 	installLog = strings.ToLower(installLog)
 	unmet := strings.Contains(installLog, "unmet dependency") || strings.Contains(installLog, "unmet peer dependency")
 	if unmet {
-		warning := "Unmet dependencies don't fail npm install but may cause runtime issues\n"
-		warning += "See: https://github.com/npm/npm/issues/7494"
-		n.Logger.Info(warning)
+		n.Logger.Info(UNMET_DEP_WARNING)
 	}
 }

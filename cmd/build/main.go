@@ -30,7 +30,7 @@ func runBuild(context build.Build) (int, error) {
 	context.Logger.FirstLine(context.Logger.PrettyIdentity(context.Buildpack))
 
 	packageManager := npm.NPM{
-		Runner: utils.CommandRunner{},
+		Runner: utils.Command{},
 		Logger: context.Logger,
 	}
 

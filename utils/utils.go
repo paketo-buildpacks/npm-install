@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-type CommandRunner struct {
+type Command struct {
 }
 
-func (r CommandRunner) Run(bin, dir string, quiet bool, args ...string) error {
+func (r Command) Run(bin, dir string, quiet bool, args ...string) error {
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = dir
 	if quiet {
@@ -25,7 +25,7 @@ func (r CommandRunner) Run(bin, dir string, quiet bool, args ...string) error {
 	return cmd.Run()
 }
 
-func (r CommandRunner) RunWithOutput(bin, dir string, quiet bool, args ...string) (string, error) {
+func (r Command) RunWithOutput(bin, dir string, quiet bool, args ...string) (string, error) {
 	logs := &bytes.Buffer{}
 
 	cmd := exec.Command(bin, args...)

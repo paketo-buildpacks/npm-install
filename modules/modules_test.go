@@ -22,173 +22,117 @@ func TestUnitModules(t *testing.T) {
 }
 
 func testModules(t *testing.T, when spec.G, it spec.S) {
+	var (
+		mockCtrl       *gomock.Controller
+		mockPkgManager *MockPackageManager
+		factory        *test.BuildFactory
+	)
+
 	it.Before(func() {
 		RegisterTestingT(t)
+		mockCtrl = gomock.NewController(t)
+		mockPkgManager = NewMockPackageManager(mockCtrl)
+
+		factory = test.NewBuildFactory(t)
 	})
 
-	when("modules.NewContributor", func() {
+	it.After(func() {
+		mockCtrl.Finish()
+	})
+
+	when("NewContributor", func() {
+		it("returns true if a build plan exists with the dep", func() {
+			factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
+
+			_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(willContribute).To(BeTrue())
+		})
+
+		it("returns false if a build plan does not exist with the dep", func() {
+			_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(willContribute).To(BeFalse())
+		})
+
+		it("uses package-lock.json for identity when it exists", func() {
+			test.WriteFile(t, filepath.Join(factory.Build.Application.Root, "package-lock.json"), "package lock")
+			factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
+
+			contributor, _, _ := modules.NewContributor(factory.Build, mockPkgManager)
+			name, version := contributor.NodeModulesMetadata.Identity()
+			Expect(name).To(Equal(modules.Dependency))
+			Expect(version).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
+		})
+
+	})
+
+	when("Contribute", func() {
 		var (
-			mockCtrl       *gomock.Controller
-			mockPkgManager *MockPackageManager
-			factory        *test.BuildFactory
+			contributor                                      modules.Contributor
+			willContribute                                   bool
+			nodeModulesLayerRoot, npmCacheLayerRoot, appRoot string
+			err                                              error
 		)
-
 		it.Before(func() {
-			mockCtrl = gomock.NewController(t)
-			mockPkgManager = NewMockPackageManager(mockCtrl)
+			nodeModulesLayerRoot = factory.Build.Layers.Layer(modules.Dependency).Root
+			npmCacheLayerRoot = factory.Build.Layers.Layer(modules.Cache).Root
+			appRoot = factory.Build.Application.Root
+			factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
+				Metadata: buildplan.Metadata{"build": true, "launch": true},
+			})
 
-			factory = test.NewBuildFactory(t)
+			contributor, willContribute, err = modules.NewContributor(factory.Build, mockPkgManager)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(willContribute).To(BeTrue())
 		})
-
-		it.After(func() {
-			mockCtrl.Finish()
-		})
-
-		when("there is a package-lock.json", func() {
+		when("the app is not vendored", func() {
 			it.Before(func() {
-				test.WriteFile(t, filepath.Join(factory.Build.Application.Root, "package-lock.json"), "package lock")
-			})
+				mockPkgManager.EXPECT().Install(nodeModulesLayerRoot, npmCacheLayerRoot, appRoot).Do(func(_, _, location string) {
+					module := filepath.Join(location, modules.ModulesDir, "test_module")
+					test.WriteFile(t, module, "some module")
 
-			it("returns true if a build plan exists with the dep", func() {
-				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
-
-				_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(willContribute).To(BeTrue())
-			})
-
-			it("returns false if a build plan does not exist with the dep", func() {
-				_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(willContribute).To(BeFalse())
-			})
-
-			it("uses package-lock.json for identity", func() {
-				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
-
-				contributor, _, _ := modules.NewContributor(factory.Build, mockPkgManager)
-				name, version := contributor.NodeModulesMetadata.Identity()
-				Expect(name).To(Equal(modules.Dependency))
-				Expect(version).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
-			})
-
-			when("the app is vendored", func() {
-				it.Before(func() {
-					test.WriteFile(t, filepath.Join(factory.Build.Application.Root, modules.ModulesDir, "test_module"), "some module")
-					mockPkgManager.EXPECT().Rebuild(gomock.Any(), factory.Build.Application.Root)
-				})
-
-				it("contributes for the build phase", func() {
-					factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
-						Metadata: buildplan.Metadata{"build": true},
-					})
-
-					contributor, _, err := modules.NewContributor(factory.Build, mockPkgManager)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(contributor.Contribute()).To(Succeed())
-
-					layer := factory.Build.Layers.Layer(modules.Dependency)
-					Expect(layer).To(test.HaveLayerMetadata(true, true, false))
-					Expect(filepath.Join(layer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
-					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(layer.Root, modules.ModulesDir)))
-
-					Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
-				})
-
-				it("contributes for the launch phase", func() {
-					factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
-						Metadata: buildplan.Metadata{"launch": true},
-					})
-
-					contributor, _, err := modules.NewContributor(factory.Build, mockPkgManager)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(contributor.Contribute()).To(Succeed())
-
-					Expect(factory.Build.Layers).To(test.HaveLaunchMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}}))
-
-					layer := factory.Build.Layers.Layer(modules.Dependency)
-					Expect(layer).To(test.HaveLayerMetadata(false, true, true))
-					Expect(filepath.Join(layer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
-					Expect(layer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(layer.Root, modules.ModulesDir)))
-
-					Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
+					cache := filepath.Join(location, modules.CacheDir, "test_cache_item")
+					test.WriteFile(t, cache, "some cache contents")
 				})
 			})
 
-			when("the app is not vendored", func() {
-				it.Before(func() {
-					nodeModulesLayerRoot := factory.Build.Layers.Layer(modules.Dependency).Root
-					npmCacheLayerRoot := factory.Build.Layers.Layer(modules.Cache).Root
-					appRoot := factory.Build.Application.Root
-
-					mockPkgManager.EXPECT().Install(nodeModulesLayerRoot, npmCacheLayerRoot, appRoot).Do(func(_, _, location string) {
-						module := filepath.Join(location, modules.ModulesDir, "test_module")
-						test.WriteFile(t, module, "some module")
-
-						cache := filepath.Join(location, modules.CacheDir, "test_cache_item")
-						test.WriteFile(t, cache, "some cache contents")
-					})
-				})
-
-				it("contributes for the build phase", func() {
-					factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
-						Metadata: buildplan.Metadata{"build": true},
-					})
-
-					contributor, _, err := modules.NewContributor(factory.Build, mockPkgManager)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(contributor.Contribute()).To(Succeed())
-
-					nodeModulesLayer := factory.Build.Layers.Layer(modules.Dependency)
-					Expect(nodeModulesLayer).To(test.HaveLayerMetadata(true, true, false))
-					Expect(filepath.Join(nodeModulesLayer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
-					Expect(nodeModulesLayer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(nodeModulesLayer.Root, modules.ModulesDir)))
-
-					npmCacheLayer := factory.Build.Layers.Layer(modules.Cache)
-					Expect(npmCacheLayer).To(test.HaveLayerMetadata(false, true, false))
-					Expect(filepath.Join(npmCacheLayer.Root, modules.CacheDir, "test_cache_item")).To(BeARegularFile())
-
-					Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
-					Expect(filepath.Join(factory.Build.Application.Root, modules.CacheDir)).NotTo(BeADirectory())
-				})
-
-				it("contributes for the launch phase", func() {
-					factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
-						Metadata: buildplan.Metadata{"launch": true},
-					})
-
-					contributor, _, err := modules.NewContributor(factory.Build, mockPkgManager)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(contributor.Contribute()).To(Succeed())
-
-					Expect(factory.Build.Layers).To(test.HaveLaunchMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}}))
-
-					nodeModulesLayer := factory.Build.Layers.Layer(modules.Dependency)
-					Expect(nodeModulesLayer).To(test.HaveLayerMetadata(false, true, true))
-					Expect(filepath.Join(nodeModulesLayer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
-					Expect(nodeModulesLayer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(nodeModulesLayer.Root, modules.ModulesDir)))
-
-					npmCacheLayer := factory.Build.Layers.Layer(modules.Cache)
-					Expect(npmCacheLayer).To(test.HaveLayerMetadata(false, true, false))
-					Expect(filepath.Join(npmCacheLayer.Root, modules.CacheDir, "test_cache_item")).To(BeARegularFile())
-
-					Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
-					Expect(filepath.Join(factory.Build.Application.Root, modules.CacheDir)).NotTo(BeADirectory())
-				})
-			})
-		})
-
-		when("there is no package-lock.json", func() {
-			it("should create a contributor", func() {
-				factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
-				contributor, _, err := modules.NewContributor(factory.Build, mockPkgManager)
+			it("installs node_modules, sets environment vars, writes layer metadata", func() {
 				Expect(contributor.NodeModulesMetadata).To(BeNil())
 				Expect(contributor.NPMCacheMetadata).To(BeNil())
-				Expect(err).NotTo(HaveOccurred())
+
+				Expect(contributor.Contribute()).To(Succeed())
+
+				nodeModulesLayer := factory.Build.Layers.Layer(modules.Dependency)
+				Expect(nodeModulesLayer).To(test.HaveLayerMetadata(true, true, true))
+
+				Expect(filepath.Join(nodeModulesLayer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
+				Expect(nodeModulesLayer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(nodeModulesLayer.Root, modules.ModulesDir)))
+				Expect(nodeModulesLayer).To(test.HaveAppendPathSharedEnvironment("PATH", filepath.Join(nodeModulesLayer.Root, modules.ModulesDir, ".bin")))
+
+				npmCacheLayer := factory.Build.Layers.Layer(modules.Cache)
+				Expect(npmCacheLayer).To(test.HaveLayerMetadata(false, true, false))
+				Expect(filepath.Join(npmCacheLayer.Root, modules.CacheDir, "test_cache_item")).To(BeARegularFile())
+
+				Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
+				Expect(filepath.Join(factory.Build.Application.Root, modules.CacheDir)).NotTo(BeADirectory())
+
+				Expect(factory.Build.Layers).To(test.HaveApplicationMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}}))
+			})
+
+		})
+		when("the app is vendored", func() {
+			it.Before(func() {
+				test.WriteFile(t, filepath.Join(factory.Build.Application.Root, modules.ModulesDir, "test_module"), "some module")
+				mockPkgManager.EXPECT().Rebuild(gomock.Any(), factory.Build.Application.Root)
+			})
+
+			it("rebuilds the node_modules and moves them out of the app dir", func() {
+				Expect(contributor.Contribute()).To(Succeed())
+
+				layer := factory.Build.Layers.Layer(modules.Dependency)
+				Expect(filepath.Join(layer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
+				Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
 			})
 		})
 	})

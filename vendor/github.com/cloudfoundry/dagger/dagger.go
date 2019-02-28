@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -44,6 +45,30 @@ func PackageBuildpack() (string, error) {
 	r := regexp.MustCompile("Buildpack packaged into: (.*)")
 	bpDir := r.FindStringSubmatch(string(out))[1]
 	return bpDir, nil
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
+
+func RandStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
+func TempBuildpackPath(name string) (string) {
+	return filepath.Join("/tmp", name + "-" + RandStringRunes(16))
+}
+
+func PackageCachedBuildpack(bpPath string) (string, string, error) {
+	tarFile := TempBuildpackPath(filepath.Base(bpPath))// + ".tgz"
+	cmd := exec.Command("./.bin/packager", tarFile)
+	cmd.Dir = bpPath
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
+
+	return tarFile, string(out), err
 }
 
 func GetLatestBuildpack(name string) (string, error) {
@@ -103,6 +128,7 @@ func GetLatestBuildpack(name string) (string, error) {
 	return dest, helper.ExtractTarGz(downloadFile.Name(), dest, 0)
 }
 
+// This returns the build logs as part of the error case
 func PackBuild(appDir string, buildpacks ...string) (*App, error) {
 	appImageName := randomString(16)
 	buildLogs := &bytes.Buffer{}
@@ -115,7 +141,7 @@ func PackBuild(appDir string, buildpacks ...string) (*App, error) {
 	cmd.Stdout = io.MultiWriter(os.Stdout, buildLogs)
 	cmd.Stderr = io.MultiWriter(os.Stderr, buildLogs)
 	if err := cmd.Run(); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, buildLogs.String())
 	}
 
 	app := &App{
@@ -131,7 +157,7 @@ func BuildCFLinuxFS3() error {
 	cmd := exec.Command("pack", "stacks", "--no-color")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "could not get stack list")
+		return errors.Wrapf(err, "could not get stack list %s", out)
 	}
 
 	contains, err := regexp.Match(CFLINUXFS3, out)
@@ -152,6 +178,7 @@ func BuildCFLinuxFS3() error {
 }
 
 type App struct {
+	Memory      string
 	buildLogs   *bytes.Buffer
 	Env         map[string]string
 	logProc     *exec.Cmd
@@ -184,6 +211,10 @@ func (a *App) Start() error {
 	buf := &bytes.Buffer{}
 
 	args := []string{"run", "-d", "-P"}
+	if a.Memory != "" {
+		args = append(args, "--memory", a.Memory)
+	}
+
 	if a.healthCheck.command != "" {
 		args = append(args, "--health-cmd", a.healthCheck.command)
 	}
@@ -256,6 +287,7 @@ func (a *App) Destroy() error {
 		return err
 	}
 
+
 	cmd = exec.Command("docker", "rm", a.containerId, "-f", "--volumes")
 	if err := cmd.Run(); err != nil {
 		return err
@@ -272,14 +304,12 @@ func (a *App) Destroy() error {
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-
 	cmd = exec.Command("docker", "image", "prune", "-f")
 	if err := cmd.Run(); err != nil {
 		return err
 	}
 
 	a.imageName = ""
-
 	return nil
 }
 

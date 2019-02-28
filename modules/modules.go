@@ -8,18 +8,18 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cloudfoundry/libcfbuildpack/helper"
-
 	"github.com/buildpack/libbuildpack/application"
 	"github.com/cloudfoundry/libcfbuildpack/build"
+	"github.com/cloudfoundry/libcfbuildpack/helper"
 	"github.com/cloudfoundry/libcfbuildpack/layers"
 )
 
 const (
-	Dependency = "node_modules"
-	Cache      = "cache"
-	ModulesDir = "node_modules"
-	CacheDir   = "npm-cache"
+	Dependency     = "node_modules"
+	NodeDependency = "node"
+	Cache          = "cache"
+	ModulesDir     = "node_modules"
+	CacheDir       = "npm-cache"
 )
 
 type PackageManager interface {
@@ -136,7 +136,11 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 		return err
 	}
 
-	return c.launch.WriteMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}})
+	if err := layer.AppendPathSharedEnv("PATH", filepath.Join(layer.Root, ModulesDir, ".bin")); err != nil {
+		return err
+	}
+
+	return c.launch.WriteApplicationMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}})
 }
 
 func (c Contributor) contributeNPMCache(layer layers.Layer) error {

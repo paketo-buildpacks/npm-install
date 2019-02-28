@@ -56,6 +56,18 @@ func (mr *MockPackageManagerMockRecorder) Rebuild(cacheLayer, location interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockPackageManager)(nil).Rebuild), cacheLayer, location)
 }
 
+// RunScript mocks base method
+func (m *MockPackageManager) RunScript(location, script string) error {
+	ret := m.ctrl.Call(m, "RunScript", location, script)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RunScript indicates an expected call of RunScript
+func (mr *MockPackageManagerMockRecorder) RunScript(location, script interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunScript", reflect.TypeOf((*MockPackageManager)(nil).RunScript), location, script)
+}
+
 // MockMetadataInterface is a mock of MetadataInterface interface
 type MockMetadataInterface struct {
 	ctrl     *gomock.Controller
