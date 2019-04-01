@@ -69,7 +69,7 @@ func GetClient(ctx context.Context) *github.Client {
 	tc := oauth2.NewClient(ctx, ts)
 
 	client := github.NewClient(http.DefaultClient)
-	if git_token != "" {
+	if git_token == "" {
 		fmt.Println("Using unauthorized github api, consider setting the GIT_TOKEN environment variable")
 		fmt.Println("More info on Github tokens here: https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line")
 		client = github.NewClient(tc)
