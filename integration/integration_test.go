@@ -138,11 +138,11 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("the app is pushed twice", func() {
-		it("does not reinstall node_modules", func() {
+		it.Focus("does not reinstall node_modules", func() {
 			appDir := filepath.Join("testdata", "simple_app")
 			app, err := dagger.PackBuild(appDir, nodeBP, bp)
 			Expect(err).ToNot(HaveOccurred())
-			defer app.Destroy()
+			//defer app.Destroy()
 
 			Expect(app.BuildLogs()).To(MatchRegexp("node_modules .*: Contributing to layer"))
 
@@ -153,7 +153,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			_, imageID, _, err := app.Info()
 			Expect(err).NotTo(HaveOccurred())
 
-			cmd := exec.Command("pack", "build", imageID, "--builder", "cfbuildpacks/cflinuxfs3-cnb-test-builder", "--clear-cache", "--buildpack", nodeBP, "--buildpack", bp)
+			cmd := exec.Command("pack", "build", imageID, "--builder", "cfbuildpacks/cflinuxfs3-cnb-test-builder", "--buildpack", nodeBP, "--buildpack", bp)
 			cmd.Dir = appDir
 			cmd.Stdout = io.MultiWriter(os.Stdout, buildLogs)
 			cmd.Stderr = io.MultiWriter(os.Stderr, buildLogs)
