@@ -12,7 +12,7 @@ import (
 )
 
 func TestIncompletePackageJSONIntegration(t *testing.T) {
-	spec.Run(t, "MyIntegration", incompletePackageJSONIntegration, spec.Report(report.Terminal{}))
+	spec.Run(t, "IncompletePackageJSONIntegration", incompletePackageJSONIntegration, spec.Report(report.Terminal{}))
 }
 
 func incompletePackageJSONIntegration(t *testing.T, when spec.G, it spec.S) {
@@ -40,11 +40,9 @@ func incompletePackageJSONIntegration(t *testing.T, when spec.G, it spec.S) {
 			defer app.Destroy()
 
 			Expect(app.Start()).To(Succeed())
-
-			Expect(app.Files("node_modules/leftpad")).To(ContainElement(ContainSubstring("node_modules/leftpad")))
-			Expect(app.Files("node_modules/hashish")).To(ContainElement(ContainSubstring("node_modules/hashish")))
+			response, _, err := app.HTTPGet("/")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response).To(ContainSubstring("Hello, World!"))
 		})
-
 	})
-
 }

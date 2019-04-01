@@ -1,4 +1,6 @@
 const http = require('http')
+const leftpad = require('leftpad')
+const hashish = require('hashish')
 const port = Number(process.env.PORT || 8080);
 
 const requestHandler = (request, response) => {
