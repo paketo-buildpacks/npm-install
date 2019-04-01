@@ -14,7 +14,7 @@ import (
 )
 
 func TestVersioningIntegration(t *testing.T) {
-	spec.Run(t, "Integration", testVersioningIntegration, spec.Report(report.Terminal{}))
+	spec.Run(t, "VersioningIntegration", testVersioningIntegration, spec.Report(report.Terminal{}))
 }
 
 func testVersioningIntegration(t *testing.T, when spec.G, it spec.S) {
