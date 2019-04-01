@@ -25,8 +25,6 @@ func incompletePackageJSONIntegration(t *testing.T, when spec.G, it spec.S) {
 		RegisterTestingT(t)
 
 		var err error
-		err = dagger.BuildCFLinuxFS3()
-		Expect(err).NotTo(HaveOccurred())
 
 		bp, err = dagger.PackageBuildpack()
 		Expect(err).ToNot(HaveOccurred())

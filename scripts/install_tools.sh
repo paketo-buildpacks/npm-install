@@ -20,7 +20,6 @@ if [ "$#" -eq 1  ]; then
     PACK_VERSION="$1"
 fi
 
-
 install_pack_master() {
     if [[ -f ".bin/pack" ]]; then return 0; fi
 
@@ -86,7 +85,6 @@ expand() {
     tar xzvf $PACK_ARTIFACT -C .bin
     rm $PACK_ARTIFACT
 }
-
 
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
 

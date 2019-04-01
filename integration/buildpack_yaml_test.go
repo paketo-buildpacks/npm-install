@@ -29,9 +29,6 @@ func testBuildpackYAML(t *testing.T, when spec.G, it spec.S) {
 
 		var err error
 
-		err = dagger.BuildCFLinuxFS3()
-		Expect(err).ToNot(HaveOccurred())
-
 		bp, err = dagger.PackageBuildpack()
 		Expect(err).ToNot(HaveOccurred())
 

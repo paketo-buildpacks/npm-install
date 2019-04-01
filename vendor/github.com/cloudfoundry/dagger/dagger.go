@@ -57,18 +57,31 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 
-func TempBuildpackPath(name string) (string) {
-	return filepath.Join("/tmp", name + "-" + RandStringRunes(16))
+func TempBuildpackPath(name string) string {
+	return filepath.Join("/tmp", name+"-"+RandStringRunes(16))
 }
 
 func PackageCachedBuildpack(bpPath string) (string, string, error) {
-	tarFile := TempBuildpackPath(filepath.Base(bpPath))// + ".tgz"
+	tarFile := TempBuildpackPath(filepath.Base(bpPath)) // + ".tgz"
 	cmd := exec.Command("./.bin/packager", tarFile)
 	cmd.Dir = bpPath
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 
 	return tarFile, string(out), err
+}
+
+func PackageLocalBuildpack(name, path string) (string, error) {
+	cmd := exec.Command("./scripts/package.sh")
+	cmd.Dir = path
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	r := regexp.MustCompile("Buildpack packaged into: (.*)")
+	bpDir := r.FindStringSubmatch(string(out))[1]
+	return bpDir, nil
 }
 
 func GetLatestBuildpack(name string) (string, error) {
@@ -130,10 +143,14 @@ func GetLatestBuildpack(name string) (string, error) {
 
 // This returns the build logs as part of the error case
 func PackBuild(appDir string, buildpacks ...string) (*App, error) {
-	appImageName := randomString(16)
+	return PackBuildNamedImage(randomString(16), appDir, buildpacks...)
+}
+
+// This pack builds an app from appDir into appImageName, to allow specifying an image name in a test
+func PackBuildNamedImage(appImageName, appDir string, buildpacks ...string) (*App, error) {
 	buildLogs := &bytes.Buffer{}
 
-	cmd := exec.Command("pack", "build", appImageName, "--builder", "cfbuildpacks/cflinuxfs3-cnb-test-builder", "--clear-cache")
+	cmd := exec.Command("pack", "build", appImageName, "--builder", "cfbuildpacks/cflinuxfs3-cnb-test-builder")
 	for _, bp := range buildpacks {
 		cmd.Args = append(cmd.Args, "--buildpack", bp)
 	}
@@ -151,30 +168,6 @@ func PackBuild(appDir string, buildpacks ...string) (*App, error) {
 		fixtureName: appDir,
 	}
 	return app, nil
-}
-
-func BuildCFLinuxFS3() error {
-	cmd := exec.Command("pack", "stacks", "--no-color")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "could not get stack list %s", out)
-	}
-
-	contains, err := regexp.Match(CFLINUXFS3, out)
-
-	if err != nil {
-		return errors.Wrap(err, "error running regex match")
-	} else if contains {
-		fmt.Println("cflinuxfs3 stack already added")
-		return nil
-	}
-
-	cmd = exec.Command("pack", "add-stack", CFLINUXFS3, "--build-image", DEFAULT_BUILD_IMAGE, "--run-image", DEFAULT_RUN_IMAGE)
-	if err = cmd.Run(); err != nil {
-		return errors.Wrap(err, "could not add stack")
-	}
-
-	return nil
 }
 
 type App struct {
@@ -286,7 +279,6 @@ func (a *App) Destroy() error {
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-
 
 	cmd = exec.Command("docker", "rm", a.containerId, "-f", "--volumes")
 	if err := cmd.Run(); err != nil {
