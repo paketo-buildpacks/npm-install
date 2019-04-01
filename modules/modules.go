@@ -94,7 +94,11 @@ func (c Contributor) Contribute() error {
 	if err := c.nodeModulesLayer.Contribute(c.NodeModulesMetadata, c.contributeNodeModules, c.flags()...); err != nil {
 		return err
 	}
-	return c.npmCacheLayer.Contribute(c.NPMCacheMetadata, c.contributeNPMCache, layers.Cache)
+	if err := c.npmCacheLayer.Contribute(c.NPMCacheMetadata, c.contributeNPMCache, layers.Cache); err != nil {
+		return err
+	}
+
+	return c.launch.WriteApplicationMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}})
 }
 
 func (c Contributor) contributeNodeModules(layer layers.Layer) error {
@@ -136,11 +140,7 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 		return err
 	}
 
-	if err := layer.AppendPathSharedEnv("PATH", filepath.Join(layer.Root, ModulesDir, ".bin")); err != nil {
-		return err
-	}
-
-	return c.launch.WriteApplicationMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}})
+	return layer.AppendPathSharedEnv("PATH", filepath.Join(layer.Root, ModulesDir, ".bin"))
 }
 
 func (c Contributor) contributeNPMCache(layer layers.Layer) error {
