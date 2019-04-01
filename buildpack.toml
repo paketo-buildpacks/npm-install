@@ -2,17 +2,11 @@
 [buildpack]
 id = "org.cloudfoundry.buildpacks.npm"
 name = "NPM Buildpack"
-version = "0.0.4"
+version = "0.0.5"
 
 [metadata]
- include_files = [
-        "bin/build",
-        "bin/detect",
-        "buildpack.toml",
-        "go.mod",
-        "go.sum",
-    ]
- pre_package = "./scripts/build.sh"
+include_files = ["bin/build","bin/detect","buildpack.toml","go.mod","go.sum"]
+pre_package = "./scripts/build.sh"
 
 [[stacks]]
 id = "org.cloudfoundry.stacks.cflinuxfs3"
