@@ -138,7 +138,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("the app is pushed twice", func() {
-		it.Focus("does not reinstall node_modules", func() {
+		it("does not reinstall node_modules", func() {
 			appDir := filepath.Join("testdata", "simple_app")
 			app, err := dagger.PackBuild(appDir, nodeBP, bp)
 			Expect(err).ToNot(HaveOccurred())
