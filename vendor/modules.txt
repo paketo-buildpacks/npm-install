@@ -14,7 +14,7 @@ github.com/buildpack/libbuildpack/buildpack
 github.com/buildpack/libbuildpack/stack
 github.com/buildpack/libbuildpack/platform
 github.com/buildpack/libbuildpack/services
-# github.com/cloudfoundry/dagger v0.0.0-20190401212155-44a90aadbea5
+# github.com/cloudfoundry/dagger v0.0.0-20190501162049-68790e774ad6
 github.com/cloudfoundry/dagger
 # github.com/cloudfoundry/libcfbuildpack v1.48.0
 github.com/cloudfoundry/libcfbuildpack/build
@@ -61,7 +61,7 @@ github.com/pkg/errors
 # github.com/sclevine/spec v1.2.0
 github.com/sclevine/spec
 github.com/sclevine/spec/report
-# golang.org/x/net v0.0.0-20190226215741-afe646ca25a4
+# golang.org/x/net v0.0.0-20190415214537-1da14a5a36f2
 golang.org/x/net/html/charset
 golang.org/x/net/html
 golang.org/x/net/context/ctxhttp
@@ -70,7 +70,7 @@ golang.org/x/net/context
 # golang.org/x/oauth2 v0.0.0-20190319182350-c85d3e98c914
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20190226215855-775f8194d0f9
+# golang.org/x/sys v0.0.0-20190416152802-12500544f89f
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2
 golang.org/x/text/encoding
