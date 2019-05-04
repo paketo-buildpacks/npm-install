@@ -103,10 +103,6 @@ func (c Contributor) Contribute() error {
 }
 
 func (c Contributor) contributeNodeModules(layer layers.Layer) error {
-	if err := c.pkgManager.WarnUnmetDependencies(c.app.Root); err != nil {
-		return fmt.Errorf("failed to check unmet dependencies: %s", err.Error())
-	}
-
 	nodeModules := filepath.Join(c.app.Root, ModulesDir)
 
 	vendored, err := helper.FileExists(nodeModules)
@@ -143,6 +139,11 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 		if err := os.RemoveAll(nodeModules); err != nil {
 			return fmt.Errorf("unable to remove node_modules from the app dir: %s", err.Error())
 		}
+	}
+
+	os.Setenv("NODE_VERBOSE", "true")
+	if err := c.pkgManager.WarnUnmetDependencies(c.app.Root); err != nil {
+		return fmt.Errorf("failed to check unmet dependencies: %s", err.Error())
 	}
 
 	if err := layer.OverrideSharedEnv("NODE_PATH", filepath.Join(layer.Root, ModulesDir)); err != nil {

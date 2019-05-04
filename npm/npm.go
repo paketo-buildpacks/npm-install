@@ -135,7 +135,6 @@ func (n NPM) WarnUnmetDependencies(appRoot string) error {
 	}
 
 	output = strings.ToLower(string(output))
-	n.Logger.Info(string(output))
 	unmet := strings.Contains(output, "unmet dependency") || strings.Contains(output, "unmet peer dependency")
 	if unmet {
 		n.Logger.Info(UnmetDepWarning)
