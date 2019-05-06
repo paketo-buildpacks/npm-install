@@ -11,6 +11,10 @@ import (
 	"github.com/sclevine/spec"
 )
 
+func init() {
+	suite("Versioning", testVersioning)
+}
+
 func testVersioning(t *testing.T, when spec.G, it spec.S) {
 	var (
 		app *dagger.App
@@ -30,7 +34,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 
 	when("npm version minor patch is floated", func() {
 		it("should build a working OCI image, but not respect specified npm version", func() {
-			app, err = dagger.PackBuild(filepath.Join("testdata", "npm_version_with_minor_x"), nodejsCNB, bp)
+			app, err = dagger.PackBuild(filepath.Join("testdata", "npm_version_with_minor_x"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -47,7 +51,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 		const nvmrcVersion = `8.\d+\.\d+`
 
 		it("package.json takes precedence over it", func() {
-			app, err = dagger.PackBuild(filepath.Join("testdata", "simple_app_with_nvmrc"), nodejsCNB, bp)
+			app, err = dagger.PackBuild(filepath.Join("testdata", "simple_app_with_nvmrc"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -60,7 +64,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("it is honored if there package.json doesn't have an engine", func() {
-			app, err = dagger.PackBuild(filepath.Join("testdata", "simple_app_with_nvmrc_and_no_engine"), nodejsCNB, bp)
+			app, err = dagger.PackBuild(filepath.Join("testdata", "simple_app_with_nvmrc_and_no_engine"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())

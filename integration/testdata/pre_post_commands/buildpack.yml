@@ -1,4 +1,0 @@
----
-npm:
-  pre-build: "my-prebuild"
-  post-build: "my-postbuild"
