@@ -141,7 +141,10 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 		}
 	}
 
-	os.Setenv("NODE_VERBOSE", "true")
+	if err := os.Setenv("NODE_VERBOSE", "true"); err != nil {
+		return fmt.Errorf("unable to set NODE_VERBOSE to true")
+	}
+
 	if err := c.pkgManager.WarnUnmetDependencies(c.app.Root); err != nil {
 		return fmt.Errorf("failed to check unmet dependencies: %s", err.Error())
 	}
