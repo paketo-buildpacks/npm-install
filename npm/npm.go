@@ -3,17 +3,18 @@ package npm
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/cloudfoundry/libcfbuildpack/buildpack"
 
 	"github.com/Masterminds/semver"
-	"github.com/cloudfoundry/libcfbuildpack/helper"
+	. "github.com/cloudfoundry/libcfbuildpack/helper"
 	"github.com/cloudfoundry/npm-cnb/modules"
 )
 
-const UNMET_DEP_WARNING = "Unmet dependencies don't fail npm install but may cause runtime issues\nSee: https://github.com/npm/npm/issues/7494"
+const UnmetDepWarning = "Unmet dependencies don't fail npm install but may cause runtime issues\nSee: https://github.com/npm/npm/issues/7494"
 
 type Runner interface {
 	Run(bin, dir string, quiet bool, args ...string) error
@@ -58,7 +59,7 @@ func (n NPM) Rebuild(cacheLayer, location string) error {
 
 func (n NPM) moveDir(source, target, name string) error {
 	dir := filepath.Join(source, name)
-	if exists, err := helper.FileExists(dir); err != nil {
+	if exists, err := FileExists(dir); err != nil {
 		return err
 	} else if !exists {
 		return nil
@@ -80,7 +81,7 @@ func (n NPM) moveDir(source, target, name string) error {
 	}
 
 	n.Logger.Info("Reusing existing %s", name)
-	if err := helper.CopyDirectory(dir, filepath.Join(target, name)); err != nil {
+	if err := CopyDirectory(dir, filepath.Join(target, name)); err != nil {
 		return err
 	}
 
@@ -105,13 +106,7 @@ func (n NPM) runInstall(location string, cacheLocation string, skipAudit bool) e
 		args = append(args, "--no-audit")
 	}
 
-	installLogs, err := n.Runner.RunWithOutput("npm", location, false, args...)
-	if err != nil {
-		return err
-	}
-	n.warnUnmetDependencies(installLogs)
-
-	return nil
+	return n.Runner.Run("npm", location, false, args...)
 }
 
 func (n NPM) runCacheVerify(location, cacheLocation string) error {
@@ -132,10 +127,19 @@ func (n NPM) runCacheVerify(location, cacheLocation string) error {
 	return n.Runner.Run("npm", location, false, "cache", "verify", "--cache", cacheLocation)
 }
 
-func (n NPM) warnUnmetDependencies(installLog string) {
-	installLog = strings.ToLower(installLog)
-	unmet := strings.Contains(installLog, "unmet dependency") || strings.Contains(installLog, "unmet peer dependency")
-	if unmet {
-		n.Logger.Info(UNMET_DEP_WARNING)
+func (n NPM) WarnUnmetDependencies(appRoot string) error {
+	output, err := n.Runner.RunWithOutput("npm", appRoot, true, "ls", "--depth=0")
+	_, ok := err.(*exec.ExitError)
+	if err != nil && !ok {
+		return err
 	}
+
+	output = strings.ToLower(string(output))
+	n.Logger.Info(string(output))
+	unmet := strings.Contains(output, "unmet dependency") || strings.Contains(output, "unmet peer dependency")
+	if unmet {
+		n.Logger.Info(UnmetDepWarning)
+	}
+
+	return nil
 }

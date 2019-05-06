@@ -33,39 +33,39 @@ func (m *MockPackageManager) EXPECT() *MockPackageManagerMockRecorder {
 }
 
 // Install mocks base method
-func (m *MockPackageManager) Install(modulesLayer, cacheLayer, location string) error {
-	ret := m.ctrl.Call(m, "Install", modulesLayer, cacheLayer, location)
+func (m *MockPackageManager) Install(arg0, arg1, arg2 string) error {
+	ret := m.ctrl.Call(m, "Install", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Install indicates an expected call of Install
-func (mr *MockPackageManagerMockRecorder) Install(modulesLayer, cacheLayer, location interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockPackageManager)(nil).Install), modulesLayer, cacheLayer, location)
+func (mr *MockPackageManagerMockRecorder) Install(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockPackageManager)(nil).Install), arg0, arg1, arg2)
 }
 
 // Rebuild mocks base method
-func (m *MockPackageManager) Rebuild(cacheLayer, location string) error {
-	ret := m.ctrl.Call(m, "Rebuild", cacheLayer, location)
+func (m *MockPackageManager) Rebuild(arg0, arg1 string) error {
+	ret := m.ctrl.Call(m, "Rebuild", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Rebuild indicates an expected call of Rebuild
-func (mr *MockPackageManagerMockRecorder) Rebuild(cacheLayer, location interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockPackageManager)(nil).Rebuild), cacheLayer, location)
+func (mr *MockPackageManagerMockRecorder) Rebuild(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockPackageManager)(nil).Rebuild), arg0, arg1)
 }
 
-// RunScript mocks base method
-func (m *MockPackageManager) RunScript(location, script string) error {
-	ret := m.ctrl.Call(m, "RunScript", location, script)
+// WarnUnmetDependencies mocks base method
+func (m *MockPackageManager) WarnUnmetDependencies(arg0 string) error {
+	ret := m.ctrl.Call(m, "WarnUnmetDependencies", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RunScript indicates an expected call of RunScript
-func (mr *MockPackageManagerMockRecorder) RunScript(location, script interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunScript", reflect.TypeOf((*MockPackageManager)(nil).RunScript), location, script)
+// WarnUnmetDependencies indicates an expected call of WarnUnmetDependencies
+func (mr *MockPackageManagerMockRecorder) WarnUnmetDependencies(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WarnUnmetDependencies", reflect.TypeOf((*MockPackageManager)(nil).WarnUnmetDependencies), arg0)
 }
 
 // MockMetadataInterface is a mock of MetadataInterface interface

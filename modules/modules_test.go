@@ -85,6 +85,8 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			contributor, willContribute, err = modules.NewContributor(factory.Build, mockPkgManager)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(willContribute).To(BeTrue())
+
+			mockPkgManager.EXPECT().WarnUnmetDependencies(appRoot)
 		})
 		when("the app is not vendored", func() {
 			it.Before(func() {

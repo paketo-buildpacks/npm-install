@@ -53,14 +53,14 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 	when("installing", func() {
 		when("node_modules and npm-cache do not already exist", func() {
 			it("should run npm install and npm cache verify if npm version after 5.0.0", func() {
-				mockRunner.EXPECT().RunWithOutput("npm", location, false, "install", "--unsafe-perm", "--cache", npmCache)
+				mockRunner.EXPECT().Run("npm", location, false, "install", "--unsafe-perm", "--cache", npmCache)
 				mockRunner.EXPECT().Run("npm", location, false, "cache", "verify", "--cache", npmCache)
 				mockRunner.EXPECT().RunWithOutput("npm", location, true, "-v").Return("5.0.0", nil)
 				Expect(pkgManager.Install("", "", location)).To(Succeed())
 			})
 
 			it("should run npm install and skip npm cache verify if npm version before 5.0.0", func() {
-				mockRunner.EXPECT().RunWithOutput("npm", location, false, "install", "--unsafe-perm", "--cache", npmCache)
+				mockRunner.EXPECT().Run("npm", location, false, "install", "--unsafe-perm", "--cache", npmCache)
 				mockRunner.EXPECT().RunWithOutput("npm", location, true, "-v").Return("4.3.2", nil)
 				Expect(pkgManager.Install("", "", location)).To(Succeed())
 			})
@@ -83,7 +83,7 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 				Expect(ioutil.WriteFile(filepath.Join(cacheLayer, modules.CacheDir, "cache-item"), []byte(""), os.ModePerm)).To(Succeed())
 
 				npmCache := filepath.Join(location, modules.CacheDir)
-				mockRunner.EXPECT().RunWithOutput("npm", location, false, "install", "--unsafe-perm", "--cache", npmCache)
+				mockRunner.EXPECT().Run("npm", location, false, "install", "--unsafe-perm", "--cache", npmCache)
 				mockRunner.EXPECT().Run("npm", location, false, "cache", "verify", "--cache", npmCache)
 				mockRunner.EXPECT().RunWithOutput("npm", location, true, "-v").Return("5.0.1", nil)
 
@@ -105,33 +105,24 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 			defer os.RemoveAll(cacheLayer)
 
 			mockRunner.EXPECT().Run("npm", location, false, "rebuild")
-			mockRunner.EXPECT().RunWithOutput("npm", location, false, "install", "--unsafe-perm", "--cache", npmCache, "--no-audit")
+			mockRunner.EXPECT().Run("npm", location, false, "install", "--unsafe-perm", "--cache", npmCache, "--no-audit")
 
 			Expect(pkgManager.Rebuild(cacheLayer, location)).To(Succeed())
 		})
 
 	})
 
-	when("Not fully vendored", func() {
+	when("WarnUnmetDependencies", func() {
 		it("warns that unmet dependencies may cause issues", func() {
-			modulesLayer, err := ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-			defer os.RemoveAll(modulesLayer)
-
-			cacheLayer, err := ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-			defer os.RemoveAll(cacheLayer)
-
 			debugBuff := bytes.Buffer{}
 			infoBuff := bytes.Buffer{}
 			npmLogger := logger.Logger{Logger: logger2.NewLogger(&debugBuff, &infoBuff)}
 			pkgManager.Logger = npmLogger
 
-			mockRunner.EXPECT().RunWithOutput("npm", location, false, "install", "--unsafe-perm", "--cache", npmCache).Return("unmet peer dependency", nil)
-			mockRunner.EXPECT().RunWithOutput("npm", location, true, "-v").Return("4.3.2", nil)
+			mockRunner.EXPECT().RunWithOutput("npm", location, true, "ls").Return("unmet peer dependency", nil)
 
-			Expect(pkgManager.Install(modulesLayer, cacheLayer, location)).To(Succeed())
-			Expect(infoBuff.String()).To(ContainSubstring(npm.UNMET_DEP_WARNING))
+			Expect(pkgManager.WarnUnmetDependencies(location)).To(Succeed())
+			Expect(infoBuff.String()).To(ContainSubstring(npm.UnmetDepWarning))
 		})
 	})
 }

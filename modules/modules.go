@@ -23,8 +23,9 @@ const (
 )
 
 type PackageManager interface {
-	Install(modulesLayer, cacheLayer, location string) error
-	Rebuild(cacheLayer, location string) error
+	Install(string, string, string) error
+	Rebuild(string, string) error
+	WarnUnmetDependencies(string) error
 }
 
 type MetadataInterface interface {
@@ -102,6 +103,10 @@ func (c Contributor) Contribute() error {
 }
 
 func (c Contributor) contributeNodeModules(layer layers.Layer) error {
+	if err := c.pkgManager.WarnUnmetDependencies(c.app.Root); err != nil {
+		return fmt.Errorf("failed to check unmet dependencies: %s", err.Error())
+	}
+
 	nodeModules := filepath.Join(c.app.Root, ModulesDir)
 
 	vendored, err := helper.FileExists(nodeModules)

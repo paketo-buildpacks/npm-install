@@ -1,4 +1,4 @@
-package integration
+package integration_test
 
 import (
 	"path/filepath"
@@ -6,38 +6,19 @@ import (
 
 	"github.com/cloudfoundry/dagger"
 
-	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
-
 	. "github.com/onsi/gomega"
+	"github.com/sclevine/spec"
 )
 
-//TODO: DO WE NEED THIS?
-
-func TestBuildpackYAML(t *testing.T) {
-	spec.Run(t, "BuildpackYAML", testBuildpackYAML, spec.Report(report.Terminal{}))
-}
-
 func testBuildpackYAML(t *testing.T, when spec.G, it spec.S) {
-	var (
-		bp     string
-		nodeBP string
-	)
+	var Expect func(interface{}, ...interface{}) Assertion
 
 	it.Before(func() {
-		RegisterTestingT(t)
-
-		var err error
-
-		bp, err = dagger.PackageBuildpack()
-		Expect(err).ToNot(HaveOccurred())
-
-		nodeBP, err = dagger.GetLatestBuildpack("nodejs-cnb")
-		Expect(err).ToNot(HaveOccurred())
+		Expect = NewWithT(t).Expect
 	})
 
 	it("runs the chosen npm pre and post build scripts", func() {
-		app, err := dagger.PackBuild(filepath.Join("testdata", "pre_post_commands"), nodeBP, bp)
+		app, err := dagger.PackBuild(filepath.Join("testdata", "pre_post_commands"), nodejsCNB, bp)
 		Expect(err).ToNot(HaveOccurred())
 		defer app.Destroy()
 
