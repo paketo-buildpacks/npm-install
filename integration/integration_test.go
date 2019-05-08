@@ -21,9 +21,6 @@ var suite = spec.New("Integration", spec.Report(report.Terminal{}))
 
 func init() {
 	suite("Integration", testIntegration)
-
-
-
 }
 
 func TestIntegration(t *testing.T) {
@@ -53,14 +50,15 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 	when("when the node_modules are vendored", func() {
 		it("should build a working OCI image for a simple app", func() {
-			app, err := dagger.PackBuild(filepath.Join("testdata", "simple_app_vendored"), nodeURI, npmURI)
+			app, err := dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 			defer app.Destroy()
 
 			Expect(app.Start()).To(Succeed())
 
-			_, _, err = app.HTTPGet("/")
+			body, _, err := app.HTTPGet("/")
 			Expect(err).NotTo(HaveOccurred())
+			Expect(body).To(ContainSubstring("Hello, World!"))
 		})
 
 		//Needs fixing
@@ -75,14 +73,14 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		//		npmBp, _, err := dagger.PackageCachedBuildpack("/Users/pivotal/workspace/npm-cnb")
 		//		Expect(err).ToNot(HaveOccurred())
 		//
-		//		app, err := dagger.PackBuild(filepath.Join("testdata", "simple_app_vendored"), nodeBp, npmBp)
+		//		app, err := dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeBp, npmBp)
 		//		Expect(err).ToNot(HaveOccurred())
 		//		defer app.Destroy()
 		//
 		//		Expect(app.Start()).To(Succeed())
 		//
 		//		// TODO: add functionality to force network isolation in dagger
-		//		_, _, err = app.HTTPGet("/")
+		//		body, _, err = app.HTTPGet("/")
 		//		Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
 		//		Expect(err).NotTo(HaveOccurred())
 		//
@@ -98,8 +96,10 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 			Expect(app.Start()).To(Succeed())
 
-			_, _, err = app.HTTPGet("/")
+			body, _, err := app.HTTPGet("/")
 			Expect(err).NotTo(HaveOccurred())
+			Expect(body).To(ContainSubstring("Hello, World!"))
+
 		})
 
 		// Needs fixing
@@ -144,8 +144,9 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 			Expect(app.Start()).To(Succeed())
 
-			_, _, err = app.HTTPGet("/")
+			body, _, err := app.HTTPGet("/")
 			Expect(err).NotTo(HaveOccurred())
+			Expect(body).To(ContainSubstring("Hello, World!"))
 		})
 	})
 
@@ -165,8 +166,9 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 			Expect(app.Start()).To(Succeed())
 
-			_, _, err = app.HTTPGet("/")
+			body, _, err := app.HTTPGet("/")
 			Expect(err).NotTo(HaveOccurred())
+			Expect(body).To(ContainSubstring("Hello, World!"))
 		})
 	})
 }

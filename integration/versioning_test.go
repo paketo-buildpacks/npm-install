@@ -51,7 +51,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 		const nvmrcVersion = `8.\d+\.\d+`
 
 		it("package.json takes precedence over it", func() {
-			app, err = dagger.PackBuild(filepath.Join("testdata", "simple_app_with_nvmrc"), nodeURI, npmURI)
+			app, err = dagger.PackBuild(filepath.Join("testdata", "with_nvmrc"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -64,7 +64,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("it is honored if there package.json doesn't have an engine", func() {
-			app, err = dagger.PackBuild(filepath.Join("testdata", "simple_app_with_nvmrc_and_no_engine"), nodeURI, npmURI)
+			app, err = dagger.PackBuild(filepath.Join("testdata", "with_nvmrc_and_no_engine"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())

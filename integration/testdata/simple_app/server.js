@@ -3,7 +3,7 @@ const port = process.env.PORT || 8080;
 const leftpad = require('leftpad');
 
 const requestHandler = (request, response) => {
-  response.end(leftpad('a', 10, 'b'));
+  response.end("Hello, World!");
 };
 
 const server = http.createServer(requestHandler);
