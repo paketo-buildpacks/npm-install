@@ -23,6 +23,7 @@ type Runner interface {
 
 type Logger interface {
 	Info(format string, args ...interface{})
+	Warning(format string, args ...interface{})
 }
 
 type NPM struct {
@@ -137,7 +138,7 @@ func (n NPM) WarnUnmetDependencies(appRoot string) error {
 	output = strings.ToLower(string(output))
 	unmet := strings.Contains(output, "unmet dependency") || strings.Contains(output, "unmet peer dependency")
 	if unmet {
-		n.Logger.Info(UnmetDepWarning)
+		n.Logger.Warning(UnmetDepWarning)
 	}
 
 	return nil
