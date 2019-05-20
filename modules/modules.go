@@ -105,6 +105,10 @@ func (c Contributor) Contribute() error {
 func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 	nodeModules := filepath.Join(c.app.Root, ModulesDir)
 
+	if err := c.tipVendorDependencies(nodeModules); err != nil {
+		return err
+	}
+
 	vendored, err := helper.FileExists(nodeModules)
 	if err != nil {
 		return fmt.Errorf("unable to stat node_modules: %s", err.Error())
@@ -154,6 +158,37 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 	}
 
 	return layer.AppendPathSharedEnv("PATH", filepath.Join(layer.Root, ModulesDir, ".bin"))
+}
+
+func (c *Contributor) tipVendorDependencies(nodeModules string) error {
+	subdirs, err := hasSubdirs(nodeModules)
+	if err != nil {
+		return err
+	}
+	if !subdirs {
+		c.nodeModulesLayer.Logger.Info("It is recommended to vendor the application's Node.js dependencies")
+	}
+
+	return nil
+}
+
+func hasSubdirs(path string) (bool, error) {
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (c Contributor) contributeNPMCache(layer layers.Layer) error {

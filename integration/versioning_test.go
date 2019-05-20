@@ -17,8 +17,8 @@ func init() {
 
 func testVersioning(t *testing.T, when spec.G, it spec.S) {
 	var (
-		app *dagger.App
-		err error
+		app    *dagger.App
+		err    error
 		Expect func(interface{}, ...interface{}) Assertion
 	)
 
@@ -26,7 +26,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 		Expect = NewWithT(t).Expect
 	})
 
-	it.After(func(){
+	it.After(func() {
 		if app != nil {
 			app.Destroy()
 		}
