@@ -104,3 +104,18 @@ func (mr *MockLoggerMockRecorder) Info(format interface{}, args ...interface{}) 
 	varargs := append([]interface{}{format}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Info", reflect.TypeOf((*MockLogger)(nil).Info), varargs...)
 }
+
+// Warning mocks base method
+func (m *MockLogger) Warning(format string, args ...interface{}) {
+	varargs := []interface{}{format}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "Warning", varargs...)
+}
+
+// Warning indicates an expected call of Warning
+func (mr *MockLoggerMockRecorder) Warning(format interface{}, args ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{format}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Warning", reflect.TypeOf((*MockLogger)(nil).Warning), varargs...)
+}
