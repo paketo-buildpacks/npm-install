@@ -126,10 +126,6 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 		}
 	}
 
-	if err := os.MkdirAll(layer.Root, 0777); err != nil {
-		return fmt.Errorf("unable make node modules layer: %s", err.Error())
-	}
-
 	nodeModulesExist, err := helper.FileExists(nodeModules)
 	if err != nil {
 		return fmt.Errorf("unable to stat node_modules: %s", err.Error())
