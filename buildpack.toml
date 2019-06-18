@@ -2,7 +2,7 @@
 [buildpack]
 id = "org.cloudfoundry.npm"
 name = "NPM Buildpack"
-version = "0.0.8"
+version = "0.0.9"
 
 [metadata]
 include_files = ["bin/build","bin/detect","buildpack.toml"]
