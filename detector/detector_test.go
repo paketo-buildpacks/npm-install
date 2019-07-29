@@ -56,7 +56,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 	when("there is no package.json", func() {
 		it("should fail", func() {
 			code, err := d.RunDetect(factory.Detect)
-			Expect(err).To(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(code).To(Equal(detect.FailStatusCode))
 		})
 	})

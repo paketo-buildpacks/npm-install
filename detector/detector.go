@@ -17,9 +17,15 @@ type Detector struct{}
 
 func (d *Detector) RunDetect(context detect.Detect) (int, error) {
 	packageJSON := filepath.Join(context.Application.Root, "package.json")
-	packageJSONVersion, err := d.checkPackageJSON(packageJSON)
-	if err != nil {
+	if exists, err := helper.FileExists(packageJSON); err != nil {
 		return detect.FailStatusCode, err
+	} else if !exists {
+		return detect.FailStatusCode, nil
+	}
+
+	packageJSONVersion, err := GetVersion(packageJSON)
+	if err != nil {
+		return detect.FailStatusCode, fmt.Errorf(`unable to parse "package.json": %s`, err.Error())
 	}
 
 	nodePlan, err := d.nodeBuildPlan(context, packageJSONVersion)
