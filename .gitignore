@@ -4,4 +4,3 @@
 *.tgz
 npm-cnb_*
 bin/
-/buildpack.toml
