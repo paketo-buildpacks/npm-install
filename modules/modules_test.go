@@ -1,12 +1,12 @@
 package modules_test
 
 import (
+	"github.com/cloudfoundry/libcfbuildpack/buildpackplan"
 	"path/filepath"
 	"testing"
 
 	"github.com/cloudfoundry/libcfbuildpack/layers"
 
-	"github.com/buildpack/libbuildpack/buildplan"
 	"github.com/cloudfoundry/libcfbuildpack/test"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/golang/mock/gomock"
@@ -42,7 +42,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 	when("NewContributor", func() {
 		it("returns true if a build plan exists with the dep", func() {
-			factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
+			factory.AddPlan(buildpackplan.Plan{Name:modules.Dependency})
 
 			_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
 			Expect(err).NotTo(HaveOccurred())
@@ -57,14 +57,13 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 		it("uses package-lock.json for identity when it exists", func() {
 			test.WriteFile(t, filepath.Join(factory.Build.Application.Root, "package-lock.json"), "package lock")
-			factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{})
+			factory.AddPlan(buildpackplan.Plan{Name:modules.Dependency})
 
 			contributor, _, _ := modules.NewContributor(factory.Build, mockPkgManager)
 			name, version := contributor.NodeModulesMetadata.Identity()
 			Expect(name).To(Equal(modules.Dependency))
 			Expect(version).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 		})
-
 	})
 
 	when("Contribute", func() {
@@ -78,8 +77,9 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			nodeModulesLayerRoot = factory.Build.Layers.Layer(modules.Dependency).Root
 			npmCacheLayerRoot = factory.Build.Layers.Layer(modules.Cache).Root
 			appRoot = factory.Build.Application.Root
-			factory.AddBuildPlan(modules.Dependency, buildplan.Dependency{
-				Metadata: buildplan.Metadata{"build": true, "launch": true},
+			factory.AddPlan(buildpackplan.Plan{
+				Name:modules.Dependency,
+				Metadata:buildpackplan.Metadata{"build": true, "launch": true},
 			})
 
 			contributor, willContribute, err = modules.NewContributor(factory.Build, mockPkgManager)

@@ -39,7 +39,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 			packageJSONString := fmt.Sprintf(`{"engines": {"node" : "%s"}}`, version)
 			test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, "package.json"), packageJSONString)
 
-			plan := getStandardBuildplanWithNodeVersion(version)
+			plan := getStandardBuildplanWithNodeVersion(version, "package.json")
 			runDetectAndExpectBuildplan(factory, d, plan)
 		})
 	})
@@ -48,7 +48,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 		it("should pass with empty version of node", func() {
 			test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, "package.json"), "{}")
 
-			plan := getStandardBuildplanWithNodeVersion("")
+			plan := getStandardBuildplanWithNodeVersion("", "")
 			runDetectAndExpectBuildplan(factory, d, plan)
 		})
 	})
@@ -61,59 +61,66 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 		})
 	})
 
-	when("When .nvmrc is present", func() {
-		when("nvmrc is present and engines field in package.json is present", func() {
-			it("selects the version from the engines field in packages.json", func() {
-				packageJSONVersion := "10.0.0"
+	when("package.json exists", func() {
+		when("node version is specified in the engines field", func() {
+			var packageJSONPath, packageJSONVersion string
+
+			it.Before(func() {
+				packageJSONVersion = "10.0.0"
 				packageJSONString := fmt.Sprintf(`{"engines": {"node" : "%s"}}`, packageJSONVersion)
-				test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, "package.json"), packageJSONString)
+				packageJSONPath = filepath.Join(factory.Detect.Application.Root, "package.json")
+				test.WriteFile(t, packageJSONPath, packageJSONString)
+			})
 
-				nvmrcVersion := "10.2.3"
-				factory.AddBuildPlan(modules.NodeDependency, buildplan.Dependency{
-					Version:  nvmrcVersion,
-					Metadata: buildplan.Metadata{"launch": true},
-				})
-
-				plan := getStandardBuildplanWithNodeVersion(packageJSONVersion)
+			it("selects the node version from the engines field in package.json", func() {
+				plan := getStandardBuildplanWithNodeVersion(packageJSONVersion, "package.json")
 				runDetectAndExpectBuildplan(factory, d, plan)
 			})
 		})
 
-		when("nvmrc is present and engines field in package.json is missing", func() {
-			it("selects the version in nvmrc", func() {
+		when("node version is not specified in the engines field", func() {
+			var packageJSONPath string
+
+			it.Before(func() {
 				packageJSONString := `{"engines": {"node" : ""}}`
-				test.WriteFile(t, filepath.Join(factory.Detect.Application.Root, "package.json"), packageJSONString)
+				packageJSONPath = filepath.Join(factory.Detect.Application.Root, "package.json")
+				test.WriteFile(t, packageJSONPath, packageJSONString)
+			})
 
-				nvmrcVersion := "10.2.3"
-				factory.AddBuildPlan(modules.NodeDependency, buildplan.Dependency{
-					Version:  nvmrcVersion,
-					Metadata: buildplan.Metadata{"launch": true},
-				})
-
-				plan := getStandardBuildplanWithNodeVersion(nvmrcVersion)
+			it("does not request a specific version of node", func() {
+				plan := getStandardBuildplanWithNodeVersion("", "")
 				runDetectAndExpectBuildplan(factory, d, plan)
 			})
 		})
 	})
 }
 
-func runDetectAndExpectBuildplan(factory *test.DetectFactory, d detector.Detector, buildplan buildplan.BuildPlan) {
+func runDetectAndExpectBuildplan(factory *test.DetectFactory, d detector.Detector, buildplan buildplan.Plan) {
 	code, err := d.RunDetect(factory.Detect)
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(code).To(Equal(detect.PassStatusCode))
 
-	Expect(factory.Output).To(Equal(buildplan))
+	Expect(factory.Plans.Plan).To(Equal(buildplan))
 }
 
-func getStandardBuildplanWithNodeVersion(version string) buildplan.BuildPlan {
-	return buildplan.BuildPlan{
-		modules.NodeDependency: buildplan.Dependency{
-			Version:  version,
-			Metadata: buildplan.Metadata{"build": true, "launch": true},
-		},
-		modules.Dependency: buildplan.Dependency{
-			Metadata: buildplan.Metadata{"launch": true},
+func getStandardBuildplanWithNodeVersion(version, versionSource string) buildplan.Plan {
+	return buildplan.Plan{
+		Provides: []buildplan.Provided{{Name: modules.Dependency}},
+		Requires: []buildplan.Required{
+			{
+				Name:     modules.NodeDependency,
+				Version:  version,
+				Metadata: buildplan.Metadata{
+					"build": true,
+					"launch": true,
+					"version-source": versionSource,
+				},
+			},
+			{
+				Name:     modules.Dependency,
+				Metadata: buildplan.Metadata{"launch": true},
+			},
 		},
 	}
 }

@@ -34,6 +34,7 @@ func (m *MockPackageManager) EXPECT() *MockPackageManagerMockRecorder {
 
 // Install mocks base method
 func (m *MockPackageManager) Install(arg0, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Install", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -41,11 +42,13 @@ func (m *MockPackageManager) Install(arg0, arg1, arg2 string) error {
 
 // Install indicates an expected call of Install
 func (mr *MockPackageManagerMockRecorder) Install(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockPackageManager)(nil).Install), arg0, arg1, arg2)
 }
 
 // Rebuild mocks base method
 func (m *MockPackageManager) Rebuild(arg0, arg1 string) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Rebuild", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -53,11 +56,13 @@ func (m *MockPackageManager) Rebuild(arg0, arg1 string) error {
 
 // Rebuild indicates an expected call of Rebuild
 func (mr *MockPackageManagerMockRecorder) Rebuild(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockPackageManager)(nil).Rebuild), arg0, arg1)
 }
 
 // WarnUnmetDependencies mocks base method
 func (m *MockPackageManager) WarnUnmetDependencies(arg0 string) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WarnUnmetDependencies", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -65,6 +70,7 @@ func (m *MockPackageManager) WarnUnmetDependencies(arg0 string) error {
 
 // WarnUnmetDependencies indicates an expected call of WarnUnmetDependencies
 func (mr *MockPackageManagerMockRecorder) WarnUnmetDependencies(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WarnUnmetDependencies", reflect.TypeOf((*MockPackageManager)(nil).WarnUnmetDependencies), arg0)
 }
 
@@ -93,6 +99,7 @@ func (m *MockMetadataInterface) EXPECT() *MockMetadataInterfaceMockRecorder {
 
 // Identity mocks base method
 func (m *MockMetadataInterface) Identity() (string, string) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Identity")
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(string)
@@ -101,5 +108,6 @@ func (m *MockMetadataInterface) Identity() (string, string) {
 
 // Identity indicates an expected call of Identity
 func (mr *MockMetadataInterfaceMockRecorder) Identity() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Identity", reflect.TypeOf((*MockMetadataInterface)(nil).Identity))
 }

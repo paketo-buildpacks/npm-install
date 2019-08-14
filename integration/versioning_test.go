@@ -63,7 +63,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		it("it is honored if there package.json doesn't have an engine", func() {
+		it("is honored if the package.json doesn't have an engine version", func() {
 			app, err = dagger.PackBuild(filepath.Join("testdata", "with_nvmrc_and_no_engine"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 

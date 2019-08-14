@@ -41,17 +41,23 @@ func TestIntegration(t *testing.T) {
 func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	var (
 		Expect func(interface{}, ...interface{}) Assertion
+		app *dagger.App
 	)
 
 	it.Before(func() {
 		Expect = NewWithT(t).Expect
 	})
 
+	it.After(func() {
+		if app != nil {
+			app.Destroy()
+		}
+	})
+
 	when("when the node_modules are vendored", func() {
 		it("should build a working OCI image for a simple app", func() {
 			app, err := dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
-			defer app.Destroy()
 
 			Expect(app.Start()).To(Succeed())
 
@@ -60,38 +66,40 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			Expect(body).To(ContainSubstring("Hello, World!"))
 		})
 
-		//Needs fixing
-		//
-		//when("the npm and node buildpacks are cached", func() {
-		//	it("should not reach out to the internet", func() {
-		//		// TODO replace absolute path with wherever we copy nodejs-cnb to
-		//		nodeBp, _, err := dagger.PackageCachedBuildpack("/Users/pivotal/workspace/nodejs-cnb")
-		//		Expect(err).ToNot(HaveOccurred())
-		//
-		//		// TODO replace with current root dir somehow
-		//		npmBp, _, err := dagger.PackageCachedBuildpack("/Users/pivotal/workspace/npm-cnb")
-		//		Expect(err).ToNot(HaveOccurred())
-		//
-		//		app, err := dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeBp, npmBp)
-		//		Expect(err).ToNot(HaveOccurred())
-		//		defer app.Destroy()
-		//
-		//		Expect(app.Start()).To(Succeed())
-		//
-		//		// TODO: add functionality to force network isolation in dagger
-		//		body, _, err = app.HTTPGet("/")
-		//		Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
-		//		Expect(err).NotTo(HaveOccurred())
-		//
-		//	})
-		//})
+		// Needs fixing
+		when.Pend("the npm and node buildpacks are cached", func() {
+			var(
+				nodeBp, npmBp string
+				err error
+			)
+			it.Before(func() {
+				nodeBp, _, err = dagger.PackageCachedBuildpack(filepath.Join(bpDir,"..","node-engine-cnb"))
+				Expect(err).ToNot(HaveOccurred())
+				defer dagger.DeleteBuildpack(nodeBp)
+
+				npmBp, _, err = dagger.PackageCachedBuildpack(bpDir)
+				Expect(err).ToNot(HaveOccurred())
+				defer dagger.DeleteBuildpack(npmBp)
+			})
+
+			it("should not reach out to the internet", func() {
+				app, err := dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeBp, npmBp)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(app.Start()).To(Succeed())
+
+				// TODO: add functionality to force network isolation in dagger
+				_, _, err = app.HTTPGet("/")
+				Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 
 	when("when the node_modules are not vendored", func() {
 		it("should build a working OCI image for a simple app", func() {
 			app, err := dagger.PackBuild(filepath.Join("testdata", "simple_app"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
-			defer app.Destroy()
 
 			Expect(app.Start()).To(Succeed())
 
@@ -102,30 +110,33 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		// Needs fixing
-		//
-		//when("the npm and node buildpacks are cached", func() {
-		//	it("should install all the node modules", func() {
-		//		// TODO replace absolute path with wherever we copy nodejs-cnb to
-		//		nodeBp, _, err := dagger.PackageCachedBuildpack("/Users/pivotal/workspace/nodejs-cnb")
-		//		Expect(err).ToNot(HaveOccurred())
-		//
-		//		// TODO replace with current root dir somehow
-		//		npmBp, _, err := dagger.PackageCachedBuildpack("/Users/pivotal/workspace/npm-cnb")
-		//		Expect(err).ToNot(HaveOccurred())
-		//
-		//		app, err := dagger.PackBuild(filepath.Join("testdata", "simple_app"), nodeBp, npmBp)
-		//		Expect(err).ToNot(HaveOccurred())
-		//		defer app.Destroy()
-		//
-		//		Expect(app.Start()).To(Succeed())
-		//
-		//		// TODO: add functionality to force network isolation in dagger
-		//		_, _, err = app.HTTPGet("/")
-		//		Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
-		//		Expect(err).NotTo(HaveOccurred())
-		//
-		//	})
-		//})
+		when.Pend("the npm and node buildpacks are cached", func() {
+			var(
+				nodeBp, npmBp string
+				err error
+			)
+			it.Before(func() {
+				nodeBp, _, err = dagger.PackageCachedBuildpack(filepath.Join(bpDir,"..","node-engine-cnb"))
+				Expect(err).ToNot(HaveOccurred())
+				defer dagger.DeleteBuildpack(nodeBp)
+
+				npmBp, _, err = dagger.PackageCachedBuildpack(bpDir)
+				Expect(err).ToNot(HaveOccurred())
+				defer dagger.DeleteBuildpack(npmBp)
+			})
+
+			it("should install all the node modules", func() {
+				app, err := dagger.PackBuild(filepath.Join("testdata", "simple_app"), nodeBp, npmBp)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(app.Start()).To(Succeed())
+
+				_, _, err = app.HTTPGet("/")
+				Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
+				Expect(err).NotTo(HaveOccurred())
+			//	TODO expect logs to contain something about downloading modules
+			})
+		})
 	})
 
 	when("when there are no node modules", func() {
@@ -139,7 +150,6 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		it("should build a working OCI image for an app that doesn't have a package-lock.json", func() {
 			app, err := dagger.PackBuild(filepath.Join("testdata", "empty_node_modules"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
-			defer app.Destroy()
 
 			Expect(app.Start()).To(Succeed())
 
@@ -154,7 +164,6 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			appDir := filepath.Join("testdata", "simple_app")
 			app, err := dagger.PackBuild(appDir, nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
-			defer app.Destroy()
 
 			Expect(app.BuildLogs()).To(MatchRegexp("node_modules .*: Contributing to layer"))
 

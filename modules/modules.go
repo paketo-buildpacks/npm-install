@@ -54,8 +54,12 @@ type Contributor struct {
 }
 
 func NewContributor(context build.Build, pkgManager PackageManager) (Contributor, bool, error) {
-	plan, shouldUseNPM := context.BuildPlan[Dependency]
-	if !shouldUseNPM {
+	plan, wantDependency, err := context.Plans.GetShallowMerged(Dependency)
+	if err != nil {
+		return Contributor{}, false, err
+	}
+
+	if !wantDependency {
 		return Contributor{}, false, nil
 	}
 
