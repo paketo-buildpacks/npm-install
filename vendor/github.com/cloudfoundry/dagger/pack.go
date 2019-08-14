@@ -16,7 +16,7 @@ const (
 	Bionic            = "io.buildpacks.stacks.bionic"
 	DefaultBuildImage = "cloudfoundry/cnb-build:cflinuxfs3"
 	DefaultRunImage   = "cloudfoundry/cnb-run:cflinuxfs3"
-	TestBuilderImage  = "cfbuildpacks/spec-change-builder"
+	TestBuilderImage  = "cfbuildpacks/cflinuxfs3-cnb-test-builder"
 )
 
 // This returns the build logs as part of the error case
