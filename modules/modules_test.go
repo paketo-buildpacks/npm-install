@@ -1,9 +1,10 @@
 package modules_test
 
 import (
-	"github.com/cloudfoundry/libcfbuildpack/buildpackplan"
 	"path/filepath"
 	"testing"
+
+	"github.com/cloudfoundry/libcfbuildpack/buildpackplan"
 
 	"github.com/cloudfoundry/libcfbuildpack/layers"
 
@@ -42,7 +43,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 	when("NewContributor", func() {
 		it("returns true if a build plan exists with the dep", func() {
-			factory.AddPlan(buildpackplan.Plan{Name:modules.Dependency})
+			factory.AddPlan(buildpackplan.Plan{Name: modules.Dependency})
 
 			_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
 			Expect(err).NotTo(HaveOccurred())
@@ -57,11 +58,11 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 		it("uses package-lock.json for identity when it exists", func() {
 			test.WriteFile(t, filepath.Join(factory.Build.Application.Root, "package-lock.json"), "package lock")
-			factory.AddPlan(buildpackplan.Plan{Name:modules.Dependency})
+			factory.AddPlan(buildpackplan.Plan{Name: modules.Dependency})
 
 			contributor, _, _ := modules.NewContributor(factory.Build, mockPkgManager)
 			name, version := contributor.NodeModulesMetadata.Identity()
-			Expect(name).To(Equal(modules.Dependency))
+			Expect(name).To(Equal(modules.ModulesMetaName))
 			Expect(version).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
 		})
 	})
@@ -78,8 +79,8 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			npmCacheLayerRoot = factory.Build.Layers.Layer(modules.Cache).Root
 			appRoot = factory.Build.Application.Root
 			factory.AddPlan(buildpackplan.Plan{
-				Name:modules.Dependency,
-				Metadata:buildpackplan.Metadata{"build": true, "launch": true},
+				Name:     modules.Dependency,
+				Metadata: buildpackplan.Metadata{"build": true, "launch": true},
 			})
 
 			contributor, willContribute, err = modules.NewContributor(factory.Build, mockPkgManager)
@@ -100,9 +101,6 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			it("installs node_modules, sets environment vars, writes layer metadata", func() {
-				Expect(contributor.NodeModulesMetadata).To(BeNil())
-				Expect(contributor.NPMCacheMetadata).To(BeNil())
-
 				Expect(contributor.Contribute()).To(Succeed())
 
 				nodeModulesLayer := factory.Build.Layers.Layer(modules.Dependency)
@@ -120,6 +118,11 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 				Expect(filepath.Join(factory.Build.Application.Root, modules.CacheDir)).NotTo(BeADirectory())
 
 				Expect(factory.Build.Layers).To(test.HaveApplicationMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}}))
+
+				nodeModulesMetadataName, _ := contributor.NodeModulesMetadata.Identity()
+				npmCacheMetadataName, _ := contributor.NPMCacheMetadata.Identity()
+				Expect(nodeModulesMetadataName).To(Equal(modules.ModulesMetaName))
+				Expect(npmCacheMetadataName).To(Equal(modules.CacheMetaName))
 			})
 
 		})

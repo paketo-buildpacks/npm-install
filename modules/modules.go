@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/buildpack/libbuildpack/application"
 	"github.com/cloudfoundry/libcfbuildpack/build"
@@ -15,11 +17,14 @@ import (
 )
 
 const (
-	Dependency     = "node_modules"
-	NodeDependency = "node"
-	Cache          = "cache"
-	ModulesDir     = "node_modules"
-	CacheDir       = "npm-cache"
+	Dependency      = "node_modules"
+	NodeDependency  = "node"
+	Cache           = "cache"
+	ModulesDir      = "node_modules"
+	ModulesMetaName = "Node Modules"
+	CacheDir        = "npm-cache"
+	CacheMetaName   = "NPM Cache"
+	PackageLock     = "package-lock.json"
 )
 
 type PackageManager interface {
@@ -71,26 +76,12 @@ func NewContributor(context build.Build, pkgManager PackageManager) (Contributor
 		launch:           context.Layers,
 	}
 
-	lockFile := filepath.Join(context.Application.Root, "package-lock.json")
-	if exists, err := helper.FileExists(lockFile); err != nil {
+	if err := contributor.setLayersMetadata(); err != nil {
 		return Contributor{}, false, err
-	} else if exists {
-		buf, err := ioutil.ReadFile(lockFile)
-		if err != nil {
-			return Contributor{}, false, err
-		}
-		hash := sha256.Sum256(buf)
-		contributor.NodeModulesMetadata = Metadata{Dependency, hex.EncodeToString(hash[:])}
-		contributor.NPMCacheMetadata = Metadata{Cache, hex.EncodeToString(hash[:])}
 	}
 
-	if _, ok := plan.Metadata["build"]; ok {
-		contributor.buildContribution = true
-	}
-
-	if _, ok := plan.Metadata["launch"]; ok {
-		contributor.launchContribution = true
-	}
+	contributor.buildContribution, _ = plan.Metadata["build"].(bool)
+	contributor.launchContribution, _ = plan.Metadata["launch"].(bool)
 
 	return contributor, true, nil
 }
@@ -228,4 +219,24 @@ func (c Contributor) flags() []layers.Flag {
 	}
 
 	return flags
+}
+
+func (c *Contributor) setLayersMetadata() error {
+	c.NodeModulesMetadata = Metadata{ModulesMetaName, strconv.FormatInt(time.Now().UnixNano(), 16)}
+	c.NPMCacheMetadata = Metadata{CacheMetaName, strconv.FormatInt(time.Now().UnixNano(), 16)}
+
+	if exists, err := helper.FileExists(filepath.Join(c.app.Root, PackageLock)); err != nil {
+		return err
+	} else if exists {
+		out, err := ioutil.ReadFile(filepath.Join(c.app.Root, PackageLock))
+		if err != nil {
+			return err
+		}
+
+		hash := sha256.Sum256(out)
+		c.NodeModulesMetadata = Metadata{ModulesMetaName, hex.EncodeToString(hash[:])}
+		c.NPMCacheMetadata = Metadata{CacheMetaName, hex.EncodeToString(hash[:])}
+	}
+
+	return nil
 }

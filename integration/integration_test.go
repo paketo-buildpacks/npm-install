@@ -1,8 +1,11 @@
 package integration_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
+
+	"github.com/cloudfoundry/npm-cnb/modules"
 
 	"github.com/cloudfoundry/dagger"
 
@@ -41,7 +44,7 @@ func TestIntegration(t *testing.T) {
 func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	var (
 		Expect func(interface{}, ...interface{}) Assertion
-		app *dagger.App
+		app    *dagger.App
 	)
 
 	it.Before(func() {
@@ -68,12 +71,12 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 		// Needs fixing
 		when.Pend("the npm and node buildpacks are cached", func() {
-			var(
+			var (
 				nodeBp, npmBp string
-				err error
+				err           error
 			)
 			it.Before(func() {
-				nodeBp, _, err = dagger.PackageCachedBuildpack(filepath.Join(bpDir,"..","node-engine-cnb"))
+				nodeBp, _, err = dagger.PackageCachedBuildpack(filepath.Join(bpDir, "..", "node-engine-cnb"))
 				Expect(err).ToNot(HaveOccurred())
 				defer dagger.DeleteBuildpack(nodeBp)
 
@@ -111,12 +114,12 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 		// Needs fixing
 		when.Pend("the npm and node buildpacks are cached", func() {
-			var(
+			var (
 				nodeBp, npmBp string
-				err error
+				err           error
 			)
 			it.Before(func() {
-				nodeBp, _, err = dagger.PackageCachedBuildpack(filepath.Join(bpDir,"..","node-engine-cnb"))
+				nodeBp, _, err = dagger.PackageCachedBuildpack(filepath.Join(bpDir, "..", "node-engine-cnb"))
 				Expect(err).ToNot(HaveOccurred())
 				defer dagger.DeleteBuildpack(nodeBp)
 
@@ -134,7 +137,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 				_, _, err = app.HTTPGet("/")
 				Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
 				Expect(err).NotTo(HaveOccurred())
-			//	TODO expect logs to contain something about downloading modules
+				//	TODO expect logs to contain something about downloading modules
 			})
 		})
 	})
@@ -165,12 +168,12 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			app, err := dagger.PackBuild(appDir, nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(app.BuildLogs()).To(MatchRegexp("node_modules .*: Contributing to layer"))
+			Expect(app.BuildLogs()).To(MatchRegexp(fmt.Sprintf("%s .*: Contributing to layer", modules.ModulesMetaName)))
 
 			app, err = dagger.PackBuildNamedImage(app.ImageName, appDir, nodeURI, npmURI)
 
-			Expect(app.BuildLogs()).To(MatchRegexp("node_modules .*: Reusing cached layer"))
-			Expect(app.BuildLogs()).NotTo(MatchRegexp("node_modules .*: Contributing to layer"))
+			Expect(app.BuildLogs()).To(MatchRegexp(fmt.Sprintf("%s .*: Reusing cached layer", modules.ModulesMetaName)))
+			Expect(app.BuildLogs()).NotTo(MatchRegexp(fmt.Sprintf("%s .*: Contributing to layer", modules.ModulesMetaName)))
 
 			Expect(app.Start()).To(Succeed())
 
