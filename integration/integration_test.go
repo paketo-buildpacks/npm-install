@@ -19,10 +19,11 @@ var (
 	bpDir, npmURI, nodeURI string
 )
 
-var suite = spec.New("Integration", spec.Report(report.Terminal{}))
+var suite = spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
 
 func init() {
 	suite("Integration", testIntegration)
+
 }
 
 func TestIntegration(t *testing.T) {
@@ -38,7 +39,9 @@ func TestIntegration(t *testing.T) {
 	Expect(err).ToNot(HaveOccurred())
 	defer dagger.DeleteBuildpack(nodeURI)
 
-	suite.Run(t)
+	dagger.SyncParallelOutput(func() {
+		suite.Run(t)
+	})
 }
 
 func testIntegration(t *testing.T, when spec.G, it spec.S) {
