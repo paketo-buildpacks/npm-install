@@ -94,7 +94,7 @@ func (c Contributor) Contribute() error {
 		return err
 	}
 
-	return c.launch.WriteApplicationMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start"}}})
+	return c.launch.WriteApplicationMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start", false}}})
 }
 
 func (c Contributor) contributeNodeModules(layer layers.Layer) error {
