@@ -17,32 +17,28 @@ func main() {
 		os.Exit(100)
 	}
 
-	code, err := runBuild(context)
+	context.Logger.FirstLine(context.Logger.PrettyIdentity(context.Buildpack))
+
+	contributor, willContribute, err := modules.NewContributor(context, npm.NPM{
+		Runner: utils.Command{},
+		Logger: context.Logger,
+	})
+	if err != nil {
+		context.Logger.Info(err.Error())
+		os.Exit(context.Failure(102))
+	}
+
+	if willContribute {
+		if err := contributor.Contribute(); err != nil {
+			context.Logger.Info(err.Error())
+			os.Exit(context.Failure(103))
+		}
+	}
+
+	code, err := context.Success()
 	if err != nil {
 		context.Logger.Info(err.Error())
 	}
 
 	os.Exit(code)
-}
-
-func runBuild(context build.Build) (int, error) {
-	context.Logger.FirstLine(context.Logger.PrettyIdentity(context.Buildpack))
-
-	packageManager := npm.NPM{
-		Runner: utils.Command{},
-		Logger: context.Logger,
-	}
-
-	contributor, willContribute, err := modules.NewContributor(context, packageManager)
-	if err != nil {
-		return context.Failure(102), err
-	}
-
-	if willContribute {
-		if err := contributor.Contribute(); err != nil {
-			return context.Failure(103), err
-		}
-	}
-
-	return context.Success()
 }

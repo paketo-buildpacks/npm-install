@@ -23,7 +23,6 @@ var suite = spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal
 
 func init() {
 	suite("Integration", testIntegration)
-
 }
 
 func TestIntegration(t *testing.T) {
@@ -174,6 +173,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			Expect(app.BuildLogs()).To(MatchRegexp(fmt.Sprintf("%s .*: Contributing to layer", modules.ModulesMetaName)))
 
 			app, err = dagger.PackBuildNamedImage(app.ImageName, appDir, nodeURI, npmURI)
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.BuildLogs()).To(MatchRegexp(fmt.Sprintf("%s .*: Reusing cached layer", modules.ModulesMetaName)))
 			Expect(app.BuildLogs()).NotTo(MatchRegexp(fmt.Sprintf("%s .*: Contributing to layer", modules.ModulesMetaName)))

@@ -7,10 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cloudfoundry/libcfbuildpack/buildpack"
-
 	"github.com/Masterminds/semver"
-	. "github.com/cloudfoundry/libcfbuildpack/helper"
+	"github.com/cloudfoundry/libcfbuildpack/buildpack"
+	"github.com/cloudfoundry/libcfbuildpack/helper"
 	"github.com/cloudfoundry/npm-cnb/modules"
 )
 
@@ -60,7 +59,7 @@ func (n NPM) Rebuild(cacheLayer, location string) error {
 
 func (n NPM) moveDir(source, target, name string) error {
 	dir := filepath.Join(source, name)
-	if exists, err := FileExists(dir); err != nil {
+	if exists, err := helper.FileExists(dir); err != nil {
 		return err
 	} else if !exists {
 		return nil
@@ -82,7 +81,7 @@ func (n NPM) moveDir(source, target, name string) error {
 	}
 
 	n.Logger.Info("Reusing existing %s", name)
-	if err := CopyDirectory(dir, filepath.Join(target, name)); err != nil {
+	if err := helper.CopyDirectory(dir, filepath.Join(target, name)); err != nil {
 		return err
 	}
 

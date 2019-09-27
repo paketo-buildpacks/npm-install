@@ -16,17 +16,6 @@ import (
 	"github.com/cloudfoundry/libcfbuildpack/layers"
 )
 
-const (
-	Dependency      = "node_modules"
-	NodeDependency  = "node"
-	Cache           = "cache"
-	ModulesDir      = "node_modules"
-	ModulesMetaName = "Node Modules"
-	CacheDir        = "npm-cache"
-	CacheMetaName   = "NPM Cache"
-	PackageLock     = "package-lock.json"
-)
-
 type PackageManager interface {
 	Install(string, string, string) error
 	Rebuild(string, string) error
