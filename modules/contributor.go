@@ -79,11 +79,20 @@ func (c Contributor) Contribute() error {
 	if err := c.nodeModulesLayer.Contribute(c.NodeModulesMetadata, c.contributeNodeModules, c.flags()...); err != nil {
 		return err
 	}
+
 	if err := c.npmCacheLayer.Contribute(c.NPMCacheMetadata, c.contributeNPMCache, layers.Cache); err != nil {
 		return err
 	}
 
-	return c.launch.WriteApplicationMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start", false}}})
+	return c.launch.WriteApplicationMetadata(layers.Metadata{
+		Processes: []layers.Process{
+			{
+				Type:    "web",
+				Command: "npm start",
+				Direct:  false,
+			},
+		},
+	})
 }
 
 func (c Contributor) contributeNodeModules(layer layers.Layer) error {

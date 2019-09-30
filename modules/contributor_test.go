@@ -117,7 +117,15 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 				Expect(filepath.Join(factory.Build.Application.Root, modules.ModulesDir)).NotTo(BeADirectory())
 				Expect(filepath.Join(factory.Build.Application.Root, modules.CacheDir)).NotTo(BeADirectory())
 
-				Expect(factory.Build.Layers).To(test.HaveApplicationMetadata(layers.Metadata{Processes: []layers.Process{{"web", "npm start", false}}}))
+				Expect(factory.Build.Layers).To(test.HaveApplicationMetadata(layers.Metadata{
+					Processes: []layers.Process{
+						{
+							Type:    "web",
+							Command: "npm start",
+							Direct:  false,
+						},
+					},
+				}))
 
 				nodeModulesMetadataName, _ := contributor.NodeModulesMetadata.Identity()
 				npmCacheMetadataName, _ := contributor.NPMCacheMetadata.Identity()
