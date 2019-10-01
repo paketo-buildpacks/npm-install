@@ -18,7 +18,6 @@ func init() {
 func testVersioning(t *testing.T, when spec.G, it spec.S) {
 	var (
 		app    *dagger.App
-		err    error
 		Expect func(interface{}, ...interface{}) Assertion
 	)
 
@@ -28,22 +27,23 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 
 	it.After(func() {
 		if app != nil {
-			app.Destroy()
+			Expect(app.Destroy()).To(Succeed())
 		}
 	})
 
 	when("npm version minor patch is floated", func() {
 		it("should build a working OCI image, but not respect specified npm version", func() {
+			var err error
 			app, err = dagger.PackBuild(filepath.Join("testdata", "npm_version_with_minor_x"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
+
 			resp, err := app.HTTPGetBody("/")
-			matchable := `Hello, World! From npm version: \d+\.\d+.\d+`
-			unmatchable := `Hello, World! From npm version: 99.99.99`
-			Expect(resp).To(MatchRegexp(matchable))
-			Expect(resp).NotTo(MatchRegexp(unmatchable))
 			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resp).To(MatchRegexp(`Hello, World! From npm version: \d+\.\d+.\d+`))
+			Expect(resp).NotTo(MatchRegexp(`Hello, World! From npm version: 99.99.99`))
 		})
 	})
 
@@ -51,26 +51,29 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 		const nvmrcVersion = `8.\d+\.\d+`
 
 		it("package.json takes precedence over it", func() {
+			var err error
 			app, err = dagger.PackBuild(filepath.Join("testdata", "with_nvmrc"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
+
 			resp, err := app.HTTPGetBody("/")
-			matchable := `Hello, World! From node version: v\d+\.\d+.\d+`
-			unmatchable := `Hello, World! From node version: v` + nvmrcVersion
-			Expect(resp).To(MatchRegexp(matchable))
-			Expect(resp).NotTo(MatchRegexp(unmatchable))
 			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resp).To(MatchRegexp(`Hello, World! From node version: v\d+\.\d+.\d+`))
+			Expect(resp).NotTo(MatchRegexp(`Hello, World! From node version: v` + nvmrcVersion))
 		})
 
 		it("is honored if the package.json doesn't have an engine version", func() {
+			var err error
 			app, err = dagger.PackBuild(filepath.Join("testdata", "with_nvmrc_and_no_engine"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
+
 			resp, err := app.HTTPGetBody("/")
-			Expect(strings.TrimSpace(resp)).To(MatchRegexp(`Hello, World! From node version: v` + nvmrcVersion))
 			Expect(err).NotTo(HaveOccurred())
+			Expect(strings.TrimSpace(resp)).To(MatchRegexp(`Hello, World! From node version: v` + nvmrcVersion))
 		})
 	})
 }

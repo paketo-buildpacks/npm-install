@@ -1,6 +1,8 @@
 package modules_test
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -16,7 +18,7 @@ import (
 	"github.com/sclevine/spec/report"
 )
 
-//go:generate mockgen -source=modules.go -destination=mocks_test.go -package=modules_test
+//go:generate mockgen -source=contributor.go -destination=mocks_test.go -package=modules_test
 
 func TestUnitModules(t *testing.T) {
 	spec.Run(t, "Modules", testModules, spec.Report(report.Terminal{}))
@@ -74,6 +76,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			nodeModulesLayerRoot, npmCacheLayerRoot, appRoot string
 			err                                              error
 		)
+
 		it.Before(func() {
 			nodeModulesLayerRoot = factory.Build.Layers.Layer(modules.Dependency).Root
 			npmCacheLayerRoot = factory.Build.Layers.Layer(modules.Cache).Root
@@ -89,6 +92,61 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 			mockPkgManager.EXPECT().WarnUnmetDependencies(appRoot)
 		})
+
+		when("testing the installation/rebuild combinations", func() {
+			expectInstall := func() {
+				mockPkgManager.EXPECT().Install(gomock.Any(), gomock.Any(), gomock.Any())
+			}
+
+			expectRebuild := func() {
+				mockPkgManager.EXPECT().Rebuild(gomock.Any(), gomock.Any())
+			}
+
+			expectCI := func() {
+				mockPkgManager.EXPECT().CI(gomock.Any(), gomock.Any(), gomock.Any())
+			}
+
+			for _, cfg := range []struct {
+				Locked      bool
+				Vendored    bool
+				Cached      bool
+				Expectation func()
+			}{
+				{Locked: false, Vendored: false, Cached: false, Expectation: expectInstall},
+				{Locked: false, Vendored: false, Cached: true, Expectation: expectInstall},
+				{Locked: false, Vendored: true, Cached: false, Expectation: expectRebuild},
+				{Locked: false, Vendored: true, Cached: true, Expectation: expectRebuild},
+				{Locked: true, Vendored: false, Cached: false, Expectation: expectCI},
+				{Locked: true, Vendored: false, Cached: true, Expectation: expectCI},
+				{Locked: true, Vendored: true, Cached: false, Expectation: expectRebuild},
+				{Locked: true, Vendored: true, Cached: true, Expectation: expectCI},
+			} {
+				config := cfg // copy loop variable onto loop local
+				when(fmt.Sprintf("the app is locked(%t), vendored(%t), and cached(%t)", config.Locked, config.Vendored, config.Cached), func() {
+					it("runs the correct command", func() {
+						if config.Locked {
+							_, err := os.Create(filepath.Join(appRoot, modules.PackageLock))
+							Expect(err).NotTo(HaveOccurred())
+						}
+
+						if config.Vendored {
+							err := os.Mkdir(filepath.Join(appRoot, modules.ModulesDir), 0755)
+							Expect(err).NotTo(HaveOccurred())
+						}
+
+						if config.Cached {
+							err := os.Mkdir(filepath.Join(appRoot, modules.CacheDir), 0755)
+							Expect(err).NotTo(HaveOccurred())
+						}
+
+						config.Expectation()
+
+						Expect(contributor.Contribute()).To(Succeed())
+					})
+				})
+			}
+		})
+
 		when("the app is not vendored", func() {
 			it.Before(func() {
 				mockPkgManager.EXPECT().Install(nodeModulesLayerRoot, npmCacheLayerRoot, appRoot).Do(func(_, _, location string) {
@@ -134,6 +192,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			})
 
 		})
+
 		when("the app is vendored", func() {
 			it.Before(func() {
 				test.WriteFile(t, filepath.Join(factory.Build.Application.Root, modules.ModulesDir, "test_module"), "some module")

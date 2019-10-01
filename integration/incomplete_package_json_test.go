@@ -22,14 +22,25 @@ func testIncompletePackageJSON(t *testing.T, when spec.G, it spec.S) {
 		Expect = NewWithT(t).Expect
 	})
 
-	it("should build a working OCI image for a simple app when there is an incomplete package json", func() {
-		app, err := dagger.PackBuild(filepath.Join("testdata", "incomplete_package_json"), nodeURI, npmURI)
-		Expect(err).ToNot(HaveOccurred())
-		defer app.Destroy()
+	when("there is an incomplete package json", func() {
+		var app *dagger.App
 
-		Expect(app.Start()).To(Succeed())
-		response, _, err := app.HTTPGet("/")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(response).To(ContainSubstring("Hello, World!"))
+		it.Before(func() {
+			var err error
+			app, err = dagger.PackBuild(filepath.Join("testdata", "incomplete_package_json"), nodeURI, npmURI)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		it.After(func() {
+			Expect(app.Destroy()).To(Succeed())
+		})
+
+		it("builds a working OCI image for a simple app", func() {
+			Expect(app.Start()).To(Succeed())
+
+			response, _, err := app.HTTPGet("/")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response).To(ContainSubstring("Hello, World!"))
+		})
 	})
 }

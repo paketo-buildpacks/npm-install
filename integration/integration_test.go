@@ -26,10 +26,12 @@ func init() {
 }
 
 func TestIntegration(t *testing.T) {
-	var err error
 	Expect := NewWithT(t).Expect
+
+	var err error
 	bpDir, err = dagger.FindBPRoot()
 	Expect(err).NotTo(HaveOccurred())
+
 	npmURI, err = dagger.PackageBuildpack(bpDir)
 	Expect(err).ToNot(HaveOccurred())
 	defer dagger.DeleteBuildpack(npmURI)
@@ -55,13 +57,14 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 	it.After(func() {
 		if app != nil {
-			app.Destroy()
+			Expect(app.Destroy()).To(Succeed())
 		}
 	})
 
 	when("when the node_modules are vendored", func() {
 		it("should build a working OCI image for a simple app", func() {
-			app, err := dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeURI, npmURI)
+			var err error
+			app, err = dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -77,6 +80,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 				nodeBp, npmBp string
 				err           error
 			)
+
 			it.Before(func() {
 				nodeBp, _, err = dagger.PackageCachedBuildpack(filepath.Join(bpDir, "..", "node-engine-cnb"))
 				Expect(err).ToNot(HaveOccurred())
@@ -88,7 +92,8 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			it("should not reach out to the internet", func() {
-				app, err := dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeBp, npmBp)
+				var err error
+				app, err = dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeBp, npmBp)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(app.Start()).To(Succeed())
@@ -103,7 +108,8 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 	when("when the node_modules are not vendored", func() {
 		it("should build a working OCI image for a simple app", func() {
-			app, err := dagger.PackBuild(filepath.Join("testdata", "simple_app"), nodeURI, npmURI)
+			var err error
+			app, err = dagger.PackBuild(filepath.Join("testdata", "simple_app"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -111,7 +117,6 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			body, _, err := app.HTTPGet("/")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(body).To(ContainSubstring("Hello, World!"))
-
 		})
 
 		// Needs fixing
@@ -120,6 +125,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 				nodeBp, npmBp string
 				err           error
 			)
+
 			it.Before(func() {
 				nodeBp, _, err = dagger.PackageCachedBuildpack(filepath.Join(bpDir, "..", "node-engine-cnb"))
 				Expect(err).ToNot(HaveOccurred())
@@ -131,7 +137,8 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			it("should install all the node modules", func() {
-				app, err := dagger.PackBuild(filepath.Join("testdata", "simple_app"), nodeBp, npmBp)
+				var err error
+				app, err = dagger.PackBuild(filepath.Join("testdata", "simple_app"), nodeBp, npmBp)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(app.Start()).To(Succeed())
@@ -146,14 +153,16 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 	when("when there are no node modules", func() {
 		it("should build a working OCI image for an app without dependencies", func() {
-			_, err := dagger.PackBuild(filepath.Join("testdata", "no_node_modules"), nodeURI, npmURI)
+			var err error
+			app, err = dagger.PackBuild(filepath.Join("testdata", "no_node_modules"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 
 	when("when the node modules are partially vendored", func() {
 		it("should build a working OCI image for an app that doesn't have a package-lock.json", func() {
-			app, err := dagger.PackBuild(filepath.Join("testdata", "empty_node_modules"), nodeURI, npmURI)
+			var err error
+			app, err = dagger.PackBuild(filepath.Join("testdata", "empty_node_modules"), nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -167,7 +176,9 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	when("the app is pushed twice", func() {
 		it("does not reinstall node_modules", func() {
 			appDir := filepath.Join("testdata", "simple_app")
-			app, err := dagger.PackBuild(appDir, nodeURI, npmURI)
+
+			var err error
+			app, err = dagger.PackBuild(appDir, nodeURI, npmURI)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.BuildLogs()).To(MatchRegexp(fmt.Sprintf("%s .*: Contributing to layer", modules.ModulesMetaName)))

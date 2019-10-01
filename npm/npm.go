@@ -30,6 +30,24 @@ type NPM struct {
 	Logger Logger
 }
 
+func (n NPM) CI(modulesLayer, cacheLayer, location string) error {
+	if err := n.moveDir(modulesLayer, location, modules.ModulesDir); err != nil {
+		return err
+	}
+
+	if err := n.moveDir(cacheLayer, location, modules.CacheDir); err != nil {
+		return err
+	}
+
+	npmCache := filepath.Join(location, modules.CacheDir)
+
+	if err := n.Runner.Run("npm", location, false, "ci", "--unsafe-perm", "--cache", npmCache); err != nil {
+		return err
+	}
+
+	return n.runCacheVerify(location, npmCache)
+}
+
 func (n NPM) Install(modulesLayer, cacheLayer, location string) error {
 	if err := n.moveDir(modulesLayer, location, modules.ModulesDir); err != nil {
 		return err
@@ -44,6 +62,7 @@ func (n NPM) Install(modulesLayer, cacheLayer, location string) error {
 	if err := n.runInstall(location, npmCache, false); err != nil {
 		return err
 	}
+
 	return n.runCacheVerify(location, npmCache)
 }
 
@@ -59,19 +78,23 @@ func (n NPM) Rebuild(cacheLayer, location string) error {
 
 func (n NPM) moveDir(source, target, name string) error {
 	dir := filepath.Join(source, name)
-	if exists, err := helper.FileExists(dir); err != nil {
+
+	exists, err := helper.FileExists(dir)
+	if err != nil {
 		return err
-	} else if !exists {
+	}
+
+	if !exists {
 		return nil
 	}
 
-	var fullTarget, fullDir string
-	var err error
-
-	if fullTarget, err = filepath.Abs(filepath.Join(target, name)); err != nil {
+	fullTarget, err := filepath.Abs(filepath.Join(target, name))
+	if err != nil {
 		return err
 	}
-	if fullDir, err = filepath.Abs(dir); err != nil {
+
+	fullDir, err := filepath.Abs(dir)
+	if err != nil {
 		return err
 	}
 

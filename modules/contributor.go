@@ -17,9 +17,10 @@ import (
 )
 
 type PackageManager interface {
-	Install(string, string, string) error
-	Rebuild(string, string) error
-	WarnUnmetDependencies(string) error
+	CI(cacheLayer, moduleLayer, location string) error
+	Install(cacheLayer, moduleLayer, location string) error
+	Rebuild(cacheLayer, location string) error
+	WarnUnmetDependencies(appRoot string) error
 }
 
 type MetadataInterface interface {
@@ -102,19 +103,37 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 		return err
 	}
 
+	locked, err := helper.FileExists(filepath.Join(c.app.Root, PackageLock))
+	if err != nil {
+		return fmt.Errorf("unable to stat node_modules: %s", err.Error())
+	}
+
+	cached, err := helper.FileExists(filepath.Join(c.app.Root, CacheDir))
+	if err != nil {
+		return fmt.Errorf("unable to stat node_modules: %s", err.Error())
+	}
+
 	vendored, err := helper.FileExists(nodeModules)
 	if err != nil {
 		return fmt.Errorf("unable to stat node_modules: %s", err.Error())
 	}
 
-	if vendored {
-		c.nodeModulesLayer.Logger.Info("Rebuilding node_modules")
+	switch {
+	case !locked && vendored, locked && vendored && !cached:
+		c.nodeModulesLayer.Logger.Info("running npm rebuild")
 		if err := c.pkgManager.Rebuild(c.npmCacheLayer.Root, c.app.Root); err != nil {
 			return fmt.Errorf("unable to rebuild node_modules: %s", err.Error())
 		}
-	} else {
-		c.nodeModulesLayer.Logger.Info("Installing node_modules")
+
+	case !locked && !vendored:
+		c.nodeModulesLayer.Logger.Info("running npm install")
 		if err := c.pkgManager.Install(layer.Root, c.npmCacheLayer.Root, c.app.Root); err != nil {
+			return fmt.Errorf("unable to install node_modules: %s", err.Error())
+		}
+
+	case locked:
+		c.nodeModulesLayer.Logger.Info("running npm ci")
+		if err := c.pkgManager.CI(layer.Root, c.npmCacheLayer.Root, c.app.Root); err != nil {
 			return fmt.Errorf("unable to install node_modules: %s", err.Error())
 		}
 	}
