@@ -5,30 +5,26 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/cloudfoundry/libcfbuildpack/buildpackplan"
-
 	"github.com/cloudfoundry/libcfbuildpack/layers"
-
 	"github.com/cloudfoundry/libcfbuildpack/test"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
+
+	. "github.com/onsi/gomega"
 )
 
 //go:generate mockgen -source=contributor.go -destination=mocks_test.go -package=modules_test
 
-func TestUnitModules(t *testing.T) {
-	spec.Run(t, "Modules", testModules, spec.Report(report.Terminal{}))
-}
-
-func testModules(t *testing.T, when spec.G, it spec.S) {
+func testContributor(t *testing.T, when spec.G, it spec.S) {
 	var (
 		mockCtrl       *gomock.Controller
 		mockPkgManager *MockPackageManager
 		factory        *test.BuildFactory
+		now            time.Time
 	)
 
 	it.Before(func() {
@@ -37,6 +33,10 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 		mockPkgManager = NewMockPackageManager(mockCtrl)
 
 		factory = test.NewBuildFactory(t)
+
+		var err error
+		now, err = time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	it.After(func() {
@@ -44,42 +44,41 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("NewContributor", func() {
-		it("returns true if a build plan exists with the dep", func() {
-			factory.AddPlan(buildpackplan.Plan{Name: modules.Dependency})
+		when("a plan for the dependency exists", func() {
+			it.Before(func() {
+				factory.AddPlan(buildpackplan.Plan{Name: modules.Dependency})
+			})
 
-			_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(willContribute).To(BeTrue())
+			it("returns true", func() {
+				factory.AddPlan(buildpackplan.Plan{Name: modules.Dependency})
+
+				_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(willContribute).To(BeTrue())
+			})
 		})
 
-		it("returns false if a build plan does not exist with the dep", func() {
-			_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(willContribute).To(BeFalse())
-		})
-
-		it("uses package-lock.json for identity when it exists", func() {
-			test.WriteFile(t, filepath.Join(factory.Build.Application.Root, "package-lock.json"), "package lock")
-			factory.AddPlan(buildpackplan.Plan{Name: modules.Dependency})
-
-			contributor, _, _ := modules.NewContributor(factory.Build, mockPkgManager)
-			name, version := contributor.NodeModulesMetadata.Identity()
-			Expect(name).To(Equal(modules.ModulesMetaName))
-			Expect(version).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
+		when("a plan for the dependency does NOT exist", func() {
+			it("returns false if a build plan does not exist with the dep", func() {
+				_, willContribute, err := modules.NewContributor(factory.Build, mockPkgManager)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(willContribute).To(BeFalse())
+			})
 		})
 	})
 
 	when("Contribute", func() {
 		var (
-			contributor                                      modules.Contributor
-			willContribute                                   bool
-			nodeModulesLayerRoot, npmCacheLayerRoot, appRoot string
-			err                                              error
+			contributor                     modules.Contributor
+			willContribute                  bool
+			nodeModulesLayer, npmCacheLayer layers.Layer
+			appRoot                         string
+			err                             error
 		)
 
 		it.Before(func() {
-			nodeModulesLayerRoot = factory.Build.Layers.Layer(modules.Dependency).Root
-			npmCacheLayerRoot = factory.Build.Layers.Layer(modules.Cache).Root
+			nodeModulesLayer = factory.Build.Layers.Layer(modules.Dependency)
+			npmCacheLayer = factory.Build.Layers.Layer(modules.Cache)
 			appRoot = factory.Build.Application.Root
 			factory.AddPlan(buildpackplan.Plan{
 				Name:     modules.Dependency,
@@ -91,6 +90,57 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			Expect(willContribute).To(BeTrue())
 
 			mockPkgManager.EXPECT().WarnUnmetDependencies(appRoot)
+		})
+
+		when("the package-lock.json file exists", func() {
+			it.Before(func() {
+				packageLockPath := filepath.Join(appRoot, "package-lock.json")
+
+				test.WriteFile(t, packageLockPath, "package lock")
+				mockPkgManager.EXPECT().CI(gomock.Any(), gomock.Any(), gomock.Any())
+			})
+
+			it("uses package-lock.json for identity", func() {
+				err := contributor.Contribute(now)
+				Expect(err).NotTo(HaveOccurred())
+
+				var metadata modules.Metadata
+				err = nodeModulesLayer.ReadMetadata(&metadata)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(metadata.Name).To(Equal(modules.ModulesMetaName))
+				Expect(metadata.Hash).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
+
+				err = npmCacheLayer.ReadMetadata(&metadata)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(metadata.Name).To(Equal(modules.CacheMetaName))
+				Expect(metadata.Hash).To(Equal("152468741c83af08df4394d612172b58b2e7dca7164b5e6b79c5f6e96b829f77"))
+			})
+		})
+
+		when("the package-lock.json file does NOT exist", func() {
+			it.Before(func() {
+				mockPkgManager.EXPECT().Install(gomock.Any(), gomock.Any(), gomock.Any())
+			})
+
+			it("uses current time for identity", func() {
+				err := contributor.Contribute(now)
+				Expect(err).NotTo(HaveOccurred())
+
+				var metadata modules.Metadata
+				err = nodeModulesLayer.ReadMetadata(&metadata)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(metadata.Name).To(Equal(modules.ModulesMetaName))
+				Expect(metadata.Hash).To(Equal("b3cf032436957e22a4c99036760a59c65bd4bdd981f3d2f02e4d3a80a0cf0cfe"))
+
+				err = npmCacheLayer.ReadMetadata(&metadata)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(metadata.Name).To(Equal(modules.CacheMetaName))
+				Expect(metadata.Hash).To(Equal("b3cf032436957e22a4c99036760a59c65bd4bdd981f3d2f02e4d3a80a0cf0cfe"))
+			})
 		})
 
 		when("testing the installation/rebuild combinations", func() {
@@ -141,7 +191,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 						config.Expectation()
 
-						Expect(contributor.Contribute()).To(Succeed())
+						Expect(contributor.Contribute(now)).To(Succeed())
 					})
 				})
 			}
@@ -149,7 +199,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 
 		when("the app is not vendored", func() {
 			it.Before(func() {
-				mockPkgManager.EXPECT().Install(nodeModulesLayerRoot, npmCacheLayerRoot, appRoot).Do(func(_, _, location string) {
+				mockPkgManager.EXPECT().Install(nodeModulesLayer.Root, npmCacheLayer.Root, appRoot).Do(func(_, _, location string) {
 					module := filepath.Join(location, modules.ModulesDir, "test_module")
 					test.WriteFile(t, module, "some module")
 
@@ -159,7 +209,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			it("installs node_modules, sets environment vars, writes layer metadata", func() {
-				Expect(contributor.Contribute()).To(Succeed())
+				Expect(contributor.Contribute(now)).To(Succeed())
 
 				nodeModulesLayer := factory.Build.Layers.Layer(modules.Dependency)
 				Expect(nodeModulesLayer).To(test.HaveLayerMetadata(true, true, true))
@@ -185,12 +235,15 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 					},
 				}))
 
-				nodeModulesMetadataName, _ := contributor.NodeModulesMetadata.Identity()
-				npmCacheMetadataName, _ := contributor.NPMCacheMetadata.Identity()
-				Expect(nodeModulesMetadataName).To(Equal(modules.ModulesMetaName))
-				Expect(npmCacheMetadataName).To(Equal(modules.CacheMetaName))
-			})
+				var metadata modules.Metadata
+				err = nodeModulesLayer.ReadMetadata(&metadata)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(metadata.Name).To(Equal(modules.ModulesMetaName))
 
+				err = npmCacheLayer.ReadMetadata(&metadata)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(metadata.Name).To(Equal(modules.CacheMetaName))
+			})
 		})
 
 		when("the app is vendored", func() {
@@ -200,7 +253,7 @@ func testModules(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			it("rebuilds the node_modules and moves them out of the app dir", func() {
-				Expect(contributor.Contribute()).To(Succeed())
+				Expect(contributor.Contribute(now)).To(Succeed())
 
 				layer := factory.Build.Layers.Layer(modules.Dependency)
 				Expect(filepath.Join(layer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())

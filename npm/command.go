@@ -1,4 +1,4 @@
-package utils
+package npm
 
 import (
 	"bytes"
@@ -9,8 +9,7 @@ import (
 	"strings"
 )
 
-type Command struct {
-}
+type Command struct{}
 
 func (r Command) Run(bin, dir string, quiet bool, args ...string) error {
 	cmd := exec.Command(bin, args...)

@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/cloudfoundry/libcfbuildpack/build"
 	"github.com/cloudfoundry/npm-cnb/modules"
 	"github.com/cloudfoundry/npm-cnb/npm"
-	"github.com/cloudfoundry/npm-cnb/utils"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 	context.Logger.FirstLine(context.Logger.PrettyIdentity(context.Buildpack))
 
 	contributor, willContribute, err := modules.NewContributor(context, npm.NPM{
-		Runner: utils.Command{},
+		Runner: npm.Command{},
 		Logger: context.Logger,
 	})
 	if err != nil {
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	if willContribute {
-		if err := contributor.Contribute(); err != nil {
+		if err := contributor.Contribute(time.Now()); err != nil {
 			context.Logger.Info(err.Error())
 			os.Exit(context.Failure(103))
 		}

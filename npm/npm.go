@@ -35,11 +35,7 @@ func (n NPM) CI(modulesLayer, cacheLayer, location string) error {
 		return err
 	}
 
-	if err := n.moveDir(cacheLayer, location, modules.CacheDir); err != nil {
-		return err
-	}
-
-	npmCache := filepath.Join(location, modules.CacheDir)
+	npmCache := filepath.Join(cacheLayer, modules.CacheDir)
 
 	if err := n.Runner.Run("npm", location, false, "ci", "--unsafe-perm", "--cache", npmCache); err != nil {
 		return err
@@ -53,11 +49,7 @@ func (n NPM) Install(modulesLayer, cacheLayer, location string) error {
 		return err
 	}
 
-	if err := n.moveDir(cacheLayer, location, modules.CacheDir); err != nil {
-		return err
-	}
-
-	npmCache := filepath.Join(location, modules.CacheDir)
+	npmCache := filepath.Join(cacheLayer, modules.CacheDir)
 
 	if err := n.runInstall(location, npmCache, false); err != nil {
 		return err
@@ -72,7 +64,7 @@ func (n NPM) Rebuild(cacheLayer, location string) error {
 	}
 
 	n.Logger.Info("Installing the additional un-vendored modules listed below:")
-	npmCache := filepath.Join(location, modules.CacheDir)
+	npmCache := filepath.Join(cacheLayer, modules.CacheDir)
 	return n.runInstall(location, npmCache, true)
 }
 
