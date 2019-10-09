@@ -27,7 +27,11 @@ func testIncompletePackageJSON(t *testing.T, when spec.G, it spec.S) {
 
 		it.Before(func() {
 			var err error
-			app, err = dagger.PackBuild(filepath.Join("testdata", "incomplete_package_json"), nodeURI, npmURI)
+			app, err = dagger.NewPack(
+				filepath.Join("testdata", "incomplete_package_json"),
+				dagger.RandomImage(),
+				dagger.SetBuildpacks(nodeURI, npmURI),
+			).Build()
 			Expect(err).ToNot(HaveOccurred())
 		})
 

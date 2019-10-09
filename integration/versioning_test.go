@@ -19,6 +19,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 	var (
 		app    *dagger.App
 		Expect func(interface{}, ...interface{}) Assertion
+		err error
 	)
 
 	it.Before(func() {
@@ -33,8 +34,11 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 
 	when("npm version minor patch is floated", func() {
 		it("should build a working OCI image, but not respect specified npm version", func() {
-			var err error
-			app, err = dagger.PackBuild(filepath.Join("testdata", "npm_version_with_minor_x"), nodeURI, npmURI)
+			app, err = dagger.NewPack(
+				filepath.Join("testdata", "npm_version_with_minor_x"),
+				dagger.RandomImage(),
+				dagger.SetBuildpacks(nodeURI, npmURI),
+			).Build()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -51,8 +55,11 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 		const nvmrcVersion = `8.\d+\.\d+`
 
 		it("package.json takes precedence over it", func() {
-			var err error
-			app, err = dagger.PackBuild(filepath.Join("testdata", "with_nvmrc"), nodeURI, npmURI)
+			app, err = dagger.NewPack(
+				filepath.Join("testdata", "with_nvmrc"),
+				dagger.RandomImage(),
+				dagger.SetBuildpacks(nodeURI, npmURI),
+			).Build()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -65,8 +72,11 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		it("is honored if the package.json doesn't have an engine version", func() {
-			var err error
-			app, err = dagger.PackBuild(filepath.Join("testdata", "with_nvmrc_and_no_engine"), nodeURI, npmURI)
+			app, err = dagger.NewPack(
+				filepath.Join("testdata", "with_nvmrc_and_no_engine"),
+				dagger.RandomImage(),
+				dagger.SetBuildpacks(nodeURI, npmURI),
+			).Build()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())

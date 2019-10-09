@@ -37,7 +37,11 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 	when("when the node_modules are vendored", func() {
 		it("should build a working OCI image for a simple app", func() {
-			app, err = dagger.PackBuild(filepath.Join("testdata", "vendored"), nodeURI, npmURI)
+			app, err = dagger.NewPack(
+				filepath.Join("testdata", "vendored"),
+				dagger.RandomImage(),
+				dagger.SetBuildpacks(nodeURI, npmURI),
+			).Build()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -47,7 +51,9 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			Expect(body).To(ContainSubstring("Hello, World!"))
 		})
 
-		when("the npm and node buildpacks are cached", func() {
+		// TODO: This test is blocked on a pack release https://www.pivotaltracker.com/story/show/169012540
+		// unpend this test when the --network flag is in a pack release
+		when.Pend("the npm and node buildpacks are cached", func() {
 			it("should not reach out to the internet", func() {
 				app, err = dagger.NewPack(
 					filepath.Join("testdata", "vendored"),
@@ -68,7 +74,11 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 	when("when the node_modules are not vendored", func() {
 		it("should build a working OCI image for a simple app", func() {
-			app, err = dagger.PackBuild(filepath.Join("testdata", "simple_app"), nodeURI, npmURI)
+			app, err = dagger.NewPack(
+				filepath.Join("testdata", "simple_app"),
+				dagger.RandomImage(),
+				dagger.SetBuildpacks(nodeURI, npmURI),
+			).Build()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -115,7 +125,11 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 	when("when the node modules are partially vendored", func() {
 		it("should build a working OCI image for an app that doesn't have a package-lock.json", func() {
-			app, err = dagger.PackBuild(filepath.Join("testdata", "empty_node_modules"), nodeURI, npmURI)
+			app, err = dagger.NewPack(
+				filepath.Join("testdata", "empty_node_modules"),
+				dagger.RandomImage(),
+				dagger.SetBuildpacks(nodeURI, npmURI),
+			).Build()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.Start()).To(Succeed())
@@ -130,12 +144,20 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 		it("does not reinstall node_modules", func() {
 			appDir := filepath.Join("testdata", "simple_app")
 
-			app, err = dagger.PackBuild(appDir, nodeURI, npmURI)
+			app, err = dagger.NewPack(
+				appDir,
+				dagger.RandomImage(),
+				dagger.SetBuildpacks(nodeURI, npmURI),
+			).Build()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.BuildLogs()).To(MatchRegexp(fmt.Sprintf("%s .*: Contributing to layer", modules.ModulesMetaName)))
 
-			app, err = dagger.PackBuildNamedImage(app.ImageName, appDir, nodeURI, npmURI)
+			app, err = dagger.NewPack(
+				appDir,
+				dagger.SetImage(app.ImageName),
+				dagger.SetBuildpacks(nodeURI, npmURI),
+			).Build()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(app.BuildLogs()).To(MatchRegexp(fmt.Sprintf("%s .*: Reusing cached layer", modules.ModulesMetaName)))
