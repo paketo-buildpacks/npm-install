@@ -20,6 +20,7 @@ func TestIntegration(t *testing.T) {
 	Expect := NewWithT(t).Expect
 
 	var err error
+	var nodeRepo string
 	bpDir, err = dagger.FindBPRoot()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -35,7 +36,7 @@ func TestIntegration(t *testing.T) {
 	Expect(err).ToNot(HaveOccurred())
 	defer dagger.DeleteBuildpack(nodeURI)
 
-	nodeRepo, err := dagger.GetLatestUnpackagedBuildpack("node-engine-cnb")
+	nodeRepo, err = dagger.GetLatestUnpackagedBuildpack("node-engine-cnb")
 	Expect(err).ToNot(HaveOccurred())
 	defer os.RemoveAll(nodeRepo)
 

@@ -22,7 +22,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 	var (
 		Expect func(interface{}, ...interface{}) Assertion
 		app    *dagger.App
-		err error
+		err    error
 	)
 
 	it.Before(func() {
@@ -51,9 +51,7 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			Expect(body).To(ContainSubstring("Hello, World!"))
 		})
 
-		// TODO: This test is blocked on a pack release https://www.pivotaltracker.com/story/show/169012540
-		// unpend this test when the --network flag is in a pack release
-		when.Pend("the npm and node buildpacks are cached", func() {
+		when("the npm and node buildpacks are cached", func() {
 			it("should not reach out to the internet", func() {
 				app, err = dagger.NewPack(
 					filepath.Join("testdata", "vendored"),
