@@ -217,6 +217,8 @@ func testContributor(t *testing.T, when spec.G, it spec.S) {
 				Expect(filepath.Join(nodeModulesLayer.Root, modules.ModulesDir, "test_module")).To(BeARegularFile())
 				Expect(nodeModulesLayer).To(test.HaveOverrideSharedEnvironment("NODE_PATH", filepath.Join(nodeModulesLayer.Root, modules.ModulesDir)))
 				Expect(nodeModulesLayer).To(test.HaveAppendPathSharedEnvironment("PATH", filepath.Join(nodeModulesLayer.Root, modules.ModulesDir, ".bin")))
+				Expect(nodeModulesLayer).To(test.HaveOverrideSharedEnvironment("NPM_CONFIG_PRODUCTION", "true"))
+				Expect(nodeModulesLayer).To(test.HaveOverrideSharedEnvironment("NPM_CONFIG_LOGLEVEL", "error"))
 
 				npmCacheLayer := factory.Build.Layers.Layer(modules.Cache)
 				Expect(npmCacheLayer).To(test.HaveLayerMetadata(false, true, false))

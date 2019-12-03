@@ -16,13 +16,18 @@ import (
 const UnmetDepWarning = "Unmet dependencies don't fail npm install but may cause runtime issues\nSee: https://github.com/npm/npm/issues/7494"
 
 type Runner interface {
-	Run(bin, dir string, quiet bool, args ...string) error
-	RunWithOutput(bin, dir string, quiet bool, args ...string) (string, error)
+	Run(bin, dir string, quiet bool, env map[string]string, args ...string) error
+	RunWithOutput(bin, dir string, quiet bool, env map[string]string, args ...string) (string, error)
 }
 
 type Logger interface {
 	Info(format string, args ...interface{})
 	Warning(format string, args ...interface{})
+}
+
+var DEFAULT_VARIABLES = map[string]string{
+	"NPM_CONFIG_PRODUCTION": "true",
+	"NPM_CONFIG_LOGLEVEL":   "error",
 }
 
 type NPM struct {
@@ -37,7 +42,7 @@ func (n NPM) CI(modulesLayer, cacheLayer, location string) error {
 
 	npmCache := filepath.Join(cacheLayer, modules.CacheDir)
 
-	if err := n.Runner.Run("npm", location, false, "ci", "--unsafe-perm", "--cache", npmCache); err != nil {
+	if err := n.Runner.Run("npm", location, false, DEFAULT_VARIABLES, "ci", "--unsafe-perm", "--cache", npmCache); err != nil {
 		return err
 	}
 
@@ -59,7 +64,7 @@ func (n NPM) Install(modulesLayer, cacheLayer, location string) error {
 }
 
 func (n NPM) Rebuild(cacheLayer, location string) error {
-	if err := n.Runner.Run("npm", location, false, "rebuild"); err != nil {
+	if err := n.Runner.Run("npm", location, false, DEFAULT_VARIABLES, "rebuild"); err != nil {
 		return fmt.Errorf("failed running npm rebuild %s", err.Error())
 	}
 
@@ -104,7 +109,7 @@ func (n NPM) moveDir(source, target, name string) error {
 }
 
 func (n NPM) getNPMVersion(location string) (buildpack.Version, error) {
-	out, err := n.Runner.RunWithOutput("npm", location, true, "-v")
+	out, err := n.Runner.RunWithOutput("npm", location, true, DEFAULT_VARIABLES, "-v")
 	if err != nil {
 		return buildpack.Version{}, err
 	}
@@ -121,7 +126,7 @@ func (n NPM) runInstall(location string, cacheLocation string, skipAudit bool) e
 		args = append(args, "--no-audit")
 	}
 
-	return n.Runner.Run("npm", location, false, args...)
+	return n.Runner.Run("npm", location, false, DEFAULT_VARIABLES, args...)
 }
 
 func (n NPM) runCacheVerify(location, cacheLocation string) error {
@@ -139,11 +144,11 @@ func (n NPM) runCacheVerify(location, cacheLocation string) error {
 		return nil
 	}
 
-	return n.Runner.Run("npm", location, false, "cache", "verify", "--cache", cacheLocation)
+	return n.Runner.Run("npm", location, false, DEFAULT_VARIABLES, "cache", "verify", "--cache", cacheLocation)
 }
 
 func (n NPM) WarnUnmetDependencies(appRoot string) error {
-	output, err := n.Runner.RunWithOutput("npm", appRoot, true, "ls", "--depth=0")
+	output, err := n.Runner.RunWithOutput("npm", appRoot, true, DEFAULT_VARIABLES, "ls", "--depth=0")
 	_, ok := err.(*exec.ExitError)
 	if err != nil && !ok {
 		return err

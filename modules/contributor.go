@@ -160,6 +160,14 @@ func (c Contributor) contributeNodeModules(layer layers.Layer) error {
 		return err
 	}
 
+	if err := layer.OverrideSharedEnv("NPM_CONFIG_PRODUCTION", "true"); err != nil {
+		return err
+	}
+
+	if err := layer.OverrideSharedEnv("NPM_CONFIG_LOGLEVEL", "error"); err != nil {
+		return err
+	}
+
 	return layer.AppendPathSharedEnv("PATH", filepath.Join(layer.Root, ModulesDir, ".bin"))
 }
 

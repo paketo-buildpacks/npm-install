@@ -70,12 +70,33 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 		when("node_modules and npm-cache do not already exist", func() {
 			when("the npm version is after 5.0.0", func() {
 				it.Before(func() {
-					mockRunner.EXPECT().RunWithOutput("npm", appRoot, true, "-v").Return("5.0.0", nil)
+					mockRunner.EXPECT().RunWithOutput(
+						"npm", appRoot, true,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"-v",
+					).Return("5.0.0", nil)
 				})
 
 				it("should run npm install and npm cache verify if npm version after 5.0.0", func() {
-					mockRunner.EXPECT().Run("npm", appRoot, false, "install", "--unsafe-perm", "--cache", npmCache)
-					mockRunner.EXPECT().Run("npm", appRoot, false, "cache", "verify", "--cache", npmCache)
+					mockRunner.EXPECT().Run(
+						"npm", appRoot, false,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"install", "--unsafe-perm", "--cache", npmCache,
+					)
+					mockRunner.EXPECT().Run(
+						"npm", appRoot, false,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"cache", "verify", "--cache", npmCache,
+					)
 
 					Expect(pkgManager.Install(modulesLayer, cacheLayer, appRoot)).To(Succeed())
 				})
@@ -83,11 +104,25 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 
 			when("the npm version is before 5.0.0", func() {
 				it.Before(func() {
-					mockRunner.EXPECT().RunWithOutput("npm", appRoot, true, "-v").Return("4.3.2", nil)
+					mockRunner.EXPECT().RunWithOutput(
+						"npm", appRoot, true,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"-v",
+					).Return("4.3.2", nil)
 				})
 
 				it("should run npm install and skip npm cache verify if npm version before 5.0.0", func() {
-					mockRunner.EXPECT().Run("npm", appRoot, false, "install", "--unsafe-perm", "--cache", npmCache)
+					mockRunner.EXPECT().Run(
+						"npm", appRoot, false,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"install", "--unsafe-perm", "--cache", npmCache,
+					)
 					Expect(pkgManager.Install(modulesLayer, cacheLayer, appRoot)).To(Succeed())
 				})
 			})
@@ -104,9 +139,30 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			it("should run npm install, npm cache verify, and reuse the existing modules + cache", func() {
-				mockRunner.EXPECT().Run("npm", appRoot, false, "install", "--unsafe-perm", "--cache", npmCache)
-				mockRunner.EXPECT().Run("npm", appRoot, false, "cache", "verify", "--cache", npmCache)
-				mockRunner.EXPECT().RunWithOutput("npm", appRoot, true, "-v").Return("5.0.1", nil)
+				mockRunner.EXPECT().Run(
+					"npm", appRoot, false,
+					map[string]string{
+						"NPM_CONFIG_PRODUCTION": "true",
+						"NPM_CONFIG_LOGLEVEL":   "error",
+					},
+					"install", "--unsafe-perm", "--cache", npmCache,
+				)
+				mockRunner.EXPECT().Run(
+					"npm", appRoot, false,
+					map[string]string{
+						"NPM_CONFIG_PRODUCTION": "true",
+						"NPM_CONFIG_LOGLEVEL":   "error",
+					},
+					"cache", "verify", "--cache", npmCache,
+				)
+				mockRunner.EXPECT().RunWithOutput(
+					"npm", appRoot, true,
+					map[string]string{
+						"NPM_CONFIG_PRODUCTION": "true",
+						"NPM_CONFIG_LOGLEVEL":   "error",
+					},
+					"-v",
+				).Return("5.0.1", nil)
 
 				Expect(pkgManager.Install(modulesLayer, cacheLayer, appRoot)).To(Succeed())
 
@@ -123,12 +179,32 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 		when("node_modules and npm-cache do not already exist", func() {
 			when("the npm version is after 5.0.0", func() {
 				it.Before(func() {
-					mockRunner.EXPECT().RunWithOutput("npm", appRoot, true, "-v").Return("5.0.0", nil)
+					mockRunner.EXPECT().RunWithOutput("npm", appRoot, true,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"-v",
+					).Return("5.0.0", nil)
 				})
 
 				it("should run npm ci and npm cache verify if npm version after 5.0.0", func() {
-					mockRunner.EXPECT().Run("npm", appRoot, false, "ci", "--unsafe-perm", "--cache", npmCache)
-					mockRunner.EXPECT().Run("npm", appRoot, false, "cache", "verify", "--cache", npmCache)
+					mockRunner.EXPECT().Run(
+						"npm", appRoot, false,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"ci", "--unsafe-perm", "--cache", npmCache,
+					)
+					mockRunner.EXPECT().Run(
+						"npm", appRoot, false,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"cache", "verify", "--cache", npmCache,
+					)
 
 					Expect(pkgManager.CI(modulesLayer, cacheLayer, appRoot)).To(Succeed())
 				})
@@ -136,11 +212,25 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 
 			when("the npm version is before 5.0.0", func() {
 				it.Before(func() {
-					mockRunner.EXPECT().RunWithOutput("npm", appRoot, true, "-v").Return("4.3.2", nil)
+					mockRunner.EXPECT().RunWithOutput(
+						"npm", appRoot, true,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"-v",
+					).Return("4.3.2", nil)
 				})
 
 				it("should run npm ci and skip npm cache verify if npm version before 5.0.0", func() {
-					mockRunner.EXPECT().Run("npm", appRoot, false, "ci", "--unsafe-perm", "--cache", npmCache)
+					mockRunner.EXPECT().Run(
+						"npm", appRoot, false,
+						map[string]string{
+							"NPM_CONFIG_PRODUCTION": "true",
+							"NPM_CONFIG_LOGLEVEL":   "error",
+						},
+						"ci", "--unsafe-perm", "--cache", npmCache,
+					)
 					Expect(pkgManager.CI(modulesLayer, cacheLayer, appRoot)).To(Succeed())
 				})
 			})
@@ -156,9 +246,30 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			it("should run npm ci, npm cache verify, and reuse the existing modules + cache", func() {
-				mockRunner.EXPECT().Run("npm", appRoot, false, "ci", "--unsafe-perm", "--cache", npmCache)
-				mockRunner.EXPECT().Run("npm", appRoot, false, "cache", "verify", "--cache", npmCache)
-				mockRunner.EXPECT().RunWithOutput("npm", appRoot, true, "-v").Return("5.0.1", nil)
+				mockRunner.EXPECT().Run(
+					"npm", appRoot, false,
+					map[string]string{
+						"NPM_CONFIG_PRODUCTION": "true",
+						"NPM_CONFIG_LOGLEVEL":   "error",
+					},
+					"ci", "--unsafe-perm", "--cache", npmCache,
+				)
+				mockRunner.EXPECT().Run(
+					"npm", appRoot, false,
+					map[string]string{
+						"NPM_CONFIG_PRODUCTION": "true",
+						"NPM_CONFIG_LOGLEVEL":   "error",
+					},
+					"cache", "verify", "--cache", npmCache,
+				)
+				mockRunner.EXPECT().RunWithOutput(
+					"npm", appRoot, true,
+					map[string]string{
+						"NPM_CONFIG_PRODUCTION": "true",
+						"NPM_CONFIG_LOGLEVEL":   "error",
+					},
+					"-v",
+				).Return("5.0.1", nil)
 
 				Expect(pkgManager.CI(modulesLayer, cacheLayer, appRoot)).To(Succeed())
 
@@ -173,8 +284,22 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 
 	when("Rebuild", func() {
 		it("should run npm rebuild", func() {
-			mockRunner.EXPECT().Run("npm", appRoot, false, "rebuild")
-			mockRunner.EXPECT().Run("npm", appRoot, false, "install", "--unsafe-perm", "--cache", npmCache, "--no-audit")
+			mockRunner.EXPECT().Run(
+				"npm", appRoot, false,
+				map[string]string{
+					"NPM_CONFIG_PRODUCTION": "true",
+					"NPM_CONFIG_LOGLEVEL":   "error",
+				},
+				"rebuild",
+			)
+			mockRunner.EXPECT().Run(
+				"npm", appRoot, false,
+				map[string]string{
+					"NPM_CONFIG_PRODUCTION": "true",
+					"NPM_CONFIG_LOGLEVEL":   "error",
+				},
+				"install", "--unsafe-perm", "--cache", npmCache, "--no-audit",
+			)
 
 			Expect(pkgManager.Rebuild(cacheLayer, appRoot)).To(Succeed())
 		})
@@ -187,7 +312,14 @@ func testNPM(t *testing.T, when spec.G, it spec.S) {
 			npmLogger := logger.Logger{Logger: logger2.NewLogger(&debugBuff, &infoBuff)}
 			pkgManager.Logger = npmLogger
 
-			mockRunner.EXPECT().RunWithOutput("npm", appRoot, true, "ls").Return("unmet peer dependency", nil)
+			mockRunner.EXPECT().RunWithOutput(
+				"npm", appRoot, true,
+				map[string]string{
+					"NPM_CONFIG_PRODUCTION": "true",
+					"NPM_CONFIG_LOGLEVEL":   "error",
+				},
+				"ls",
+			).Return("unmet peer dependency", nil)
 
 			Expect(pkgManager.WarnUnmetDependencies(appRoot)).To(Succeed())
 			Expect(infoBuff.String()).To(ContainSubstring(npm.UnmetDepWarning))
