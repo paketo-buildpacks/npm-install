@@ -6,34 +6,24 @@ import (
 	"testing"
 
 	"github.com/cloudfoundry/dagger"
+	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
-	"github.com/sclevine/spec"
 )
 
-func init() {
-	suite("Versioning", testVersioning)
-}
-
-func testVersioning(t *testing.T, when spec.G, it spec.S) {
+func testVersioning(t *testing.T, context spec.G, it spec.S) {
 	var (
+		Expect = NewWithT(t).Expect
 		app    *dagger.App
-		Expect func(interface{}, ...interface{}) Assertion
-		err error
 	)
 
-	it.Before(func() {
-		Expect = NewWithT(t).Expect
-	})
-
 	it.After(func() {
-		if app != nil {
-			Expect(app.Destroy()).To(Succeed())
-		}
+		Expect(app.Destroy()).To(Succeed())
 	})
 
-	when("npm version minor patch is floated", func() {
-		it("should build a working OCI image, but not respect specified npm version", func() {
+	context("when the npm version minor patch is floated", func() {
+		it.Pend("builds a working OCI image, but not respect specified npm version", func() {
+			var err error
 			app, err = dagger.NewPack(
 				filepath.Join("testdata", "npm_version_with_minor_x"),
 				dagger.RandomImage(),
@@ -51,10 +41,11 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 		})
 	})
 
-	when("using a nvmrc file", func() {
+	context("when using a nvmrc file", func() {
 		const nvmrcVersion = `8.\d+\.\d+`
 
-		it("package.json takes precedence over it", func() {
+		it.Pend("package.json takes precedence over it", func() {
+			var err error
 			app, err = dagger.NewPack(
 				filepath.Join("testdata", "with_nvmrc"),
 				dagger.RandomImage(),
@@ -71,7 +62,8 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 			Expect(resp).NotTo(MatchRegexp(`Hello, World! From node version: v` + nvmrcVersion))
 		})
 
-		it("is honored if the package.json doesn't have an engine version", func() {
+		it.Pend("is honored if the package.json doesn't have an engine version", func() {
+			var err error
 			app, err = dagger.NewPack(
 				filepath.Join("testdata", "with_nvmrc_and_no_engine"),
 				dagger.RandomImage(),

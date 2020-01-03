@@ -1,57 +1,26 @@
-# cloud.google.com/go v0.50.0
-cloud.google.com/go/compute/metadata
 # code.cloudfoundry.org/lager v2.0.0+incompatible
 code.cloudfoundry.org/lager
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
 # github.com/Masterminds/semver v1.5.0
 github.com/Masterminds/semver
-# github.com/buildpack/libbuildpack v1.25.8
+# github.com/buildpack/libbuildpack v1.25.9
 github.com/buildpack/libbuildpack/application
-github.com/buildpack/libbuildpack/build
-github.com/buildpack/libbuildpack/buildpack
-github.com/buildpack/libbuildpack/buildpackplan
-github.com/buildpack/libbuildpack/buildplan
-github.com/buildpack/libbuildpack/detect
 github.com/buildpack/libbuildpack/internal
-github.com/buildpack/libbuildpack/layers
 github.com/buildpack/libbuildpack/logger
-github.com/buildpack/libbuildpack/platform
-github.com/buildpack/libbuildpack/services
-github.com/buildpack/libbuildpack/stack
 # github.com/cloudfoundry/dagger v0.0.0-20191213212648-a45390236bb7
 github.com/cloudfoundry/dagger
 github.com/cloudfoundry/dagger/utils
-# github.com/cloudfoundry/libcfbuildpack v1.91.15
-github.com/cloudfoundry/libcfbuildpack/build
-github.com/cloudfoundry/libcfbuildpack/buildpack
-github.com/cloudfoundry/libcfbuildpack/buildpackplan
-github.com/cloudfoundry/libcfbuildpack/detect
+# github.com/cloudfoundry/libcfbuildpack v1.91.16
 github.com/cloudfoundry/libcfbuildpack/helper
-github.com/cloudfoundry/libcfbuildpack/internal
-github.com/cloudfoundry/libcfbuildpack/layers
-github.com/cloudfoundry/libcfbuildpack/logger
-github.com/cloudfoundry/libcfbuildpack/runner
-github.com/cloudfoundry/libcfbuildpack/services
-github.com/cloudfoundry/libcfbuildpack/test
 # github.com/cloudfoundry/packit v0.0.0-20191202164725-43d6fa19d96c
 github.com/cloudfoundry/packit/pexec
-# github.com/fatih/color v1.8.0
-github.com/fatih/color
-# github.com/golang/mock v1.3.1
-github.com/golang/mock/gomock
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 # github.com/google/go-github v17.0.0+incompatible
 github.com/google/go-github/github
 # github.com/google/go-querystring v1.0.0
 github.com/google/go-querystring/query
-# github.com/mattn/go-colorable v0.1.4
-github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.11
-github.com/mattn/go-isatty
-# github.com/mitchellh/mapstructure v1.1.2
-github.com/mitchellh/mapstructure
 # github.com/onsi/gomega v1.8.1
 github.com/onsi/gomega
 github.com/onsi/gomega/format
@@ -80,12 +49,7 @@ golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 # golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6
 golang.org/x/oauth2
-golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
-golang.org/x/oauth2/jws
-golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8
-golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
@@ -108,13 +72,10 @@ golang.org/x/text/transform
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # google.golang.org/appengine v1.6.5
-google.golang.org/appengine
 google.golang.org/appengine/internal
-google.golang.org/appengine/internal/app_identity
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
-google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch

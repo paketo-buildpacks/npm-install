@@ -5,22 +5,26 @@ import (
 	"testing"
 
 	"github.com/cloudfoundry/dagger"
-	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
+
+	. "github.com/onsi/gomega"
 )
 
 var (
-	suite = spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
-
-	bpDir, npmURI, npmCachedURI, nodeURI, nodeCachedURI string
+	bpDir         string
+	npmURI        string
+	npmCachedURI  string
+	nodeURI       string
+	nodeCachedURI string
 )
 
 func TestIntegration(t *testing.T) {
-	Expect := NewWithT(t).Expect
+	var (
+		Expect = NewWithT(t).Expect
+		err    error
+	)
 
-	var err error
-	var nodeRepo string
 	bpDir, err = dagger.FindBPRoot()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -36,7 +40,7 @@ func TestIntegration(t *testing.T) {
 	Expect(err).ToNot(HaveOccurred())
 	defer dagger.DeleteBuildpack(nodeURI)
 
-	nodeRepo, err = dagger.GetLatestUnpackagedBuildpack("node-engine-cnb")
+	nodeRepo, err := dagger.GetLatestUnpackagedBuildpack("node-engine-cnb")
 	Expect(err).ToNot(HaveOccurred())
 	defer os.RemoveAll(nodeRepo)
 
@@ -44,7 +48,15 @@ func TestIntegration(t *testing.T) {
 	Expect(err).ToNot(HaveOccurred())
 	defer dagger.DeleteBuildpack(nodeCachedURI)
 
-	dagger.SyncParallelOutput(func() {
-		suite.Run(t)
-	})
+	suite := spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
+	suite("EmptyNodeModules", testEmptyNodeModules)
+	suite("IncompleteNodeModules", testIncompleteNodeModules)
+	suite("IncompletePackageJSON", testIncompletePackageJSON)
+	suite("NoNodeModules", testNoNodeModules)
+	suite("SimpleApp", testSimpleApp)
+	suite("UnmetDependencies", testUnmetDependencies)
+	suite("Vendored", testVendored)
+	suite("Versioning", testVersioning)
+
+	dagger.SyncParallelOutput(func() { suite.Run(t) })
 }

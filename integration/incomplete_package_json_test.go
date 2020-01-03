@@ -5,24 +5,15 @@ import (
 	"testing"
 
 	"github.com/cloudfoundry/dagger"
-	. "github.com/onsi/gomega"
 	"github.com/sclevine/spec"
+
+	. "github.com/onsi/gomega"
 )
 
-func init() {
-	suite("IncompletePackageJSON", testIncompletePackageJSON)
-}
+func testIncompletePackageJSON(t *testing.T, context spec.G, it spec.S) {
+	var Expect = NewWithT(t).Expect
 
-func testIncompletePackageJSON(t *testing.T, when spec.G, it spec.S) {
-	var (
-		Expect func(interface{}, ...interface{}) Assertion
-	)
-
-	it.Before(func() {
-		Expect = NewWithT(t).Expect
-	})
-
-	when("there is an incomplete package json", func() {
+	context("when there is an incomplete package json", func() {
 		var app *dagger.App
 
 		it.Before(func() {
@@ -39,7 +30,7 @@ func testIncompletePackageJSON(t *testing.T, when spec.G, it spec.S) {
 			Expect(app.Destroy()).To(Succeed())
 		})
 
-		it("builds a working OCI image for a simple app", func() {
+		it.Pend("builds a working OCI image for a simple app", func() {
 			Expect(app.Start()).To(Succeed())
 
 			response, _, err := app.HTTPGet("/")
