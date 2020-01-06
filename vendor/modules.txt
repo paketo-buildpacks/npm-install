@@ -13,7 +13,9 @@ github.com/cloudfoundry/dagger
 github.com/cloudfoundry/dagger/utils
 # github.com/cloudfoundry/libcfbuildpack v1.91.16
 github.com/cloudfoundry/libcfbuildpack/helper
-# github.com/cloudfoundry/packit v0.0.0-20191202164725-43d6fa19d96c
+# github.com/cloudfoundry/packit v0.0.0-20200106160329-76ccd3bd2a8e
+github.com/cloudfoundry/packit
+github.com/cloudfoundry/packit/internal
 github.com/cloudfoundry/packit/pexec
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
