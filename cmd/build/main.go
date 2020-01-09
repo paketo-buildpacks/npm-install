@@ -9,7 +9,7 @@ import (
 
 func main() {
 	executable := pexec.NewExecutable("npm", lager.NewLogger("npm"))
-	nodePackageManager := npm.NewNodePackageManager(executable)
+	resolver := npm.NewBuildProcessResolver(executable)
 
-	packit.Build(npm.Build(nodePackageManager))
+	packit.Build(npm.Build(resolver))
 }

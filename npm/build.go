@@ -1,20 +1,15 @@
 package npm
 
-import (
-	"os"
-	"path/filepath"
+import "github.com/cloudfoundry/packit"
 
-	"github.com/cloudfoundry/packit"
-)
+const LayerNameNodeModules = "modules_layer"
 
-const LayerNameNodeModules = "node_modules"
-
-//go:generate faux --interface PackageManager --output fakes/package_manager.go
-type PackageManager interface {
-	Install(dir string) error
+//go:generate faux --interface BuildManager --output fakes/build_manager.go
+type BuildManager interface {
+	Resolve(workingDir string) (BuildProcess, error)
 }
 
-func Build(packageManager PackageManager) packit.BuildFunc {
+func Build(buildManager BuildManager) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		nodeModulesLayer, err := context.Layers.Get(LayerNameNodeModules, packit.LaunchLayer)
 		if err != nil {
@@ -25,17 +20,12 @@ func Build(packageManager PackageManager) packit.BuildFunc {
 			return packit.BuildResult{}, err
 		}
 
-		err = os.Mkdir(filepath.Join(nodeModulesLayer.Path, "node_modules"), os.ModePerm)
+		process, err := buildManager.Resolve(context.WorkingDir)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
 
-		err = os.Symlink(filepath.Join(nodeModulesLayer.Path, "node_modules"), filepath.Join(context.WorkingDir, "node_modules"))
-		if err != nil {
-			return packit.BuildResult{}, err
-		}
-
-		err = packageManager.Install(context.WorkingDir)
+		err = process(nodeModulesLayer.Path, context.WorkingDir)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}

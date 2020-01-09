@@ -21,7 +21,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when the node_modules are vendored", func() {
-		it.Pend("builds a working OCI image for a simple app", func() {
+		it("builds a working OCI image for a simple app", func() {
 			var err error
 			app, err = dagger.NewPack(
 				filepath.Join("testdata", "vendored"),

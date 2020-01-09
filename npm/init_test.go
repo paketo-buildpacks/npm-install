@@ -10,8 +10,8 @@ import (
 func TestUnitNPM(t *testing.T) {
 	suite := spec.New("npm", spec.Report(report.Terminal{}))
 	suite("Build", testBuild)
+	suite("BuildProcessResolver", testBuildProcessResolver)
 	suite("Detect", testDetect)
-	suite("NodePackageManager", testNodePackageManager)
 	suite("PackageJSONParser", testPackageJSONParser)
 	suite.Run(t)
 }

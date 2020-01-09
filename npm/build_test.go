@@ -19,10 +19,13 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		layersDir      string
-		workingDir     string
-		packageManager *fakes.PackageManager
-		build          packit.BuildFunc
+		layersDir  string
+		workingDir string
+
+		processLayerDir   string
+		processWorkingDir string
+		buildManager      *fakes.BuildManager
+		build             packit.BuildFunc
 	)
 
 	it.Before(func() {
@@ -33,9 +36,15 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		workingDir, err = ioutil.TempDir("", "working-dir")
 		Expect(err).NotTo(HaveOccurred())
 
-		packageManager = &fakes.PackageManager{}
+		buildManager = &fakes.BuildManager{}
+		buildManager.ResolveCall.Returns.BuildProcess = func(ld, wd string) error {
+			processLayerDir = ld
+			processWorkingDir = wd
 
-		build = npm.Build(packageManager)
+			return nil
+		}
+
+		build = npm.Build(buildManager)
 	})
 
 	it.After(func() {
@@ -43,7 +52,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
 	})
 
-	it("returns a result that installs node modules", func() {
+	it("resolves and calls the build process", func() {
 		result, err := build(packit.BuildContext{
 			WorkingDir: workingDir,
 			Layers:     packit.Layers{Path: layersDir},
@@ -62,8 +71,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			},
 			Layers: []packit.Layer{
 				{
-					Name:      "node_modules",
-					Path:      filepath.Join(layersDir, "node_modules"),
+					Name:      npm.LayerNameNodeModules,
+					Path:      filepath.Join(layersDir, npm.LayerNameNodeModules),
 					SharedEnv: packit.Environment{},
 					BuildEnv:  packit.Environment{},
 					LaunchEnv: packit.Environment{},
@@ -80,19 +89,18 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			},
 		}))
 
-		Expect(packageManager.InstallCall.Receives.Dir).To(Equal(workingDir))
+		Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 
-		path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(path).To(Equal(filepath.Join(layersDir, "node_modules", "node_modules")))
+		Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npm.LayerNameNodeModules)))
+		Expect(processWorkingDir).To(Equal(workingDir))
 	})
 
 	context("failure cases", func() {
 		context("when the node_modules layer cannot be fetched", func() {
 			it.Before(func() {
-				_, err := os.Create(filepath.Join(layersDir, "node_modules.toml"))
+				_, err := os.Create(filepath.Join(layersDir, "modules_layer.toml"))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(os.Chmod(filepath.Join(layersDir, "node_modules.toml"), 0000)).To(Succeed())
+				Expect(os.Chmod(filepath.Join(layersDir, "modules_layer.toml"), 0000)).To(Succeed())
 			})
 
 			it("returns an error", func() {
@@ -111,16 +119,16 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		context("when the node_modules layer cannot be reset", func() {
 			it.Before(func() {
-				Expect(os.Mkdir(filepath.Join(layersDir, "node_modules"), os.ModePerm)).To(Succeed())
+				Expect(os.Mkdir(filepath.Join(layersDir, npm.LayerNameNodeModules), os.ModePerm)).To(Succeed())
 
-				_, err := os.OpenFile(filepath.Join(layersDir, "node_modules", "some-file"), os.O_CREATE, 0000)
+				_, err := os.OpenFile(filepath.Join(layersDir, npm.LayerNameNodeModules, "some-file"), os.O_CREATE, 0000)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(os.Chmod(filepath.Join(layersDir, "node_modules"), 0000)).To(Succeed())
+				Expect(os.Chmod(filepath.Join(layersDir, npm.LayerNameNodeModules), 0000)).To(Succeed())
 			})
 
 			it.After(func() {
-				Expect(os.Chmod(filepath.Join(layersDir, "node_modules"), os.ModePerm)).To(Succeed())
+				Expect(os.Chmod(filepath.Join(layersDir, npm.LayerNameNodeModules), os.ModePerm)).To(Succeed())
 			})
 
 			it("returns an error", func() {
@@ -137,9 +145,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			})
 		})
 
-		context("when the node_modules symlink cannot be created", func() {
+		context("when the build process cannot be resolved", func() {
 			it.Before(func() {
-				Expect(os.Chmod(workingDir, 0000)).To(Succeed())
+				buildManager.ResolveCall.Returns.Error = errors.New("failed to resolve build process")
 			})
 
 			it("returns an error", func() {
@@ -152,13 +160,15 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						},
 					},
 				})
-				Expect(err).To(MatchError(ContainSubstring("permission denied")))
+				Expect(err).To(MatchError("failed to resolve build process"))
 			})
 		})
 
-		context("when the package manager cannot install", func() {
+		context("when the build process provided fails", func() {
 			it.Before(func() {
-				packageManager.InstallCall.Returns.Error = errors.New("failed to install")
+				buildManager.ResolveCall.Returns.BuildProcess = func(string, string) error {
+					return errors.New("given build process failed")
+				}
 			})
 
 			it("returns an error", func() {
@@ -171,7 +181,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						},
 					},
 				})
-				Expect(err).To(MatchError("failed to install"))
+				Expect(err).To(MatchError("given build process failed"))
 			})
 		})
 	})

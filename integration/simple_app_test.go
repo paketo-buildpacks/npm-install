@@ -36,24 +36,6 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(body).To(ContainSubstring("Hello, World!"))
 		})
-
-		context("when the npm and node buildpacks are cached", func() {
-			it.Pend("installs all the node modules", func() {
-				var err error
-				app, err = dagger.NewPack(
-					filepath.Join("testdata", "simple_app"),
-					dagger.RandomImage(),
-					dagger.SetBuildpacks(nodeCachedURI, npmCachedURI),
-				).Build()
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(app.Start()).To(Succeed())
-
-				_, _, err = app.HTTPGet("/")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
-			})
-		})
 	})
 
 	context("the app is pushed twice", func() {
