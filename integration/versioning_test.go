@@ -22,6 +22,12 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when the npm version minor patch is floated", func() {
+		// NOTE: this regression test was based on v2 buildpack functionality that
+		// installed a version of npm that was specified by the user in the
+		// package.json file. We seem to have skipped this functionality in the
+		// CNB. We are waiting on feedback for whether we should be implementing
+		// that behavior here and adding test coverage for it, or removing this as
+		// an unnecessary test.
 		it.Pend("builds a working OCI image, but not respect specified npm version", func() {
 			var err error
 			app, err = dagger.NewPack(
@@ -62,7 +68,7 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 			Expect(resp).NotTo(MatchRegexp(`Hello, World! From node version: v` + nvmrcVersion))
 		})
 
-		it.Pend("is honored if the package.json doesn't have an engine version", func() {
+		it("is honored if the package.json doesn't have an engine version", func() {
 			var err error
 			app, err = dagger.NewPack(
 				filepath.Join("testdata", "with_nvmrc_and_no_engine"),
