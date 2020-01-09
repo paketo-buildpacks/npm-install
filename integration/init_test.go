@@ -51,7 +51,6 @@ func TestIntegration(t *testing.T) {
 	suite := spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
 	suite("EmptyNodeModules", testEmptyNodeModules)
 	suite("IncompleteNodeModules", testIncompleteNodeModules)
-	suite("IncompletePackageJSON", testIncompletePackageJSON)
 	suite("NoNodeModules", testNoNodeModules)
 	suite("SimpleApp", testSimpleApp)
 	suite("UnmetDependencies", testUnmetDependencies)
