@@ -14,9 +14,9 @@ const (
 )
 
 type BuildPlanMetadata struct {
-	VersionSource string
-	Build         bool `toml:"build"`
-	Launch        bool `toml:"launch"`
+	VersionSource string `toml:"version-source"`
+	Build         bool   `toml:"build"`
+	Launch        bool   `toml:"launch"`
 }
 
 //go:generate faux --interface VersionParser --output fakes/version_parser.go

@@ -50,7 +50,7 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 	context("when using a nvmrc file", func() {
 		const nvmrcVersion = `8.\d+\.\d+`
 
-		it.Pend("package.json takes precedence over it", func() {
+		it("package.json takes precedence over it", func() {
 			var err error
 			app, err = dagger.NewPack(
 				filepath.Join("testdata", "with_nvmrc"),
