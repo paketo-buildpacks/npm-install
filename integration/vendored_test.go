@@ -38,7 +38,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		context("when the npm and node buildpacks are cached", func() {
-			it.Pend("does not reach out to the internet", func() {
+			it("does not reach out to the internet", func() {
 				var err error
 				app, err = dagger.NewPack(
 					filepath.Join("testdata", "vendored"),
@@ -48,10 +48,9 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				).Build()
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(app.Start()).To(Succeed())
+				Expect(app.Start()).To(Succeed(), func() string { return app.BuildLogs() })
 
 				_, _, err = app.HTTPGet("/")
-				Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

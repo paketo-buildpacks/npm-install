@@ -68,4 +68,62 @@ func testPackageJSONParser(t *testing.T, context spec.G, it spec.S) {
 			})
 		})
 	})
+
+	context("ParseScripts", func() {
+		var (
+			path   string
+			parser npm.PackageJSONParser
+		)
+
+		it.Before(func() {
+			file, err := ioutil.TempFile("", "package.json")
+			Expect(err).NotTo(HaveOccurred())
+			defer file.Close()
+
+			_, err = file.WriteString(`{
+				"scripts": {
+				  "preinstall": "a pre-install script",
+					"postinstall": "a post-install script",
+					"baller": "this a baller script"
+				}
+			}`)
+			Expect(err).NotTo(HaveOccurred())
+
+			path = file.Name()
+
+			parser = npm.NewPackageJSONParser()
+		})
+
+		it("parses scripts", func() {
+			scripts, err := parser.ParseScripts(path)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(scripts).To(Equal(map[string]string{
+				"preinstall":  "a pre-install script",
+				"postinstall": "a post-install script",
+				"baller":      "this a baller script",
+			}))
+		})
+
+		context("failure cases", func() {
+			context("when the package.json file does not exist", func() {
+				it("returns an error", func() {
+					_, err := parser.ParseScripts("/missing/file")
+					Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
+				})
+			})
+
+			context("when the package.json contents are malformed", func() {
+				it.Before(func() {
+					err := ioutil.WriteFile(path, []byte("%%%"), 0644)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				it("returns an error", func() {
+					_, err := parser.ParseScripts(path)
+					Expect(err).To(MatchError(ContainSubstring("invalid character")))
+				})
+			})
+		})
+	})
 }

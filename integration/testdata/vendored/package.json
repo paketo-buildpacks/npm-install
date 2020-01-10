@@ -9,7 +9,8 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "sqlite3": "~4.1.1"
+    "sqlite3": "~4.1.1",
+    "node-pre-gyp": "0.14.x"
   },
   "repository": {
     "type": "git",

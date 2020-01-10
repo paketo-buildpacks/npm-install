@@ -50,8 +50,8 @@ func TestIntegration(t *testing.T) {
 
 	suite := spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
 	suite("EmptyNodeModules", testEmptyNodeModules)
-	suite("IncompleteNodeModules", testIncompleteNodeModules)
 	suite("NoNodeModules", testNoNodeModules)
+	suite("PrePostScriptsRebuild", testPrePostScriptRebuild)
 	suite("SimpleApp", testSimpleApp)
 	suite("UnmetDependencies", testUnmetDependencies)
 	suite("Vendored", testVendored)

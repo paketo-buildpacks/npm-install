@@ -9,7 +9,8 @@ import (
 
 func main() {
 	executable := pexec.NewExecutable("npm", lager.NewLogger("npm"))
-	resolver := npm.NewBuildProcessResolver(executable)
+	packageJSONParser := npm.NewPackageJSONParser()
+	resolver := npm.NewBuildProcessResolver(executable, packageJSONParser)
 
 	packit.Build(npm.Build(resolver))
 }

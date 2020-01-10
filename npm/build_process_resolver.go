@@ -2,6 +2,7 @@ package npm
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -14,13 +15,20 @@ type Executable interface {
 	Execute(pexec.Execution) (stdout, stderr string, err error)
 }
 
-type BuildProcessResolver struct {
-	executable Executable
+//go:generate faux --interface ScriptsParser --output fakes/scripts_parser.go
+type ScriptsParser interface {
+	ParseScripts(path string) (scriptsMap map[string]string, err error)
 }
 
-func NewBuildProcessResolver(executable Executable) BuildProcessResolver {
+type BuildProcessResolver struct {
+	executable    Executable
+	scriptsParser ScriptsParser
+}
+
+func NewBuildProcessResolver(executable Executable, scriptsParser ScriptsParser) BuildProcessResolver {
 	return BuildProcessResolver{
-		executable: executable,
+		executable:    executable,
+		scriptsParser: scriptsParser,
 	}
 }
 
@@ -78,20 +86,44 @@ func (r BuildProcessResolver) rebuild(layerDir, workingDir string) error {
 		return err
 	}
 
-	_, _, err = r.executable.Execute(pexec.Execution{
-		Args: []string{"rebuild"},
-		Dir:  workingDir,
-	})
+	scripts, err := r.scriptsParser.ParseScripts(filepath.Join(workingDir, "package.json"))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse package.json: %s", err)
+	}
+
+	if _, exists := scripts["preinstall"]; exists {
+		_, _, err = r.executable.Execute(pexec.Execution{
+			Args:   []string{"run-script", "preinstall"},
+			Dir:    workingDir,
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+		})
+
+		if err != nil {
+			return fmt.Errorf("preinstall script failed on rebuild: %s", err)
+		}
 	}
 
 	_, _, err = r.executable.Execute(pexec.Execution{
-		Args: []string{"install"},
+		Args: []string{"rebuild", fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))},
 		Dir:  workingDir,
 	})
+
 	if err != nil {
-		return err
+		return fmt.Errorf("npm rebuild failed: %s", err)
+	}
+
+	if _, exists := scripts["postinstall"]; exists {
+		_, _, err = r.executable.Execute(pexec.Execution{
+			Args:   []string{"run-script", "postinstall"},
+			Dir:    workingDir,
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+		})
+
+		if err != nil {
+			return fmt.Errorf("postinstall script failed on rebuild: %s", err)
+		}
 	}
 
 	return nil

@@ -1,0 +1,24 @@
+{
+  "name": "vendored",
+  "version": "0.0.1",
+  "description": "some app",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "preinstall": "echo \"running preinstall script\" ",
+    "postinstall": "echo \"running postinstall script\" "
+  },
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "sqlite3": "~4.1.1",
+    "node-pre-gyp": "0.14.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "engines": {
+    "node": "~10"
+  }
+}
