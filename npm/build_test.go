@@ -24,8 +24,10 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		processLayerDir   string
 		processWorkingDir string
-		buildManager      *fakes.BuildManager
-		build             packit.BuildFunc
+		processCacheDir   string
+
+		buildManager *fakes.BuildManager
+		build        packit.BuildFunc
 	)
 
 	it.Before(func() {
@@ -37,8 +39,18 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 
 		buildManager = &fakes.BuildManager{}
-		buildManager.ResolveCall.Returns.BuildProcess = func(ld, wd string) error {
+		buildManager.ResolveCall.Returns.BuildProcess = func(ld, cd, wd string) error {
+			err := os.MkdirAll(filepath.Join(ld, "layer-content"), os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			err = os.MkdirAll(filepath.Join(cd, "layer-content"), os.ModePerm)
+			if err != nil {
+				return err
+			}
 			processLayerDir = ld
+			processCacheDir = cd
 			processWorkingDir = wd
 
 			return nil
@@ -79,6 +91,15 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					Build:     false,
 					Launch:    true,
 					Cache:     false,
+				}, {
+					Name:      npm.LayerNameCache,
+					Path:      filepath.Join(layersDir, npm.LayerNameCache),
+					SharedEnv: packit.Environment{},
+					BuildEnv:  packit.Environment{},
+					LaunchEnv: packit.Environment{},
+					Build:     false,
+					Launch:    false,
+					Cache:     true,
 				},
 			},
 			Processes: []packit.Process{
@@ -92,7 +113,81 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 
 		Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npm.LayerNameNodeModules)))
+		Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npm.LayerNameCache)))
 		Expect(processWorkingDir).To(Equal(workingDir))
+	})
+
+	context("when the cache layer directory is empty", func() {
+		it.Before(func() {
+			buildManager.ResolveCall.Returns.BuildProcess = func(ld, cd, wd string) error {
+				err := os.MkdirAll(cd, os.ModePerm)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}
+
+			build = npm.Build(buildManager)
+		})
+
+		it("filters out empty layers", func() {
+			result, err := build(packit.BuildContext{
+				WorkingDir: workingDir,
+				Layers:     packit.Layers{Path: layersDir},
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{Name: "node_modules"},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Layers).To(Equal([]packit.Layer{
+				{
+					Name:      npm.LayerNameNodeModules,
+					Path:      filepath.Join(layersDir, npm.LayerNameNodeModules),
+					SharedEnv: packit.Environment{},
+					BuildEnv:  packit.Environment{},
+					LaunchEnv: packit.Environment{},
+					Build:     false,
+					Launch:    true,
+					Cache:     false,
+				},
+			}))
+		})
+	})
+
+	context("when the cache layer directory does not exist", func() {
+		it.Before(func() {
+			buildManager.ResolveCall.Returns.BuildProcess = func(ld, cd, wd string) error { return nil }
+
+			build = npm.Build(buildManager)
+		})
+
+		it("filters out empty layers", func() {
+			result, err := build(packit.BuildContext{
+				WorkingDir: workingDir,
+				Layers:     packit.Layers{Path: layersDir},
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{Name: "node_modules"},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Layers).To(Equal([]packit.Layer{
+				{
+					Name:      npm.LayerNameNodeModules,
+					Path:      filepath.Join(layersDir, npm.LayerNameNodeModules),
+					SharedEnv: packit.Environment{},
+					BuildEnv:  packit.Environment{},
+					LaunchEnv: packit.Environment{},
+					Build:     false,
+					Launch:    true,
+					Cache:     false,
+				},
+			}))
+		})
 	})
 
 	context("failure cases", func() {
@@ -101,6 +196,27 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				_, err := os.Create(filepath.Join(layersDir, "modules_layer.toml"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(os.Chmod(filepath.Join(layersDir, "modules_layer.toml"), 0000)).To(Succeed())
+			})
+
+			it("returns an error", func() {
+				_, err := build(packit.BuildContext{
+					WorkingDir: workingDir,
+					Layers:     packit.Layers{Path: layersDir},
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+				})
+				Expect(err).To(MatchError(ContainSubstring("permission denied")))
+			})
+		})
+
+		context("when the npm-cache layer cannot be fetched", func() {
+			it.Before(func() {
+				_, err := os.Create(filepath.Join(layersDir, "npm-cache.toml"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.Chmod(filepath.Join(layersDir, "npm-cache.toml"), 0000)).To(Succeed())
 			})
 
 			it("returns an error", func() {
@@ -166,7 +282,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		context("when the build process provided fails", func() {
 			it.Before(func() {
-				buildManager.ResolveCall.Returns.BuildProcess = func(string, string) error {
+				buildManager.ResolveCall.Returns.BuildProcess = func(string, string, string) error {
 					return errors.New("given build process failed")
 				}
 			})

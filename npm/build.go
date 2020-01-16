@@ -1,17 +1,31 @@
 package npm
 
-import "github.com/cloudfoundry/packit"
+import (
+	"os"
 
-const LayerNameNodeModules = "modules_layer"
+	"github.com/cloudfoundry/packit"
+	"github.com/cloudfoundry/packit/fs"
+)
+
+const (
+	LayerNameNodeModules = "modules_layer"
+	LayerNameCache       = "npm-cache"
+)
 
 //go:generate faux --interface BuildManager --output fakes/build_manager.go
 type BuildManager interface {
-	Resolve(workingDir string) (BuildProcess, error)
+	Resolve(workingDir, cacheDir string) (BuildProcess, error)
 }
 
 func Build(buildManager BuildManager) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
+
 		nodeModulesLayer, err := context.Layers.Get(LayerNameNodeModules, packit.LaunchLayer)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+
+		nodeCacheLayer, err := context.Layers.Get(LayerNameCache, packit.CacheLayer)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
@@ -20,19 +34,27 @@ func Build(buildManager BuildManager) packit.BuildFunc {
 			return packit.BuildResult{}, err
 		}
 
-		process, err := buildManager.Resolve(context.WorkingDir)
+		process, err := buildManager.Resolve(context.WorkingDir, nodeCacheLayer.Path)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
 
-		err = process(nodeModulesLayer.Path, context.WorkingDir)
+		err = process(nodeModulesLayer.Path, nodeCacheLayer.Path, context.WorkingDir)
 		if err != nil {
 			return packit.BuildResult{}, err
+		}
+
+		layers := []packit.Layer{nodeModulesLayer}
+
+		if _, err := os.Stat(nodeCacheLayer.Path); err == nil {
+			if !fs.IsEmptyDir(nodeCacheLayer.Path) {
+				layers = append(layers, nodeCacheLayer)
+			}
 		}
 
 		return packit.BuildResult{
 			Plan:   context.Plan,
-			Layers: []packit.Layer{nodeModulesLayer},
+			Layers: layers,
 			Processes: []packit.Process{
 				{
 					Type:    "web",

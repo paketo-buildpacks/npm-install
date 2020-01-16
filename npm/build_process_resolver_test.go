@@ -22,64 +22,215 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 		Expect = NewWithT(t).Expect
 
 		layerDir      string
+		cacheDir      string
 		workingDir    string
-		executable    *fakes.Executable
 		scriptsParser *fakes.ScriptsParser
+		executable    *fakes.Executable
 
-		resolver npm.BuildProcessResolver
+		solutionsMap map[[3]bool]string
 	)
+	solutionsMap = map[[3]bool]string{
+		// package-lock.json | node_modules | npm-cache => npm command
+		[3]bool{false, false, false}: "install",
+		[3]bool{false, false, true}:  "install",
+		[3]bool{false, true, false}:  "rebuild",
+		[3]bool{false, true, true}:   "rebuild",
+		[3]bool{true, false, false}:  "ci",
+		[3]bool{true, false, true}:   "ci",
+		[3]bool{true, true, false}:   "rebuild",
+		[3]bool{true, true, true}:    "ci",
+	}
 
-	it.Before(func() {
-		var err error
-		layerDir, err = ioutil.TempDir("", "layer")
-		Expect(err).NotTo(HaveOccurred())
+	for _, i := range []bool{false, true} {
+		for _, j := range []bool{false, true} {
+			for _, k := range []bool{false, true} {
 
-		workingDir, err = ioutil.TempDir("", "working-dir")
-		Expect(err).NotTo(HaveOccurred())
+				stateArray := [3]bool{i, j, k}
+				packageLockExist, nodeModulesExist, npmCacheExist := stateArray[0], stateArray[1], stateArray[2]
+				specName := fmt.Sprintf("NodeModules: %v, package-lock.json: %v, npmCache: %v", nodeModulesExist, packageLockExist, npmCacheExist)
+				var argsMap map[string][]string
+				context(specName, func() {
+					var executionCalls []pexec.Execution
+					var process npm.BuildProcess
+					var resolver npm.BuildProcessResolver
+					it.Before(func() {
+						var err error
+						layerDir, err = ioutil.TempDir("", "layer")
+						Expect(err).NotTo(HaveOccurred())
 
-		executable = &fakes.Executable{}
-		scriptsParser = &fakes.ScriptsParser{}
+						cacheDir, err = ioutil.TempDir("", "layer")
+						Expect(err).NotTo(HaveOccurred())
 
-		resolver = npm.NewBuildProcessResolver(executable, scriptsParser)
-	})
+						workingDir, err = ioutil.TempDir("", "working-dir")
+						Expect(err).NotTo(HaveOccurred())
 
-	it.After(func() {
-		Expect(os.RemoveAll(layerDir)).To(Succeed())
-		Expect(os.RemoveAll(workingDir)).To(Succeed())
-	})
+						executable = &fakes.Executable{}
+						scriptsParser = &fakes.ScriptsParser{}
 
-	context("Resolve", func() {
-		context("when the node_modules directory does not exist in the working directory", func() {
-			var process npm.BuildProcess
+						executionCalls = []pexec.Execution{}
 
-			it.Before(func() {
-				var err error
-				process, err = resolver.Resolve(workingDir)
-				Expect(err).NotTo(HaveOccurred())
+						executable.ExecuteCall.Stub = func(param1 pexec.Execution) (string, string, error) {
+							executionCalls = append(executionCalls, param1)
+							return "", "", nil
+						}
+						argsMap = map[string][]string{
+							"install": {"--unsafe-perm", "--cache", cacheDir},
+							"rebuild": {fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))},
+							"ci":      {"--unsafe-perm", "--cache", cacheDir},
+						}
+
+						resolver = npm.NewBuildProcessResolver(executable, scriptsParser)
+
+					})
+
+					it.After(func() {
+						Expect(os.RemoveAll(layerDir)).To(Succeed())
+						Expect(os.RemoveAll(workingDir)).To(Succeed())
+						Expect(os.RemoveAll(cacheDir)).To(Succeed())
+					})
+
+					context("Resolve and run installation process", func() {
+						it.Before(func() {
+							if nodeModulesExist {
+								Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules", "some-module"), os.ModePerm)).To(Succeed())
+
+								err := ioutil.WriteFile(filepath.Join(workingDir, "node_modules", "some-module", "some-file"), []byte("some-content"), 0644)
+								Expect(err).NotTo(HaveOccurred())
+							}
+							if packageLockExist {
+								// make packageLock
+								Expect(ioutil.WriteFile(filepath.Join(workingDir, "package-lock.json"), []byte(""), os.ModePerm)).To(Succeed())
+							}
+							if npmCacheExist {
+								// make npmCache
+								Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
+
+								err := ioutil.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
+								Expect(err).NotTo(HaveOccurred())
+							}
+
+							var err error
+							process, err = resolver.Resolve(workingDir, cacheDir)
+							Expect(err).NotTo(HaveOccurred())
+
+						})
+						it(fmt.Sprintf("runs npm and succeeds"), func() {
+							Expect(process(layerDir, cacheDir, workingDir)).To(Succeed())
+
+							Expect(executionCalls).To(HaveLen(1))
+
+							Expect(executionCalls[0]).To(Equal(pexec.Execution{
+								Args: append([]string{solutionsMap[stateArray]}, argsMap[solutionsMap[stateArray]]...),
+								Dir:  workingDir,
+							}))
+
+							if nodeModulesExist {
+								path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
+								Expect(err).NotTo(HaveOccurred())
+								Expect(path).To(Equal(filepath.Join(layerDir, "node_modules")))
+
+								contents, err := ioutil.ReadFile(filepath.Join(layerDir, "node_modules", "some-module", "some-file"))
+								Expect(err).NotTo(HaveOccurred())
+								Expect(string(contents)).To(Equal("some-content"))
+							}
+							if npmCacheExist {
+								contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
+								Expect(err).NotTo(HaveOccurred())
+								Expect(string(contents)).To(Equal("some-content"))
+							}
+
+						})
+					})
+				})
+			}
+		}
+	}
+	context("failure cases", func() {
+		var (
+			//executionCalls []pexec.Execution
+			process    npm.BuildProcess
+			resolver   npm.BuildProcessResolver
+			executable *fakes.Executable
+		)
+
+		it.Before(func() {
+
+			var err error
+			layerDir, err = ioutil.TempDir("", "layer")
+			Expect(err).NotTo(HaveOccurred())
+
+			cacheDir, err = ioutil.TempDir("", "layer")
+			Expect(err).NotTo(HaveOccurred())
+
+			workingDir, err = ioutil.TempDir("", "working-dir")
+			Expect(err).NotTo(HaveOccurred())
+
+			executable = &fakes.Executable{}
+			scriptsParser = &fakes.ScriptsParser{}
+
+			resolver = npm.NewBuildProcessResolver(executable, scriptsParser)
+
+		})
+		it.After(func() {
+			Expect(os.RemoveAll(layerDir)).To(Succeed())
+			Expect(os.RemoveAll(workingDir)).To(Succeed())
+			Expect(os.RemoveAll(cacheDir)).To(Succeed())
+		})
+
+		it.Before(func() {
+			resolver = npm.NewBuildProcessResolver(executable, scriptsParser)
+		})
+
+		context("Resolve", func() {
+			context("when the working directory is unreadable", func() {
+				it.Before(func() {
+					Expect(os.Chmod(workingDir, 0000)).To(Succeed())
+				})
+
+				it.After(func() {
+					Expect(os.Chmod(workingDir, os.ModePerm)).To(Succeed())
+				})
+
+				it("returns an error", func() {
+					_, err := resolver.Resolve(workingDir, cacheDir)
+					Expect(err).To(MatchError(ContainSubstring("permission denied")))
+				})
 			})
+			context("npm-cache exists and is unreadable", func() {
+				var npmCacheItemPath string
+				it.Before(func() {
+					npmCacheItemPath = filepath.Join(workingDir, "npm-cache", "some-cache-dir")
+					Expect(os.MkdirAll(npmCacheItemPath, os.ModePerm)).To(Succeed())
+					Expect(os.Chmod(npmCacheItemPath, 0000)).To(Succeed())
+				})
 
-			it("resolves a process that installs the node modules", func() {
-				err := process(layerDir, workingDir)
-				Expect(err).NotTo(HaveOccurred())
+				it.After(func() {
+					Expect(os.Chmod(npmCacheItemPath, os.ModePerm)).To(Succeed())
+				})
+				it("fails", func() {
+					_, err := resolver.Resolve(workingDir, cacheDir)
+					Expect(err).To(MatchError(ContainSubstring("permission denied")))
+				})
 
-				Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
-					Args: []string{"install"},
-					Dir:  workingDir,
-				}))
-
-				path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(path).To(Equal(filepath.Join(layerDir, "node_modules")))
 			})
+		})
 
-			context("failure cases", func() {
+		context("BuildFunctions", func() {
+			context("install", func() {
+
+				it.Before(func() {
+					var err error
+					process, err = resolver.Resolve(workingDir, cacheDir)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
 				context("when the node_modules directory cannot be created", func() {
 					it.Before(func() {
 						Expect(os.Chmod(layerDir, 0000)).To(Succeed())
 					})
 
 					it("returns an error", func() {
-						err := process(layerDir, workingDir)
+						err := process(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError(ContainSubstring("permission denied")))
 					})
 				})
@@ -90,7 +241,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("returns an error", func() {
-						err := process(layerDir, workingDir)
+						err := process(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError(ContainSubstring("permission denied")))
 					})
 				})
@@ -101,162 +252,23 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("returns an error", func() {
-						err := process(layerDir, workingDir)
+						err := process(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError("failed to execute"))
 					})
 				})
 			})
-		})
 
-		context("when the node_modules directory exists in the working directory", func() {
-			var process npm.BuildProcess
-			var executionCalls []pexec.Execution
-
-			it.Before(func() {
-				Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules", "some-module"), os.ModePerm)).To(Succeed())
-
-				err := ioutil.WriteFile(filepath.Join(workingDir, "node_modules", "some-module", "some-file"), []byte("some-content"), 0644)
-				Expect(err).NotTo(HaveOccurred())
-
-				executable.ExecuteCall.Stub = func(param1 pexec.Execution) (string, string, error) {
-					executionCalls = append(executionCalls, param1)
-					return "", "", nil
-				}
-			})
-
-			context("preinstall and postinstall scripts are defined in package.json", func() {
+			context("ci", func() {
 				it.Before(func() {
 					var err error
-					process, err = resolver.Resolve(workingDir)
+					err = os.Mkdir(filepath.Join(workingDir, "package-lock.json"), os.ModePerm)
 					Expect(err).NotTo(HaveOccurred())
 
-					scriptsParser.ParseScriptsCall.Returns.ScriptsMap = map[string]string{
-						"preinstall":  "pre-install script",
-						"postinstall": "post-install script",
-					}
-				})
-
-				it("runs scripts and rebuilds the node modules", func() {
-					err := process(layerDir, workingDir)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(executionCalls).To(HaveLen(3))
-
-					Expect(executionCalls[0]).To(Equal(pexec.Execution{
-						Args:   []string{"run-script", "preinstall"},
-						Dir:    workingDir,
-						Stdout: os.Stdout,
-						Stderr: os.Stderr,
-					}))
-
-					Expect(executionCalls[1]).To(Equal(pexec.Execution{
-						Args: []string{"rebuild", fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))},
-						Dir:  workingDir,
-					}))
-
-					Expect(executionCalls[2]).To(Equal(pexec.Execution{
-						Args:   []string{"run-script", "postinstall"},
-						Dir:    workingDir,
-						Stdout: os.Stdout,
-						Stderr: os.Stderr,
-					}))
-
-					path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(path).To(Equal(filepath.Join(layerDir, "node_modules")))
-
-					contents, err := ioutil.ReadFile(filepath.Join(layerDir, "node_modules", "some-module", "some-file"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("some-content"))
-				})
-			})
-
-			context("there are no scripts defined in package.json", func() {
-				it.Before(func() {
-					var err error
-					process, err = resolver.Resolve(workingDir)
+					process, err = resolver.Resolve(workingDir, cacheDir)
 					Expect(err).NotTo(HaveOccurred())
 				})
-				it("rebuilds the node modules", func() {
-					err := process(layerDir, workingDir)
-					Expect(err).NotTo(HaveOccurred())
 
-					Expect(executionCalls).To(HaveLen(1))
-
-					Expect(executionCalls[0]).To(Equal(pexec.Execution{
-						Args: []string{"rebuild", fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))},
-						Dir:  workingDir,
-					}))
-
-					path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(path).To(Equal(filepath.Join(layerDir, "node_modules")))
-
-					contents, err := ioutil.ReadFile(filepath.Join(layerDir, "node_modules", "some-module", "some-file"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("some-content"))
-				})
-			})
-
-			context("failure cases", func() {
-				it.Before(func() {
-					var err error
-					process, err = resolver.Resolve(workingDir)
-					Expect(err).NotTo(HaveOccurred())
-				})
-				context("when rebuilding", func() {
-					context("parsing package.json for scripts", func() {
-						it.Before(func() {
-							scriptsParser.ParseScriptsCall.Returns.Err = errors.New("a parsing error")
-						})
-						it("fails", func() {
-							err := process(layerDir, workingDir)
-							Expect(err).To(MatchError("failed to parse package.json: a parsing error"))
-						})
-					})
-
-					context("and preinstall scripts fail", func() {
-						it.Before(func() {
-							scriptsParser.ParseScriptsCall.Returns.ScriptsMap = map[string]string{"preinstall": "some pre-install scripts"}
-
-							executable.ExecuteCall.Stub = func(execContext pexec.Execution) (string, string, error) {
-								for _, arg := range execContext.Args {
-									if strings.Contains(arg, "preinstall") {
-										return "", "", fmt.Errorf("an actual error")
-									}
-								}
-								return "", "", nil
-							}
-						})
-
-						it("fails", func() {
-							err := process(layerDir, workingDir)
-							Expect(err).To(MatchError("preinstall script failed on rebuild: an actual error"))
-						})
-					})
-
-					context("and postinstall scripts fail", func() {
-						it.Before(func() {
-							scriptsParser.ParseScriptsCall.Returns.ScriptsMap = map[string]string{"postinstall": "some post-install scripts"}
-
-							executable.ExecuteCall.Stub = func(execContext pexec.Execution) (string, string, error) {
-								for _, arg := range execContext.Args {
-									if strings.Contains(arg, "postinstall") {
-										return "", "", fmt.Errorf("an actual error")
-									}
-								}
-								return "", "", nil
-							}
-						})
-
-						it("fails", func() {
-							err := process(layerDir, workingDir)
-							Expect(err).To(MatchError("postinstall script failed on rebuild: an actual error"))
-						})
-					})
-				})
-
-				context("when the working directory is unreadable", func() {
+				context("when the node_modules directory cannot be created", func() {
 					it.Before(func() {
 						Expect(os.Chmod(workingDir, 0000)).To(Succeed())
 					})
@@ -266,9 +278,48 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("returns an error", func() {
-						_, err := resolver.Resolve(workingDir)
+						err := process(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError(ContainSubstring("permission denied")))
 					})
+				})
+
+				context("when the node_modules directory cannot be moved to the layer", func() {
+					it.Before(func() {
+						Expect(os.Chmod(layerDir, 0000)).To(Succeed())
+					})
+
+					it.After(func() {
+						Expect(os.Chmod(layerDir, os.ModePerm)).To(Succeed())
+					})
+
+					it("returns an error", func() {
+						err := process(layerDir, cacheDir, workingDir)
+						Expect(err).To(MatchError(ContainSubstring("permission denied")))
+					})
+				})
+
+				context("when the executable fails", func() {
+					it.Before(func() {
+						executable.ExecuteCall.Returns.Err = errors.New("failed to execute")
+					})
+
+					it("returns an error", func() {
+						err := process(layerDir, cacheDir, workingDir)
+						Expect(err).To(MatchError("failed to execute"))
+					})
+				})
+
+			})
+
+			context("rebuild", func() {
+
+				it.Before(func() {
+					var err error
+					err = os.Mkdir(filepath.Join(workingDir, "node_modules"), os.ModePerm)
+					Expect(err).NotTo(HaveOccurred())
+
+					process, err = resolver.Resolve(workingDir, cacheDir)
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				context("when the node_modules directory cannot be created", func() {
@@ -276,9 +327,63 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 						Expect(os.Chmod(layerDir, 0000)).To(Succeed())
 					})
 
+					it.After(func() {
+						Expect(os.Chmod(layerDir, os.ModePerm)).To(Succeed())
+					})
+
 					it("returns an error", func() {
-						err := process(layerDir, workingDir)
+						err := process(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError(ContainSubstring("permission denied")))
+					})
+				})
+
+				context("parsing package.json for scripts", func() {
+					it.Before(func() {
+						scriptsParser.ParseScriptsCall.Returns.Err = errors.New("a parsing error")
+					})
+					it("fails", func() {
+						err := process(layerDir, cacheDir, workingDir)
+						Expect(err).To(MatchError("failed to parse package.json: a parsing error"))
+					})
+				})
+
+				context("and preinstall scripts fail", func() {
+					it.Before(func() {
+						scriptsParser.ParseScriptsCall.Returns.ScriptsMap = map[string]string{"preinstall": "some pre-install scripts"}
+
+						executable.ExecuteCall.Stub = func(execContext pexec.Execution) (string, string, error) {
+							for _, arg := range execContext.Args {
+								if strings.Contains(arg, "preinstall") {
+									return "", "", fmt.Errorf("an actual error")
+								}
+							}
+							return "", "", nil
+						}
+					})
+
+					it("fails", func() {
+						err := process(layerDir, cacheDir, workingDir)
+						Expect(err).To(MatchError("preinstall script failed on rebuild: an actual error"))
+					})
+				})
+
+				context("and postinstall scripts fail", func() {
+					it.Before(func() {
+						scriptsParser.ParseScriptsCall.Returns.ScriptsMap = map[string]string{"postinstall": "some post-install scripts"}
+
+						executable.ExecuteCall.Stub = func(execContext pexec.Execution) (string, string, error) {
+							for _, arg := range execContext.Args {
+								if strings.Contains(arg, "postinstall") {
+									return "", "", fmt.Errorf("an actual error")
+								}
+							}
+							return "", "", nil
+						}
+					})
+
+					it("fails", func() {
+						err := process(layerDir, cacheDir, workingDir)
+						Expect(err).To(MatchError("postinstall script failed on rebuild: an actual error"))
 					})
 				})
 
@@ -294,10 +399,11 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("returns an error", func() {
-						err := process(layerDir, workingDir)
+						err := process(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError("npm rebuild failed: failed to rebuild"))
 					})
 				})
+
 			})
 		})
 	})

@@ -22,7 +22,7 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when using a nvmrc file", func() {
-		const nvmrcVersion = `8.\d+\.\d+`
+		const nvmrcVersion = `12.\d+\.\d+`
 
 		it("package.json takes precedence over it", func() {
 			var err error
