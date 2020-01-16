@@ -1,6 +1,7 @@
 package npm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -118,7 +119,18 @@ func (r BuildProcessResolver) ci(layerDir, cacheDir, workingDir string) error {
 }
 
 func (r BuildProcessResolver) rebuild(layerDir, cacheDir, workingDir string) error {
-	err := fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(layerDir, "node_modules"))
+	buffer := bytes.NewBuffer(nil)
+	_, _, err := r.executable.Execute(pexec.Execution{
+		Args:   []string{"list"},
+		Dir:    workingDir,
+		Stdout: buffer,
+		Stderr: buffer,
+	})
+	if err != nil {
+		return fmt.Errorf("vendored node_modules have unmet dependencies:\n%s\n%w", buffer, err)
+	}
+
+	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(layerDir, "node_modules"))
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package npm_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -48,7 +49,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				stateArray := [3]bool{i, j, k}
 				packageLockExist, nodeModulesExist, npmCacheExist := stateArray[0], stateArray[1], stateArray[2]
 				specName := fmt.Sprintf("NodeModules: %v, package-lock.json: %v, npmCache: %v", nodeModulesExist, packageLockExist, npmCacheExist)
-				var argsMap map[string][]string
+				var argsMap map[string][]pexec.Execution
 				context(specName, func() {
 					var executionCalls []pexec.Execution
 					var process npm.BuildProcess
@@ -73,14 +74,34 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 							executionCalls = append(executionCalls, param1)
 							return "", "", nil
 						}
-						argsMap = map[string][]string{
-							"install": {"--unsafe-perm", "--cache", cacheDir},
-							"rebuild": {fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))},
-							"ci":      {"--unsafe-perm", "--cache", cacheDir},
+						argsMap = map[string][]pexec.Execution{
+							"install": {
+								{
+									Args: []string{"install", "--unsafe-perm", "--cache", cacheDir},
+									Dir:  workingDir,
+								},
+							},
+							"rebuild": {
+								{
+									Args:   []string{"list"},
+									Dir:    workingDir,
+									Stdout: bytes.NewBuffer(nil),
+									Stderr: bytes.NewBuffer(nil),
+								},
+								{
+									Args: []string{"rebuild", fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))},
+									Dir:  workingDir,
+								},
+							},
+							"ci": {
+								{
+									Args: []string{"ci", "--unsafe-perm", "--cache", cacheDir},
+									Dir:  workingDir,
+								},
+							},
 						}
 
 						resolver = npm.NewBuildProcessResolver(executable, scriptsParser)
-
 					})
 
 					it.After(func() {
@@ -116,13 +137,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 						})
 						it(fmt.Sprintf("runs npm and succeeds"), func() {
 							Expect(process(layerDir, cacheDir, workingDir)).To(Succeed())
-
-							Expect(executionCalls).To(HaveLen(1))
-
-							Expect(executionCalls[0]).To(Equal(pexec.Execution{
-								Args: append([]string{solutionsMap[stateArray]}, argsMap[solutionsMap[stateArray]]...),
-								Dir:  workingDir,
-							}))
+							Expect(executionCalls).To(Equal(argsMap[solutionsMap[stateArray]]))
 
 							if nodeModulesExist {
 								path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
@@ -312,7 +327,6 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			context("rebuild", func() {
-
 				it.Before(func() {
 					var err error
 					err = os.Mkdir(filepath.Join(workingDir, "node_modules"), os.ModePerm)
@@ -320,6 +334,22 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 					process, err = resolver.Resolve(workingDir, cacheDir)
 					Expect(err).NotTo(HaveOccurred())
+				})
+
+				context("when node_modules is incomplete", func() {
+					it("npm list fails", func() {
+						executable.ExecuteCall.Stub = func(p pexec.Execution) (string, string, error) {
+							if strings.Contains(strings.Join(p.Args, " "), "list") {
+								fmt.Fprintln(p.Stdout, "stdout output")
+								fmt.Fprintln(p.Stderr, "stderr output")
+								return "", "", errors.New("exit status 1")
+							}
+							return "", "", nil
+						}
+
+						err := process(layerDir, cacheDir, workingDir)
+						Expect(err).To(MatchError("vendored node_modules have unmet dependencies:\nstdout output\nstderr output\n\nexit status 1"))
+					})
 				})
 
 				context("when the node_modules directory cannot be created", func() {
@@ -390,7 +420,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				context("when the executable fails to run rebuild", func() {
 					it.Before(func() {
 						executable.ExecuteCall.Stub = func(pexec.Execution) (string, string, error) {
-							if executable.ExecuteCall.CallCount == 1 {
+							if executable.ExecuteCall.CallCount == 2 {
 								return "", "", errors.New("failed to rebuild")
 							}
 
