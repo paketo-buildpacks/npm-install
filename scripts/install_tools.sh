@@ -102,6 +102,9 @@ expand() {
     rm "$PACK_ARTIFACT"
 }
 
+function install_jam() {
+    go get -u github.com/cloudfoundry/packit/cargo/jam && go build -o .bin/jam github.com/cloudfoundry/packit/cargo/jam
+}
 
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
 
@@ -111,4 +114,5 @@ export PATH
 
 install_pack
 install_packager
+install_jam
 
