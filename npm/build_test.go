@@ -26,6 +26,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		processWorkingDir string
 		processCacheDir   string
 
+		buildProcess *fakes.BuildProcess
 		buildManager *fakes.BuildManager
 		build        packit.BuildFunc
 	)
@@ -38,8 +39,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		workingDir, err = ioutil.TempDir("", "working-dir")
 		Expect(err).NotTo(HaveOccurred())
 
-		buildManager = &fakes.BuildManager{}
-		buildManager.ResolveCall.Returns.BuildProcess = func(ld, cd, wd string) error {
+		buildProcess = &fakes.BuildProcess{}
+		buildProcess.RunCall.Stub = func(ld, cd, wd string) error {
 			err := os.MkdirAll(filepath.Join(ld, "layer-content"), os.ModePerm)
 			if err != nil {
 				return err
@@ -55,6 +56,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			return nil
 		}
+
+		buildManager = &fakes.BuildManager{}
+		buildManager.ResolveCall.Returns.BuildProcess = buildProcess
 
 		build = npm.Build(buildManager)
 	})
@@ -119,7 +123,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 	context("when the cache layer directory is empty", func() {
 		it.Before(func() {
-			buildManager.ResolveCall.Returns.BuildProcess = func(ld, cd, wd string) error {
+			buildProcess.RunCall.Stub = func(ld, cd, wd string) error {
 				err := os.MkdirAll(cd, os.ModePerm)
 				if err != nil {
 					return err
@@ -159,7 +163,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 	context("when the cache layer directory does not exist", func() {
 		it.Before(func() {
-			buildManager.ResolveCall.Returns.BuildProcess = func(ld, cd, wd string) error { return nil }
+			buildProcess.RunCall.Stub = func(ld, cd, wd string) error { return nil }
 
 			build = npm.Build(buildManager)
 		})
@@ -282,7 +286,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		context("when the build process provided fails", func() {
 			it.Before(func() {
-				buildManager.ResolveCall.Returns.BuildProcess = func(string, string, string) error {
+				buildProcess.RunCall.Stub = func(string, string, string) error {
 					return errors.New("given build process failed")
 				}
 			})

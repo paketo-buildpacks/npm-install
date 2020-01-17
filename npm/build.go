@@ -39,7 +39,7 @@ func Build(buildManager BuildManager) packit.BuildFunc {
 			return packit.BuildResult{}, err
 		}
 
-		err = process(nodeModulesLayer.Path, nodeCacheLayer.Path, context.WorkingDir)
+		err = process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, context.WorkingDir)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}

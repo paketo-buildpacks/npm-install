@@ -12,6 +12,7 @@ func TestUnitNPM(t *testing.T) {
 	suite("Build", testBuild)
 	suite("BuildProcessResolver", testBuildProcessResolver)
 	suite("Detect", testDetect)
+	suite("InstallBuildProcess", testInstallBuildProcess)
 	suite("PackageJSONParser", testPackageJSONParser)
 	suite.Run(t)
 }

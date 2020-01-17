@@ -33,69 +33,61 @@ func NewBuildProcessResolver(executable Executable, scriptsParser ScriptsParser)
 	}
 }
 
-type BuildProcess func(layerDir, cacheDir, workingDir string) error
+//go:generate faux --interface BuildProcess --output fakes/build_process.go
+type BuildProcess interface {
+	Run(layerDir, cacheDir, workingDir string) error
+}
 
 func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess, error) {
 	nodeModulesPath := filepath.Join(workingDir, "node_modules")
 	vendored, err := fileExists(nodeModulesPath)
 	if err != nil {
-		return nilBuildProcess, err
+		return nil, err
 	}
 
 	packageLockPath := filepath.Join(workingDir, "package-lock.json")
 	locked, err := fileExists(packageLockPath)
 	if err != nil {
-		return nilBuildProcess, err
+		return nil, err
 	}
 
 	npmCachePath := filepath.Join(workingDir, "npm-cache")
 	cached, err := fileExists(npmCachePath)
 	if err != nil {
-		return nilBuildProcess, err
+		return nil, err
 	}
 
 	if cached {
 		err := fs.Move(npmCachePath, filepath.Join(cacheDir, "npm-cache"))
 		if err != nil {
-			return nilBuildProcess, err
+			return nil, err
 		}
 	}
 
 	switch {
-	case vendored && locked && cached:
-		return r.ci, nil
-	case vendored:
-		return r.rebuild, nil
-	case locked:
-		return r.ci, nil
+	case !locked && vendored, locked && vendored && !cached:
+		return RebuildBuildProcess{
+			executable:    r.executable,
+			scriptsParser: r.scriptsParser,
+		}, nil
+
+	case !locked && !vendored:
+		return InstallBuildProcess{
+			executable: r.executable,
+		}, nil
+
 	default:
-		return r.install, nil
+		return CIBuildProcess{
+			executable: r.executable,
+		}, nil
 	}
 }
 
-func (r BuildProcessResolver) install(layerDir, cacheDir, workingDir string) error {
-	err := os.Mkdir(filepath.Join(layerDir, "node_modules"), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	err = os.Symlink(filepath.Join(layerDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
-	if err != nil {
-		return err
-	}
-
-	_, _, err = r.executable.Execute(pexec.Execution{
-		Args: []string{"install", "--unsafe-perm", "--cache", cacheDir},
-		Dir:  workingDir,
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+type CIBuildProcess struct {
+	executable Executable
 }
 
-func (r BuildProcessResolver) ci(layerDir, cacheDir, workingDir string) error {
+func (r CIBuildProcess) Run(layerDir, cacheDir, workingDir string) error {
 	err := os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)
 	if err != nil {
 		return err
@@ -118,7 +110,12 @@ func (r BuildProcessResolver) ci(layerDir, cacheDir, workingDir string) error {
 	return err
 }
 
-func (r BuildProcessResolver) rebuild(layerDir, cacheDir, workingDir string) error {
+type RebuildBuildProcess struct {
+	executable    Executable
+	scriptsParser ScriptsParser
+}
+
+func (r RebuildBuildProcess) Run(layerDir, cacheDir, workingDir string) error {
 	buffer := bytes.NewBuffer(nil)
 	_, _, err := r.executable.Execute(pexec.Execution{
 		Args:   []string{"list"},
@@ -180,10 +177,6 @@ func (r BuildProcessResolver) rebuild(layerDir, cacheDir, workingDir string) err
 		}
 	}
 
-	return nil
-}
-
-func nilBuildProcess(layerDir, cacheDir, workingDir string) error {
 	return nil
 }
 

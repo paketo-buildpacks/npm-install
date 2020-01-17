@@ -136,7 +136,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 						})
 						it(fmt.Sprintf("runs npm and succeeds"), func() {
-							Expect(process(layerDir, cacheDir, workingDir)).To(Succeed())
+							Expect(process.Run(layerDir, cacheDir, workingDir)).To(Succeed())
 							Expect(executionCalls).To(Equal(argsMap[solutionsMap[stateArray]]))
 
 							if nodeModulesExist {
@@ -160,9 +160,9 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			}
 		}
 	}
+
 	context("failure cases", func() {
 		var (
-			//executionCalls []pexec.Execution
 			process    npm.BuildProcess
 			resolver   npm.BuildProcessResolver
 			executable *fakes.Executable
@@ -184,16 +184,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			scriptsParser = &fakes.ScriptsParser{}
 
 			resolver = npm.NewBuildProcessResolver(executable, scriptsParser)
-
 		})
+
 		it.After(func() {
 			Expect(os.RemoveAll(layerDir)).To(Succeed())
 			Expect(os.RemoveAll(workingDir)).To(Succeed())
 			Expect(os.RemoveAll(cacheDir)).To(Succeed())
-		})
-
-		it.Before(func() {
-			resolver = npm.NewBuildProcessResolver(executable, scriptsParser)
 		})
 
 		context("Resolve", func() {
@@ -231,48 +227,6 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		context("BuildFunctions", func() {
-			context("install", func() {
-
-				it.Before(func() {
-					var err error
-					process, err = resolver.Resolve(workingDir, cacheDir)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				context("when the node_modules directory cannot be created", func() {
-					it.Before(func() {
-						Expect(os.Chmod(layerDir, 0000)).To(Succeed())
-					})
-
-					it("returns an error", func() {
-						err := process(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError(ContainSubstring("permission denied")))
-					})
-				})
-
-				context("when the node_modules directory cannot be symlinked into the working directory", func() {
-					it.Before(func() {
-						Expect(os.Chmod(workingDir, 0000)).To(Succeed())
-					})
-
-					it("returns an error", func() {
-						err := process(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError(ContainSubstring("permission denied")))
-					})
-				})
-
-				context("when the executable fails", func() {
-					it.Before(func() {
-						executable.ExecuteCall.Returns.Err = errors.New("failed to execute")
-					})
-
-					it("returns an error", func() {
-						err := process(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError("failed to execute"))
-					})
-				})
-			})
-
 			context("ci", func() {
 				it.Before(func() {
 					var err error
@@ -293,7 +247,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("returns an error", func() {
-						err := process(layerDir, cacheDir, workingDir)
+						err := process.Run(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError(ContainSubstring("permission denied")))
 					})
 				})
@@ -308,7 +262,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("returns an error", func() {
-						err := process(layerDir, cacheDir, workingDir)
+						err := process.Run(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError(ContainSubstring("permission denied")))
 					})
 				})
@@ -319,7 +273,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("returns an error", func() {
-						err := process(layerDir, cacheDir, workingDir)
+						err := process.Run(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError("failed to execute"))
 					})
 				})
@@ -347,7 +301,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 							return "", "", nil
 						}
 
-						err := process(layerDir, cacheDir, workingDir)
+						err := process.Run(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError("vendored node_modules have unmet dependencies:\nstdout output\nstderr output\n\nexit status 1"))
 					})
 				})
@@ -362,7 +316,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("returns an error", func() {
-						err := process(layerDir, cacheDir, workingDir)
+						err := process.Run(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError(ContainSubstring("permission denied")))
 					})
 				})
@@ -372,7 +326,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 						scriptsParser.ParseScriptsCall.Returns.Err = errors.New("a parsing error")
 					})
 					it("fails", func() {
-						err := process(layerDir, cacheDir, workingDir)
+						err := process.Run(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError("failed to parse package.json: a parsing error"))
 					})
 				})
@@ -392,7 +346,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("fails", func() {
-						err := process(layerDir, cacheDir, workingDir)
+						err := process.Run(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError("preinstall script failed on rebuild: an actual error"))
 					})
 				})
@@ -412,7 +366,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("fails", func() {
-						err := process(layerDir, cacheDir, workingDir)
+						err := process.Run(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError("postinstall script failed on rebuild: an actual error"))
 					})
 				})
@@ -429,7 +383,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					})
 
 					it("returns an error", func() {
-						err := process(layerDir, cacheDir, workingDir)
+						err := process.Run(layerDir, cacheDir, workingDir)
 						Expect(err).To(MatchError("npm rebuild failed: failed to rebuild"))
 					})
 				})
