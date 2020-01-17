@@ -148,12 +148,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 								Expect(err).NotTo(HaveOccurred())
 								Expect(string(contents)).To(Equal("some-content"))
 							}
+
 							if npmCacheExist {
 								contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
 								Expect(err).NotTo(HaveOccurred())
 								Expect(string(contents)).To(Equal("some-content"))
 							}
-
 						})
 					})
 				})
@@ -207,8 +207,10 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
 			})
+
 			context("npm-cache exists and is unreadable", func() {
 				var npmCacheItemPath string
+
 				it.Before(func() {
 					npmCacheItemPath = filepath.Join(workingDir, "npm-cache", "some-cache-dir")
 					Expect(os.MkdirAll(npmCacheItemPath, os.ModePerm)).To(Succeed())
@@ -218,68 +220,15 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				it.After(func() {
 					Expect(os.Chmod(npmCacheItemPath, os.ModePerm)).To(Succeed())
 				})
+
 				it("fails", func() {
 					_, err := resolver.Resolve(workingDir, cacheDir)
 					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
-
 			})
 		})
 
 		context("BuildFunctions", func() {
-			context("ci", func() {
-				it.Before(func() {
-					var err error
-					err = os.Mkdir(filepath.Join(workingDir, "package-lock.json"), os.ModePerm)
-					Expect(err).NotTo(HaveOccurred())
-
-					process, err = resolver.Resolve(workingDir, cacheDir)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				context("when the node_modules directory cannot be created", func() {
-					it.Before(func() {
-						Expect(os.Chmod(workingDir, 0000)).To(Succeed())
-					})
-
-					it.After(func() {
-						Expect(os.Chmod(workingDir, os.ModePerm)).To(Succeed())
-					})
-
-					it("returns an error", func() {
-						err := process.Run(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError(ContainSubstring("permission denied")))
-					})
-				})
-
-				context("when the node_modules directory cannot be moved to the layer", func() {
-					it.Before(func() {
-						Expect(os.Chmod(layerDir, 0000)).To(Succeed())
-					})
-
-					it.After(func() {
-						Expect(os.Chmod(layerDir, os.ModePerm)).To(Succeed())
-					})
-
-					it("returns an error", func() {
-						err := process.Run(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError(ContainSubstring("permission denied")))
-					})
-				})
-
-				context("when the executable fails", func() {
-					it.Before(func() {
-						executable.ExecuteCall.Returns.Err = errors.New("failed to execute")
-					})
-
-					it("returns an error", func() {
-						err := process.Run(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError("failed to execute"))
-					})
-				})
-
-			})
-
 			context("rebuild", func() {
 				it.Before(func() {
 					var err error

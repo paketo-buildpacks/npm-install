@@ -11,6 +11,7 @@ func TestUnitNPM(t *testing.T) {
 	suite := spec.New("npm", spec.Report(report.Terminal{}))
 	suite("Build", testBuild)
 	suite("BuildProcessResolver", testBuildProcessResolver)
+	suite("CIBuildProcess", testCIBuildProcess)
 	suite("Detect", testDetect)
 	suite("InstallBuildProcess", testInstallBuildProcess)
 	suite("PackageJSONParser", testPackageJSONParser)

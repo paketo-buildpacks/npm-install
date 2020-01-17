@@ -15,7 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
+func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
@@ -24,7 +24,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		workingDir string
 		executable *fakes.Executable
 
-		process npm.InstallBuildProcess
+		process npm.CIBuildProcess
 	)
 
 	context("Run", func() {
@@ -41,7 +41,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 			executable = &fakes.Executable{}
 
-			process = npm.NewInstallBuildProcess(executable)
+			process = npm.NewCIBuildProcess(executable)
 		})
 
 		it.After(func() {
@@ -52,8 +52,9 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 		it("succeeds", func() {
 			Expect(process.Run(layerDir, cacheDir, workingDir)).To(Succeed())
+
 			Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
-				Args: []string{"install", "--unsafe-perm", "--cache", cacheDir},
+				Args: []string{"ci", "--unsafe-perm", "--cache", cacheDir},
 				Dir:  workingDir,
 			}))
 
@@ -63,20 +64,28 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		context("failure cases", func() {
-			context("when unable to write node_modules directory in layer", func() {
+			context("when the node_modules directory cannot be created", func() {
 				it.Before(func() {
-					Expect(os.Chmod(layerDir, 0000)).To(Succeed())
+					Expect(os.Chmod(workingDir, 0000)).To(Succeed())
 				})
 
-				it("fails", func() {
+				it.After(func() {
+					Expect(os.Chmod(workingDir, os.ModePerm)).To(Succeed())
+				})
+
+				it("returns an error", func() {
 					err := process.Run(layerDir, cacheDir, workingDir)
 					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
 			})
 
-			context("when the node_modules directory cannot be symlinked into the working directory", func() {
+			context("when the node_modules directory cannot be moved to the layer", func() {
 				it.Before(func() {
-					Expect(os.Chmod(workingDir, 0000)).To(Succeed())
+					Expect(os.Chmod(layerDir, 0000)).To(Succeed())
+				})
+
+				it.After(func() {
+					Expect(os.Chmod(layerDir, os.ModePerm)).To(Succeed())
 				})
 
 				it("returns an error", func() {
