@@ -5,8 +5,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "preinstall": "echo \"running preinstall script\" ",
-    "postinstall": "echo \"running postinstall script\" "
+    "preinstall": "echo \"running preinstall script\" > preinstall.log",
+    "postinstall": "echo \"running postinstall script\" > postinstall.log"
   },
   "author": "",
   "license": "",

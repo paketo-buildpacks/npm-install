@@ -1,12 +1,14 @@
 package dagger
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"io"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 
 	"code.cloudfoundry.org/lager"
@@ -231,7 +233,12 @@ func (p Pack) Build() (*App, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to pack build with output: %s\n %s\n", buildLogs, err.Error())
+		output := &strings.Builder{}
+		printErr := printBufferSafely(buildLogs, output)
+		if printErr != nil {
+			return nil, printErr
+		}
+		return nil, fmt.Errorf("failed to pack build with output:\n%s\n--> error message: %w", output, err)
 	}
 
 	sum := sha256.Sum256([]byte(fmt.Sprintf("index.docker.io/library/%s:latest", p.image))) //This is how pack makes cache image names
@@ -239,6 +246,20 @@ func (p Pack) Build() (*App, error) {
 
 	app := NewApp(p.dir, p.image, cacheImage, buildLogs, make(map[string]string))
 	return &app, nil
+}
+
+func printBufferSafely(src io.Reader, dst io.Writer) error {
+	var err error
+	for err == nil {
+		_, err = io.CopyN(dst, src, bufio.MaxScanTokenSize-1024)
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		fmt.Fprintln(dst)
+	}
+
+	return nil
 }
 
 type chanWriter struct {

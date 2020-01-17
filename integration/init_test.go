@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -47,6 +48,11 @@ func TestIntegration(t *testing.T) {
 	nodeCachedURI, _, err = dagger.PackageCachedBuildpack(nodeRepo)
 	Expect(err).ToNot(HaveOccurred())
 	defer dagger.DeleteBuildpack(nodeCachedURI)
+
+	// HACK: we need to fix dagger and the package.sh scripts so that this isn't required
+	npmURI = fmt.Sprintf("%s.tgz", npmURI)
+	npmCachedURI = fmt.Sprintf("%s.tgz", npmCachedURI)
+	nodeCachedURI = fmt.Sprintf("%s.tgz", nodeCachedURI)
 
 	suite := spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
 	suite("EmptyNodeModules", testEmptyNodeModules)

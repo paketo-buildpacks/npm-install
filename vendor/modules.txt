@@ -4,16 +4,16 @@ code.cloudfoundry.org/lager
 github.com/BurntSushi/toml
 # github.com/Masterminds/semver v1.5.0
 github.com/Masterminds/semver
-# github.com/buildpack/libbuildpack v1.25.9
+# github.com/buildpack/libbuildpack v1.25.11
 github.com/buildpack/libbuildpack/application
 github.com/buildpack/libbuildpack/internal
 github.com/buildpack/libbuildpack/logger
-# github.com/cloudfoundry/dagger v0.0.0-20191213212648-a45390236bb7
+# github.com/cloudfoundry/dagger v0.0.0-20200115142400-b69a9b4eabf4
 github.com/cloudfoundry/dagger
 github.com/cloudfoundry/dagger/utils
-# github.com/cloudfoundry/libcfbuildpack v1.91.16
+# github.com/cloudfoundry/libcfbuildpack v1.91.22
 github.com/cloudfoundry/libcfbuildpack/helper
-# github.com/cloudfoundry/packit v0.0.0-20200116184620-9b31514535b5
+# github.com/cloudfoundry/packit v0.0.0-20200117181238-c9fbc0a623ec
 github.com/cloudfoundry/packit
 github.com/cloudfoundry/packit/fs
 github.com/cloudfoundry/packit/internal
@@ -37,20 +37,20 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/sclevine/spec v1.4.0
 github.com/sclevine/spec
 github.com/sclevine/spec/report
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
-# golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
+# golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
-# golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6
+# golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
 # golang.org/x/text v0.3.2

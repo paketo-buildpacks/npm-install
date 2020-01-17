@@ -32,13 +32,12 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 			).Build()
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(app.BuildLogs()).To(ContainSubstring("running preinstall script"))
-			Expect(app.BuildLogs()).To(ContainSubstring("running postinstall script"))
-
 			Expect(app.Start()).To(Succeed(), func() string { return app.BuildLogs() })
 
-			_, _, err = app.HTTPGet("/")
+			body, _, err := app.HTTPGet("/")
 			Expect(err).NotTo(HaveOccurred())
+			Expect(body).To(ContainSubstring("running preinstall script"))
+			Expect(body).To(ContainSubstring("running postinstall script"))
 		})
 	})
 }
