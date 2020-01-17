@@ -10,8 +10,8 @@ type ScriptsParser struct {
 			Path string
 		}
 		Returns struct {
-			ScriptsMap map[string]string
-			Err        error
+			Scripts map[string]string
+			Err     error
 		}
 		Stub func(string) (map[string]string, error)
 	}
@@ -25,5 +25,5 @@ func (f *ScriptsParser) ParseScripts(param1 string) (map[string]string, error) {
 	if f.ParseScriptsCall.Stub != nil {
 		return f.ParseScriptsCall.Stub(param1)
 	}
-	return f.ParseScriptsCall.Returns.ScriptsMap, f.ParseScriptsCall.Returns.Err
+	return f.ParseScriptsCall.Returns.Scripts, f.ParseScriptsCall.Returns.Err
 }

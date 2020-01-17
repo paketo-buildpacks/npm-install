@@ -2,12 +2,10 @@ package npm_test
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/cloudfoundry/npm-cnb/npm"
@@ -163,7 +161,6 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 	context("failure cases", func() {
 		var (
-			process    npm.BuildProcess
 			resolver   npm.BuildProcessResolver
 			executable *fakes.Executable
 		)
@@ -225,118 +222,6 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					_, err := resolver.Resolve(workingDir, cacheDir)
 					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
-			})
-		})
-
-		context("BuildFunctions", func() {
-			context("rebuild", func() {
-				it.Before(func() {
-					var err error
-					err = os.Mkdir(filepath.Join(workingDir, "node_modules"), os.ModePerm)
-					Expect(err).NotTo(HaveOccurred())
-
-					process, err = resolver.Resolve(workingDir, cacheDir)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				context("when node_modules is incomplete", func() {
-					it("npm list fails", func() {
-						executable.ExecuteCall.Stub = func(p pexec.Execution) (string, string, error) {
-							if strings.Contains(strings.Join(p.Args, " "), "list") {
-								fmt.Fprintln(p.Stdout, "stdout output")
-								fmt.Fprintln(p.Stderr, "stderr output")
-								return "", "", errors.New("exit status 1")
-							}
-							return "", "", nil
-						}
-
-						err := process.Run(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError("vendored node_modules have unmet dependencies:\nstdout output\nstderr output\n\nexit status 1"))
-					})
-				})
-
-				context("when the node_modules directory cannot be created", func() {
-					it.Before(func() {
-						Expect(os.Chmod(layerDir, 0000)).To(Succeed())
-					})
-
-					it.After(func() {
-						Expect(os.Chmod(layerDir, os.ModePerm)).To(Succeed())
-					})
-
-					it("returns an error", func() {
-						err := process.Run(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError(ContainSubstring("permission denied")))
-					})
-				})
-
-				context("parsing package.json for scripts", func() {
-					it.Before(func() {
-						scriptsParser.ParseScriptsCall.Returns.Err = errors.New("a parsing error")
-					})
-					it("fails", func() {
-						err := process.Run(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError("failed to parse package.json: a parsing error"))
-					})
-				})
-
-				context("and preinstall scripts fail", func() {
-					it.Before(func() {
-						scriptsParser.ParseScriptsCall.Returns.ScriptsMap = map[string]string{"preinstall": "some pre-install scripts"}
-
-						executable.ExecuteCall.Stub = func(execContext pexec.Execution) (string, string, error) {
-							for _, arg := range execContext.Args {
-								if strings.Contains(arg, "preinstall") {
-									return "", "", fmt.Errorf("an actual error")
-								}
-							}
-							return "", "", nil
-						}
-					})
-
-					it("fails", func() {
-						err := process.Run(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError("preinstall script failed on rebuild: an actual error"))
-					})
-				})
-
-				context("and postinstall scripts fail", func() {
-					it.Before(func() {
-						scriptsParser.ParseScriptsCall.Returns.ScriptsMap = map[string]string{"postinstall": "some post-install scripts"}
-
-						executable.ExecuteCall.Stub = func(execContext pexec.Execution) (string, string, error) {
-							for _, arg := range execContext.Args {
-								if strings.Contains(arg, "postinstall") {
-									return "", "", fmt.Errorf("an actual error")
-								}
-							}
-							return "", "", nil
-						}
-					})
-
-					it("fails", func() {
-						err := process.Run(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError("postinstall script failed on rebuild: an actual error"))
-					})
-				})
-
-				context("when the executable fails to run rebuild", func() {
-					it.Before(func() {
-						executable.ExecuteCall.Stub = func(pexec.Execution) (string, string, error) {
-							if executable.ExecuteCall.CallCount == 2 {
-								return "", "", errors.New("failed to rebuild")
-							}
-
-							return "", "", nil
-						}
-					})
-
-					it("returns an error", func() {
-						err := process.Run(layerDir, cacheDir, workingDir)
-						Expect(err).To(MatchError("npm rebuild failed: failed to rebuild"))
-					})
-				})
-
 			})
 		})
 	})
