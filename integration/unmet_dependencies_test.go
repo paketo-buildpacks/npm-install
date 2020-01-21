@@ -21,18 +21,15 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when the package manager is npm", func() {
-		it.Pend("warns that unmet dependencies may cause issues", func() {
+		it("warns that unmet dependencies may cause issues", func() {
 			var err error
 			app, err = dagger.NewPack(
 				filepath.Join("testdata", "unmet_dep"),
 				dagger.RandomImage(),
 				dagger.SetBuildpacks(nodeURI, npmURI),
 			).Build()
-			Expect(err).ToNot(HaveOccurred())
 
-			Expect(app.Start()).To(Succeed())
-
-			Expect(app.BuildLogs()).To(ContainSubstring("Unmet dependencies don't fail npm install but may cause runtime issues"))
+			Expect(err).To(MatchError(ContainSubstring("vendored node_modules have unmet dependencies")))
 		})
 	})
 }
