@@ -19,7 +19,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 	var (
 		app    *dagger.App
 		Expect func(interface{}, ...interface{}) Assertion
-		err error
+		err    error
 	)
 
 	it.Before(func() {
@@ -52,7 +52,7 @@ func testVersioning(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("using a nvmrc file", func() {
-		const nvmrcVersion = `8.\d+\.\d+`
+		const nvmrcVersion = `12.\d+\.\d+`
 
 		it("package.json takes precedence over it", func() {
 			app, err = dagger.NewPack(

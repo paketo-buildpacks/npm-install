@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -42,6 +43,7 @@ func TestIntegration(t *testing.T) {
 
 	nodeCachedURI, _, err = dagger.PackageCachedBuildpack(nodeRepo)
 	Expect(err).ToNot(HaveOccurred())
+	nodeCachedURI = fmt.Sprintf("%s.tgz", nodeCachedURI)
 	defer dagger.DeleteBuildpack(nodeCachedURI)
 
 	dagger.SyncParallelOutput(func() {

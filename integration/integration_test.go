@@ -64,7 +64,6 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 				Expect(app.Start()).To(Succeed())
 
 				_, _, err = app.HTTPGet("/")
-				Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -99,7 +98,6 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 
 				_, _, err = app.HTTPGet("/")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(app.BuildLogs()).To(ContainSubstring("Reusing cached download from buildpack"))
 			})
 		})
 	})
