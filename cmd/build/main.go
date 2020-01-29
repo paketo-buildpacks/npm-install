@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/npm-cnb/npm"
 	"github.com/cloudfoundry/packit"
@@ -10,7 +12,9 @@ import (
 func main() {
 	executable := pexec.NewExecutable("npm", lager.NewLogger("npm"))
 	packageJSONParser := npm.NewPackageJSONParser()
-	resolver := npm.NewBuildProcessResolver(executable, packageJSONParser)
+	checksumCalculator := npm.NewChecksumCalculator()
+	resolver := npm.NewBuildProcessResolver(executable, packageJSONParser, checksumCalculator)
+	clock := npm.NewClock(time.Now)
 
-	packit.Build(npm.Build(resolver))
+	packit.Build(npm.Build(resolver, clock))
 }

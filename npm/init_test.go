@@ -12,6 +12,8 @@ func TestUnitNPM(t *testing.T) {
 	suite("Build", testBuild)
 	suite("BuildProcessResolver", testBuildProcessResolver)
 	suite("CIBuildProcess", testCIBuildProcess)
+	suite("ChecksumCalculator", testChecksumCalculator)
+	suite("Clock", testClock)
 	suite("Detect", testDetect)
 	suite("InstallBuildProcess", testInstallBuildProcess)
 	suite("PackageJSONParser", testPackageJSONParser)

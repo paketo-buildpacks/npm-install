@@ -7,7 +7,7 @@ type BuildProcess struct {
 		sync.Mutex
 		CallCount int
 		Receives  struct {
-			LayerDir   string
+			ModulesDir string
 			CacheDir   string
 			WorkingDir string
 		}
@@ -16,17 +16,45 @@ type BuildProcess struct {
 		}
 		Stub func(string, string, string) error
 	}
+	ShouldRunCall struct {
+		sync.Mutex
+		CallCount int
+		Receives  struct {
+			WorkingDir string
+			Metadata   map[string]interface {
+			}
+		}
+		Returns struct {
+			Run bool
+			Sha string
+			Err error
+		}
+		Stub func(string, map[string]interface {
+		}) (bool, string, error)
+	}
 }
 
 func (f *BuildProcess) Run(param1 string, param2 string, param3 string) error {
 	f.RunCall.Lock()
 	defer f.RunCall.Unlock()
 	f.RunCall.CallCount++
-	f.RunCall.Receives.LayerDir = param1
+	f.RunCall.Receives.ModulesDir = param1
 	f.RunCall.Receives.CacheDir = param2
 	f.RunCall.Receives.WorkingDir = param3
 	if f.RunCall.Stub != nil {
 		return f.RunCall.Stub(param1, param2, param3)
 	}
 	return f.RunCall.Returns.Error
+}
+func (f *BuildProcess) ShouldRun(param1 string, param2 map[string]interface {
+}) (bool, string, error) {
+	f.ShouldRunCall.Lock()
+	defer f.ShouldRunCall.Unlock()
+	f.ShouldRunCall.CallCount++
+	f.ShouldRunCall.Receives.WorkingDir = param1
+	f.ShouldRunCall.Receives.Metadata = param2
+	if f.ShouldRunCall.Stub != nil {
+		return f.ShouldRunCall.Stub(param1, param2)
+	}
+	return f.ShouldRunCall.Returns.Run, f.ShouldRunCall.Returns.Sha, f.ShouldRunCall.Returns.Err
 }

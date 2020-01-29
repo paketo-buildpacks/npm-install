@@ -1,70 +1,72 @@
 package integration_test
 
 import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"path/filepath"
 	"testing"
 
-	"github.com/cloudfoundry/dagger"
+	"github.com/cloudfoundry/occam"
 	"github.com/sclevine/spec"
 
+	. "github.com/cloudfoundry/occam/matchers"
 	. "github.com/onsi/gomega"
 )
 
 func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 	var (
-		Expect = NewWithT(t).Expect
-		app    *dagger.App
+		Expect     = NewWithT(t).Expect
+		Eventually = NewWithT(t).Eventually
+
+		pack   occam.Pack
+		docker occam.Docker
 	)
 
-	it.After(func() {
-		Expect(app.Destroy()).To(Succeed())
+	it.Before(func() {
+		pack = occam.NewPack()
+		docker = occam.NewDocker()
 	})
 
 	context("when the node_modules are not vendored", func() {
+		var (
+			image     occam.Image
+			container occam.Container
+
+			name string
+		)
+
+		it.Before(func() {
+			var err error
+			name, err = occam.RandomName()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		it.After(func() {
+			Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed())
+			Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
+			Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
+		})
+
 		it("builds a working OCI image for a simple app", func() {
 			var err error
-			app, err = dagger.NewPack(
-				filepath.Join("testdata", "simple_app"),
-				dagger.RandomImage(),
-				dagger.SetBuildpacks(nodeURI, npmURI),
-			).Build()
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(app.Start()).To(Succeed())
-
-			body, _, err := app.HTTPGet("/")
+			image, _, err = pack.Build.
+				WithBuildpacks(nodeURI, npmURI).
+				Execute(name, filepath.Join("testdata", "simple_app"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(body).To(ContainSubstring("Hello, World!"))
-		})
-	})
 
-	context("the app is pushed twice", func() {
-		it.Pend("does not reinstall node_modules", func() {
-			appDir := filepath.Join("testdata", "simple_app")
-
-			pack := dagger.NewPack(
-				appDir,
-				dagger.RandomImage(),
-				dagger.SetBuildpacks(nodeURI, npmURI),
-			)
-
-			var err error
-			app, err = pack.Build()
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(app.BuildLogs()).To(MatchRegexp(`Node Modules .*: Contributing to layer`))
-
-			app, err = pack.Build()
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(app.BuildLogs()).To(MatchRegexp(`Node Modules .*: Reusing cached layer`))
-			Expect(app.BuildLogs()).NotTo(MatchRegexp(`Node Modules .*: Contributing to layer`))
-
-			Expect(app.Start()).To(Succeed())
-
-			body, _, err := app.HTTPGet("/")
+			container, err = docker.Container.Run.Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(body).To(ContainSubstring("Hello, World!"))
+
+			Eventually(container).Should(BeAvailable())
+
+			response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort()))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.StatusCode).To(Equal(http.StatusOK))
+
+			content, err := ioutil.ReadAll(response.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(ContainSubstring("Hello, World!"))
 		})
 	})
 }

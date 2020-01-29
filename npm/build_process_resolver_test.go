@@ -20,11 +20,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		layerDir      string
+		modulesDir    string
 		cacheDir      string
 		workingDir    string
 		scriptsParser *fakes.ScriptsParser
 		executable    *fakes.Executable
+		summer        *fakes.Summer
 
 		solutionsMap map[[3]bool]string
 	)
@@ -54,10 +55,10 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 					var resolver npm.BuildProcessResolver
 					it.Before(func() {
 						var err error
-						layerDir, err = ioutil.TempDir("", "layer")
+						modulesDir, err = ioutil.TempDir("", "modules")
 						Expect(err).NotTo(HaveOccurred())
 
-						cacheDir, err = ioutil.TempDir("", "layer")
+						cacheDir, err = ioutil.TempDir("", "cache")
 						Expect(err).NotTo(HaveOccurred())
 
 						workingDir, err = ioutil.TempDir("", "working-dir")
@@ -65,6 +66,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 						executable = &fakes.Executable{}
 						scriptsParser = &fakes.ScriptsParser{}
+						summer = &fakes.Summer{}
 
 						executionCalls = []pexec.Execution{}
 
@@ -99,11 +101,11 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 							},
 						}
 
-						resolver = npm.NewBuildProcessResolver(executable, scriptsParser)
+						resolver = npm.NewBuildProcessResolver(executable, scriptsParser, summer)
 					})
 
 					it.After(func() {
-						Expect(os.RemoveAll(layerDir)).To(Succeed())
+						Expect(os.RemoveAll(modulesDir)).To(Succeed())
 						Expect(os.RemoveAll(workingDir)).To(Succeed())
 						Expect(os.RemoveAll(cacheDir)).To(Succeed())
 					})
@@ -134,15 +136,15 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 						})
 						it(fmt.Sprintf("runs npm and succeeds"), func() {
-							Expect(process.Run(layerDir, cacheDir, workingDir)).To(Succeed())
+							Expect(process.Run(modulesDir, cacheDir, workingDir)).To(Succeed())
 							Expect(executionCalls).To(Equal(argsMap[solutionsMap[stateArray]]))
 
 							if nodeModulesExist {
 								path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 								Expect(err).NotTo(HaveOccurred())
-								Expect(path).To(Equal(filepath.Join(layerDir, "node_modules")))
+								Expect(path).To(Equal(filepath.Join(modulesDir, "node_modules")))
 
-								contents, err := ioutil.ReadFile(filepath.Join(layerDir, "node_modules", "some-module", "some-file"))
+								contents, err := ioutil.ReadFile(filepath.Join(modulesDir, "node_modules", "some-module", "some-file"))
 								Expect(err).NotTo(HaveOccurred())
 								Expect(string(contents)).To(Equal("some-content"))
 							}
@@ -160,15 +162,11 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 	}
 
 	context("failure cases", func() {
-		var (
-			resolver   npm.BuildProcessResolver
-			executable *fakes.Executable
-		)
+		var resolver npm.BuildProcessResolver
 
 		it.Before(func() {
-
 			var err error
-			layerDir, err = ioutil.TempDir("", "layer")
+			modulesDir, err = ioutil.TempDir("", "layer")
 			Expect(err).NotTo(HaveOccurred())
 
 			cacheDir, err = ioutil.TempDir("", "layer")
@@ -177,14 +175,11 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			workingDir, err = ioutil.TempDir("", "working-dir")
 			Expect(err).NotTo(HaveOccurred())
 
-			executable = &fakes.Executable{}
-			scriptsParser = &fakes.ScriptsParser{}
-
-			resolver = npm.NewBuildProcessResolver(executable, scriptsParser)
+			resolver = npm.NewBuildProcessResolver(executable, scriptsParser, summer)
 		})
 
 		it.After(func() {
-			Expect(os.RemoveAll(layerDir)).To(Succeed())
+			Expect(os.RemoveAll(modulesDir)).To(Succeed())
 			Expect(os.RemoveAll(workingDir)).To(Succeed())
 			Expect(os.RemoveAll(cacheDir)).To(Succeed())
 		})

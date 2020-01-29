@@ -19,21 +19,29 @@ type ScriptsParser interface {
 	ParseScripts(path string) (scripts map[string]string, err error)
 }
 
+//go:generate faux --interface BuildProcess --output fakes/build_process.go
+type BuildProcess interface {
+	ShouldRun(workingDir string, metadata map[string]interface{}) (run bool, sha string, err error)
+	Run(modulesDir, cacheDir, workingDir string) error
+}
+
+//go:generate faux --interface Summer --output fakes/summer.go
+type Summer interface {
+	Sum(path string) (string, error)
+}
+
 type BuildProcessResolver struct {
 	executable    Executable
 	scriptsParser ScriptsParser
+	summer        Summer
 }
 
-func NewBuildProcessResolver(executable Executable, scriptsParser ScriptsParser) BuildProcessResolver {
+func NewBuildProcessResolver(executable Executable, scriptsParser ScriptsParser, summer Summer) BuildProcessResolver {
 	return BuildProcessResolver{
 		executable:    executable,
 		scriptsParser: scriptsParser,
+		summer:        summer,
 	}
-}
-
-//go:generate faux --interface BuildProcess --output fakes/build_process.go
-type BuildProcess interface {
-	Run(layerDir, cacheDir, workingDir string) error
 }
 
 func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess, error) {
@@ -64,20 +72,13 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 
 	switch {
 	case !locked && vendored, locked && vendored && !cached:
-		return RebuildBuildProcess{
-			executable:    r.executable,
-			scriptsParser: r.scriptsParser,
-		}, nil
+		return NewRebuildBuildProcess(r.executable, r.scriptsParser, r.summer), nil
 
 	case !locked && !vendored:
-		return InstallBuildProcess{
-			executable: r.executable,
-		}, nil
+		return NewInstallBuildProcess(r.executable), nil
 
 	default:
-		return CIBuildProcess{
-			executable: r.executable,
-		}, nil
+		return NewCIBuildProcess(r.executable, r.summer), nil
 	}
 }
 

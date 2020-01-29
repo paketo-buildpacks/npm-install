@@ -17,13 +17,17 @@ type InstallBuildProcess struct {
 	executable Executable
 }
 
-func (r InstallBuildProcess) Run(layerDir, cacheDir, workingDir string) error {
-	err := os.Mkdir(filepath.Join(layerDir, "node_modules"), os.ModePerm)
+func (r InstallBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
+	return true, "", nil
+}
+
+func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
+	err := os.Mkdir(filepath.Join(modulesDir, "node_modules"), os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = os.Symlink(filepath.Join(layerDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
+	err = os.Symlink(filepath.Join(modulesDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
 	if err != nil {
 		return err
 	}

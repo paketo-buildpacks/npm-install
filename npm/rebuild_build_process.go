@@ -13,16 +13,32 @@ import (
 type RebuildBuildProcess struct {
 	executable    Executable
 	scriptsParser ScriptsParser
+	summer        Summer
 }
 
-func NewRebuildBuildProcess(executable Executable, scriptsParser ScriptsParser) RebuildBuildProcess {
+func NewRebuildBuildProcess(executable Executable, scriptsParser ScriptsParser, summer Summer) RebuildBuildProcess {
 	return RebuildBuildProcess{
 		executable:    executable,
 		scriptsParser: scriptsParser,
+		summer:        summer,
 	}
 }
 
-func (r RebuildBuildProcess) Run(layerDir, cacheDir, workingDir string) error {
+func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
+	sum, err := r.summer.Sum(filepath.Join(workingDir, "node_modules"))
+	if err != nil {
+		return false, "", err
+	}
+
+	cacheSha, ok := metadata["cache_sha"].(string)
+	if !ok || sum != cacheSha {
+		return true, sum, nil
+	}
+
+	return false, "", nil
+}
+
+func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
 	buffer := bytes.NewBuffer(nil)
 	_, _, err := r.executable.Execute(pexec.Execution{
 		Args:   []string{"list"},
@@ -34,12 +50,12 @@ func (r RebuildBuildProcess) Run(layerDir, cacheDir, workingDir string) error {
 		return fmt.Errorf("vendored node_modules have unmet dependencies:\n%s\n%w", buffer, err)
 	}
 
-	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(layerDir, "node_modules"))
+	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(modulesDir, "node_modules"))
 	if err != nil {
 		return err
 	}
 
-	err = os.Symlink(filepath.Join(layerDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
+	err = os.Symlink(filepath.Join(modulesDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
 	if err != nil {
 		return err
 	}

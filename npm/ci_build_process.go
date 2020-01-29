@@ -10,26 +10,42 @@ import (
 
 type CIBuildProcess struct {
 	executable Executable
+	summer     Summer
 }
 
-func NewCIBuildProcess(executable Executable) CIBuildProcess {
+func NewCIBuildProcess(executable Executable, summer Summer) CIBuildProcess {
 	return CIBuildProcess{
 		executable: executable,
+		summer:     summer,
 	}
 }
 
-func (r CIBuildProcess) Run(layerDir, cacheDir, workingDir string) error {
+func (r CIBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
+	sum, err := r.summer.Sum(filepath.Join(workingDir, "package-lock.json"))
+	if err != nil {
+		return false, "", err
+	}
+
+	cacheSha, ok := metadata["cache_sha"].(string)
+	if !ok || sum != cacheSha {
+		return true, sum, nil
+	}
+
+	return false, "", nil
+}
+
+func (r CIBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
 	err := os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(layerDir, "node_modules"))
+	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(modulesDir, "node_modules"))
 	if err != nil {
 		return err
 	}
 
-	err = os.Symlink(filepath.Join(layerDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
+	err = os.Symlink(filepath.Join(modulesDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
 	if err != nil {
 		return err
 	}

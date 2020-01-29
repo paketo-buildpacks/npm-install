@@ -55,6 +55,7 @@ func TestIntegration(t *testing.T) {
 	nodeCachedURI = fmt.Sprintf("%s.tgz", nodeCachedURI)
 
 	suite := spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
+	suite("Caching", testCaching)
 	suite("EmptyNodeModules", testEmptyNodeModules)
 	suite("NoNodeModules", testNoNodeModules)
 	suite("PrePostScriptsRebuild", testPrePostScriptRebuild)
