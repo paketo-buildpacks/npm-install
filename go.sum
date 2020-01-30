@@ -41,10 +41,14 @@ github.com/cloudfoundry/libcfbuildpack v1.89.0 h1:A0OXihcHjvDRLYendhfqMxTBVe5pi5
 github.com/cloudfoundry/libcfbuildpack v1.89.0/go.mod h1:ufhp/bp0LxbDDwbf2Ms3Bf4x9YnLr9dkL1RTUYSdKg0=
 github.com/cloudfoundry/libcfbuildpack v1.91.22 h1:p7s8VyhcrDc3d0gAmzsDGoogyegNwp6d+UOfL7nGyE4=
 github.com/cloudfoundry/libcfbuildpack v1.91.22/go.mod h1:cEdi3DdqBruJMcaUw4MmP0iplOQeh7H4lcD3FtpqmOo=
+github.com/cloudfoundry/occam v0.0.0-20200129203351-7929b00e4ffd h1:eBp8hf5n5BwbhUqqW8OrPsM21W5uB217ZY12MpQowk4=
+github.com/cloudfoundry/occam v0.0.0-20200129203351-7929b00e4ffd/go.mod h1:kxp64nrzdmenydUhUsHUVoZcqKsGAOgZhLt05fiFRuc=
 github.com/cloudfoundry/packit v0.0.0-20191202164725-43d6fa19d96c h1:sjyfrHBlVjWqMfBIZclmrdI430kcKOjT6+dVgix476c=
 github.com/cloudfoundry/packit v0.0.0-20191202164725-43d6fa19d96c/go.mod h1:FffmDGXYVSrrj9HlFP4XbnJnQi7jHcsElHujPGbfP3U=
 github.com/cloudfoundry/packit v0.0.0-20200117181238-c9fbc0a623ec h1:DMK5ngDDzkhZJEIicz/8cYeaftg4cwrOjqlL6EU/Qbk=
 github.com/cloudfoundry/packit v0.0.0-20200117181238-c9fbc0a623ec/go.mod h1:p3aFtVhY7pMoXsIrp8vTk01FYaFebTURk5KYae5/Nnw=
+github.com/cloudfoundry/packit v0.0.0-20200129211718-a2b2b4f67a52 h1:wv8Z5HiXdplVvSv+OWlhtalg1jGJmsC7P7AT5eZVSic=
+github.com/cloudfoundry/packit v0.0.0-20200129211718-a2b2b4f67a52/go.mod h1:p3aFtVhY7pMoXsIrp8vTk01FYaFebTURk5KYae5/Nnw=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
@@ -112,8 +116,6 @@ github.com/mattn/go-isatty v0.0.12 h1:wuysRhFDzyxgEmMf5xjvJ2M9dZoWAXNNr5LSBS7uHX
 github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Kysco4FUpU=
 github.com/mattn/go-runewidth v0.0.7 h1:Ei8KR0497xHyKJPAv59M1dkC+rOZCMBJ+t3fZ+twI54=
 github.com/mattn/go-runewidth v0.0.7/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
-github.com/mattn/go-runewidth v0.0.8 h1:3tS41NlGYSmhhe/8fhGRzc+z3AYCw1Fe1WAyLuujKs0=
-github.com/mattn/go-runewidth v0.0.8/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
 github.com/mitchellh/mapstructure v1.1.2 h1:fmNYVwqnSfB9mZU6OS2O6GsXM+wcskZDuKQzvN1EDeE=
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/oklog/ulid v1.3.1 h1:EGfNDEx6MqHz8B3uNV6QAib1UR2Lm97sHi3ocA6ESJ4=
@@ -227,10 +229,6 @@ golang.org/x/sys v0.0.0-20191204072324-ce4227a45e2e/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200113162924-86b910548bc1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20200117145432-59e60aa80a0c h1:gUYreENmqtjZb2brVfUas1sC6UivSY8XwKwPo8tloLs=
-golang.org/x/sys v0.0.0-20200117145432-59e60aa80a0c/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20200121082415-34d275377bf9 h1:N19i1HjUnR7TF7rMt8O4p3dLvqvmYyzB6ifMFmrbY50=
-golang.org/x/sys v0.0.0-20200121082415-34d275377bf9/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200122134326-e047566fdf82 h1:ywK/j/KkyTHcdyYSZNXGjMwgmDSfjglYZ3vStQ/gSCU=
 golang.org/x/sys v0.0.0-20200122134326-e047566fdf82/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9 h1:1/DFK4b7JH8DmkqhUk48onnSfrPzImPoVxuomtbT2nk=

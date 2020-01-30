@@ -67,7 +67,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		clock = npm.NewClock(func() time.Time {
 			return now
 		})
-		timestamp = now.Format(time.RFC3339)
+		timestamp = now.Format(time.RFC3339Nano)
 
 		buildManager = &fakes.BuildManager{}
 		buildManager.ResolveCall.Returns.BuildProcess = buildProcess

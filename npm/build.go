@@ -52,7 +52,7 @@ func Build(buildManager BuildManager, clock Clock) packit.BuildFunc {
 			}
 
 			nodeModulesLayer.Metadata = map[string]interface{}{
-				"built_at":  clock.Now().Format(time.RFC3339),
+				"built_at":  clock.Now().Format(time.RFC3339Nano),
 				"cache_sha": sha,
 			}
 		} else {
