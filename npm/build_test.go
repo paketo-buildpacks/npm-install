@@ -1,6 +1,7 @@
 package npm_test
 
 import (
+	"bytes"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/cloudfoundry/npm-cnb/npm"
 	"github.com/cloudfoundry/npm-cnb/npm/fakes"
 	"github.com/cloudfoundry/packit"
+	"github.com/cloudfoundry/packit/scribe"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
@@ -33,6 +35,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buildManager *fakes.BuildManager
 		clock        npm.Clock
 		build        packit.BuildFunc
+
+		buffer *bytes.Buffer
 	)
 
 	it.Before(func() {
@@ -72,7 +76,10 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buildManager = &fakes.BuildManager{}
 		buildManager.ResolveCall.Returns.BuildProcess = buildProcess
 
-		build = npm.Build(buildManager, clock)
+		buffer = bytes.NewBuffer(nil)
+		logger := scribe.NewLogger(buffer)
+
+		build = npm.Build(buildManager, clock, logger)
 	})
 
 	it.After(func() {
@@ -226,7 +233,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				return nil
 			}
 
-			build = npm.Build(buildManager, clock)
+			build = npm.Build(buildManager, clock, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -263,7 +270,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		it.Before(func() {
 			buildProcess.RunCall.Stub = func(ld, cd, wd string) error { return nil }
 
-			build = npm.Build(buildManager, clock)
+			build = npm.Build(buildManager, clock, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {

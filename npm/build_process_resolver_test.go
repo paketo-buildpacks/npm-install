@@ -2,7 +2,6 @@ package npm_test
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,7 +9,7 @@ import (
 
 	"github.com/cloudfoundry/npm-cnb/npm"
 	"github.com/cloudfoundry/npm-cnb/npm/fakes"
-	"github.com/cloudfoundry/packit/pexec"
+	"github.com/cloudfoundry/packit/scribe"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
@@ -20,166 +19,251 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		modulesDir    string
-		cacheDir      string
-		workingDir    string
+		cacheDir   string
+		workingDir string
+
 		scriptsParser *fakes.ScriptsParser
 		executable    *fakes.Executable
 		summer        *fakes.Summer
 
-		solutionsMap map[[3]bool]string
+		resolver npm.BuildProcessResolver
+
+		buffer *bytes.Buffer
 	)
-	solutionsMap = map[[3]bool]string{
-		// package-lock.json | node_modules | npm-cache => npm command
-		[3]bool{false, false, false}: "install",
-		[3]bool{false, false, true}:  "install",
-		[3]bool{false, true, false}:  "rebuild",
-		[3]bool{false, true, true}:   "rebuild",
-		[3]bool{true, false, false}:  "ci",
-		[3]bool{true, false, true}:   "ci",
-		[3]bool{true, true, false}:   "rebuild",
-		[3]bool{true, true, true}:    "ci",
-	}
 
-	for _, i := range []bool{false, true} {
-		for _, j := range []bool{false, true} {
-			for _, k := range []bool{false, true} {
+	it.Before(func() {
+		var err error
 
-				stateArray := [3]bool{i, j, k}
-				packageLockExist, nodeModulesExist, npmCacheExist := stateArray[0], stateArray[1], stateArray[2]
-				specName := fmt.Sprintf("NodeModules: %v, package-lock.json: %v, npmCache: %v", nodeModulesExist, packageLockExist, npmCacheExist)
-				var argsMap map[string][]pexec.Execution
-				context(specName, func() {
-					var executionCalls []pexec.Execution
-					var process npm.BuildProcess
-					var resolver npm.BuildProcessResolver
-					it.Before(func() {
-						var err error
-						modulesDir, err = ioutil.TempDir("", "modules")
-						Expect(err).NotTo(HaveOccurred())
+		cacheDir, err = ioutil.TempDir("", "cache")
+		Expect(err).NotTo(HaveOccurred())
 
-						cacheDir, err = ioutil.TempDir("", "cache")
-						Expect(err).NotTo(HaveOccurred())
+		workingDir, err = ioutil.TempDir("", "working-dir")
+		Expect(err).NotTo(HaveOccurred())
 
-						workingDir, err = ioutil.TempDir("", "working-dir")
-						Expect(err).NotTo(HaveOccurred())
+		executable = &fakes.Executable{}
+		scriptsParser = &fakes.ScriptsParser{}
+		summer = &fakes.Summer{}
 
-						executable = &fakes.Executable{}
-						scriptsParser = &fakes.ScriptsParser{}
-						summer = &fakes.Summer{}
+		buffer = bytes.NewBuffer(nil)
+		logger := scribe.NewLogger(buffer)
 
-						executionCalls = []pexec.Execution{}
+		resolver = npm.NewBuildProcessResolver(executable, scriptsParser, summer, logger)
+	})
+	it.After(func() {
+		Expect(os.RemoveAll(workingDir)).To(Succeed())
+		Expect(os.RemoveAll(cacheDir)).To(Succeed())
+	})
 
-						executable.ExecuteCall.Stub = func(param1 pexec.Execution) (string, string, error) {
-							executionCalls = append(executionCalls, param1)
-							return "", "", nil
-						}
-						argsMap = map[string][]pexec.Execution{
-							"install": {
-								{
-									Args: []string{"install", "--unsafe-perm", "--cache", cacheDir},
-									Dir:  workingDir,
-								},
-							},
-							"rebuild": {
-								{
-									Args:   []string{"list"},
-									Dir:    workingDir,
-									Stdout: bytes.NewBuffer(nil),
-									Stderr: bytes.NewBuffer(nil),
-								},
-								{
-									Args: []string{"rebuild", fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))},
-									Dir:  workingDir,
-								},
-							},
-							"ci": {
-								{
-									Args: []string{"ci", "--unsafe-perm", "--cache", cacheDir},
-									Dir:  workingDir,
-								},
-							},
-						}
+	context("the build process is install", func() {
+		context("there is no node_modules, package-lock.json, or cache", func() {
+			it("returns an InstallBuildProcess", func() {
+				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
 
-						resolver = npm.NewBuildProcessResolver(executable, scriptsParser, summer)
-					})
+				Expect(buildProcess).To(Equal(npm.NewInstallBuildProcess(executable)))
 
-					it.After(func() {
-						Expect(os.RemoveAll(modulesDir)).To(Succeed())
-						Expect(os.RemoveAll(workingDir)).To(Succeed())
-						Expect(os.RemoveAll(cacheDir)).To(Succeed())
-					})
+				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: npm install"))
+			})
+		})
 
-					context("Resolve and run installation process", func() {
-						it.Before(func() {
-							if nodeModulesExist {
-								Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules", "some-module"), os.ModePerm)).To(Succeed())
+		context("there is no node_modules, package-lock.json but there is a cache", func() {
+			it.Before(func() {
+				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
 
-								err := ioutil.WriteFile(filepath.Join(workingDir, "node_modules", "some-module", "some-file"), []byte("some-content"), 0644)
-								Expect(err).NotTo(HaveOccurred())
-							}
-							if packageLockExist {
-								// make packageLock
-								Expect(ioutil.WriteFile(filepath.Join(workingDir, "package-lock.json"), []byte(""), os.ModePerm)).To(Succeed())
-							}
-							if npmCacheExist {
-								// make npmCache
-								Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
+				err := ioutil.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+			it("returns an InstallBuildProcess", func() {
+				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
 
-								err := ioutil.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
-								Expect(err).NotTo(HaveOccurred())
-							}
+				Expect(buildProcess).To(Equal(npm.NewInstallBuildProcess(executable)))
 
-							var err error
-							process, err = resolver.Resolve(workingDir, cacheDir)
-							Expect(err).NotTo(HaveOccurred())
+				contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("some-content"))
+			})
+		})
+	})
 
-						})
-						it(fmt.Sprintf("runs npm and succeeds"), func() {
-							Expect(process.Run(modulesDir, cacheDir, workingDir)).To(Succeed())
-							Expect(executionCalls).To(Equal(argsMap[solutionsMap[stateArray]]))
+	context("the build process is rebuild", func() {
+		context("there is no package-lock.json or cache but there is node_modules", func() {
+			it.Before(func() {
+				Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
+			})
 
-							if nodeModulesExist {
-								path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
-								Expect(err).NotTo(HaveOccurred())
-								Expect(path).To(Equal(filepath.Join(modulesDir, "node_modules")))
+			it("returns a RebuildBuildProcess", func() {
+				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
 
-								contents, err := ioutil.ReadFile(filepath.Join(modulesDir, "node_modules", "some-module", "some-file"))
-								Expect(err).NotTo(HaveOccurred())
-								Expect(string(contents)).To(Equal("some-content"))
-							}
+				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, scriptsParser, summer)))
 
-							if npmCacheExist {
-								contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
-								Expect(err).NotTo(HaveOccurred())
-								Expect(string(contents)).To(Equal("some-content"))
-							}
-						})
-					})
-				})
-			}
-		}
-	}
+				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: npm rebuild"))
+			})
+		})
+
+		context("there is no package-lock.json but both node_modules and a cache are present", func() {
+			it.Before(func() {
+				Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
+
+				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
+
+				err := ioutil.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			it("returns a RebuildBuildProcess", func() {
+				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, scriptsParser, summer)))
+
+				contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("some-content"))
+			})
+		})
+
+		context("there is no cache but node_modules and a package-lock.json are present", func() {
+			it.Before(func() {
+				Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
+
+				err := ioutil.WriteFile(filepath.Join(workingDir, "package-lock.json"), []byte("some-content"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			it("returns a RebuildBuildProcess", func() {
+				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, scriptsParser, summer)))
+			})
+		})
+	})
+
+	context("the build process is ci", func() {
+		context("there is no node_modules or cache but there is a package-lock.json", func() {
+			it.Before(func() {
+				err := ioutil.WriteFile(filepath.Join(workingDir, "package-lock.json"), []byte("some-content"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			it("returns a CIBuildProcess", func() {
+				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer)))
+
+				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: npm ci"))
+			})
+		})
+
+		context("there is no node_modules but the package-lock.json and cache are present", func() {
+			it.Before(func() {
+				err := ioutil.WriteFile(filepath.Join(workingDir, "package-lock.json"), []byte("some-content"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
+
+				err = ioutil.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			it("returns a CIBuildProcess", func() {
+				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer)))
+
+				contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("some-content"))
+			})
+		})
+
+		context("the package-lock.json, node_modules, and cache are present", func() {
+			it.Before(func() {
+				Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
+
+				err := ioutil.WriteFile(filepath.Join(workingDir, "package-lock.json"), []byte("some-content"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
+
+				err = ioutil.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			it("returns a CIBuildProcess", func() {
+				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer)))
+
+				contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("some-content"))
+			})
+		})
+	})
+
+	context("output cases", func() {
+		context("when there is a package-lock.json", func() {
+			it.Before(func() {
+				err := ioutil.WriteFile(filepath.Join(workingDir, "package-lock.json"), []byte("some-content"), 0644)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			it("outputs that package-lock.json was found", func() {
+				_, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(buffer.String()).To(MatchRegexp(`package-lock.json\s+-> Found`))
+			})
+		})
+
+		context("when there is a node_modules directory", func() {
+			it.Before(func() {
+				Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
+			})
+
+			it("outputs that package-lock.json was found", func() {
+				_, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(buffer.String()).To(MatchRegexp(`node_modules\s+-> Found`))
+			})
+		})
+
+		context("when there is a node_modules directory", func() {
+			it.Before(func() {
+				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
+			})
+
+			it("outputs that package-lock.json was found", func() {
+				_, err := resolver.Resolve(workingDir, cacheDir)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(buffer.String()).To(MatchRegexp(`npm-cache\s+-> Found`))
+			})
+		})
+	})
 
 	context("failure cases", func() {
 		var resolver npm.BuildProcessResolver
 
 		it.Before(func() {
 			var err error
-			modulesDir, err = ioutil.TempDir("", "layer")
-			Expect(err).NotTo(HaveOccurred())
-
 			cacheDir, err = ioutil.TempDir("", "layer")
 			Expect(err).NotTo(HaveOccurred())
 
 			workingDir, err = ioutil.TempDir("", "working-dir")
 			Expect(err).NotTo(HaveOccurred())
 
-			resolver = npm.NewBuildProcessResolver(executable, scriptsParser, summer)
+			resolver = npm.NewBuildProcessResolver(executable, scriptsParser, summer, scribe.NewLogger(bytes.NewBuffer(nil)))
 		})
 
 		it.After(func() {
-			Expect(os.RemoveAll(modulesDir)).To(Succeed())
 			Expect(os.RemoveAll(workingDir)).To(Succeed())
 			Expect(os.RemoveAll(cacheDir)).To(Succeed())
 		})

@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudfoundry/packit/fs"
 	"github.com/cloudfoundry/packit/pexec"
+	"github.com/cloudfoundry/packit/scribe"
 )
 
 //go:generate faux --interface Executable --output fakes/executable.go
@@ -34,13 +35,15 @@ type BuildProcessResolver struct {
 	executable    Executable
 	scriptsParser ScriptsParser
 	summer        Summer
+	logger        scribe.Logger
 }
 
-func NewBuildProcessResolver(executable Executable, scriptsParser ScriptsParser, summer Summer) BuildProcessResolver {
+func NewBuildProcessResolver(executable Executable, scriptsParser ScriptsParser, summer Summer, logger scribe.Logger) BuildProcessResolver {
 	return BuildProcessResolver{
 		executable:    executable,
 		scriptsParser: scriptsParser,
 		summer:        summer,
+		logger:        logger,
 	}
 }
 
@@ -70,14 +73,34 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 		}
 	}
 
+	wasItFound := map[bool]string{
+		true:  "Found",
+		false: "Not found",
+	}
+
+	inputsMap := scribe.FormattedMap{
+		"package-lock.json": wasItFound[locked],
+		"node_modules":      wasItFound[vendored],
+		"npm-cache":         wasItFound[cached],
+	}
+
+	r.logger.Subprocess("Process inputs:")
+	r.logger.Action("%s", inputsMap)
+
 	switch {
 	case !locked && vendored, locked && vendored && !cached:
+		r.logger.Subprocess("Selected NPM build process: npm rebuild")
+		r.logger.Break()
 		return NewRebuildBuildProcess(r.executable, r.scriptsParser, r.summer), nil
 
 	case !locked && !vendored:
+		r.logger.Subprocess("Selected NPM build process: npm install")
+		r.logger.Break()
 		return NewInstallBuildProcess(r.executable), nil
 
 	default:
+		r.logger.Subprocess("Selected NPM build process: npm ci")
+		r.logger.Break()
 		return NewCIBuildProcess(r.executable, r.summer), nil
 	}
 }

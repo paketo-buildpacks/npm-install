@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudfoundry/packit"
 	"github.com/cloudfoundry/packit/fs"
+	"github.com/cloudfoundry/packit/scribe"
 )
 
 const (
@@ -19,8 +20,10 @@ type BuildManager interface {
 	Resolve(workingDir, cacheDir string) (BuildProcess, error)
 }
 
-func Build(buildManager BuildManager, clock Clock) packit.BuildFunc {
+func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
+		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
+
 		nodeModulesLayer, err := context.Layers.Get(LayerNameNodeModules, packit.LaunchLayer)
 		if err != nil {
 			return packit.BuildResult{}, err
@@ -31,6 +34,7 @@ func Build(buildManager BuildManager, clock Clock) packit.BuildFunc {
 			return packit.BuildResult{}, err
 		}
 
+		logger.Process("Resolving installation process")
 		process, err := buildManager.Resolve(context.WorkingDir, nodeCacheLayer.Path)
 		if err != nil {
 			return packit.BuildResult{}, err
@@ -42,6 +46,9 @@ func Build(buildManager BuildManager, clock Clock) packit.BuildFunc {
 		}
 
 		if run {
+			logger.Process("Executing build process")
+			then := clock.Now()
+
 			if err = nodeModulesLayer.Reset(); err != nil {
 				return packit.BuildResult{}, err
 			}
@@ -51,11 +58,15 @@ func Build(buildManager BuildManager, clock Clock) packit.BuildFunc {
 				return packit.BuildResult{}, err
 			}
 
+			logger.Subprocess("Completed in %s", time.Since(then).Round(time.Millisecond))
+
 			nodeModulesLayer.Metadata = map[string]interface{}{
 				"built_at":  clock.Now().Format(time.RFC3339Nano),
 				"cache_sha": sha,
 			}
+
 		} else {
+			logger.Process("Reusing cached layer %s", nodeModulesLayer.Path)
 			err := os.RemoveAll(filepath.Join(context.WorkingDir, "node_modules"))
 			if err != nil {
 				return packit.BuildResult{}, err
