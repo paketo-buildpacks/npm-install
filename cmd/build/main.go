@@ -1,12 +1,14 @@
 package main
 
 import (
+	"os"
 	"time"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/npm-cnb/npm"
 	"github.com/cloudfoundry/packit"
 	"github.com/cloudfoundry/packit/pexec"
+	"github.com/cloudfoundry/packit/scribe"
 )
 
 func main() {
@@ -15,6 +17,7 @@ func main() {
 	checksumCalculator := npm.NewChecksumCalculator()
 	resolver := npm.NewBuildProcessResolver(executable, packageJSONParser, checksumCalculator)
 	clock := npm.NewClock(time.Now)
+	logger := scribe.NewLogger(os.Stdout)
 
-	packit.Build(npm.Build(resolver, clock))
+	packit.Build(npm.Build(resolver, clock, logger))
 }

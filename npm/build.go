@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudfoundry/packit"
 	"github.com/cloudfoundry/packit/fs"
+	"github.com/cloudfoundry/packit/scribe"
 )
 
 const (
@@ -19,8 +20,11 @@ type BuildManager interface {
 	Resolve(workingDir, cacheDir string) (BuildProcess, error)
 }
 
-func Build(buildManager BuildManager, clock Clock) packit.BuildFunc {
+func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
+		logger.Title("%s %s", "<Buildpack Name>", "<Buildpack Version>")
+		logger.Process("Resolving NPM build process")
+
 		nodeModulesLayer, err := context.Layers.Get(LayerNameNodeModules, packit.LaunchLayer)
 		if err != nil {
 			return packit.BuildResult{}, err

@@ -4,14 +4,19 @@ code.cloudfoundry.org/lager
 github.com/BurntSushi/toml
 # github.com/Masterminds/semver v1.5.0
 github.com/Masterminds/semver
+# github.com/VividCortex/ewma v1.1.1
+github.com/VividCortex/ewma
 # github.com/buildpack/libbuildpack v1.25.11
 github.com/buildpack/libbuildpack/application
 github.com/buildpack/libbuildpack/internal
 github.com/buildpack/libbuildpack/logger
+# github.com/cheggaaa/pb/v3 v3.0.4
+github.com/cheggaaa/pb/v3
+github.com/cheggaaa/pb/v3/termutil
 # github.com/cloudfoundry/dagger v0.0.0-20200115142400-b69a9b4eabf4
 github.com/cloudfoundry/dagger
 github.com/cloudfoundry/dagger/utils
-# github.com/cloudfoundry/libcfbuildpack v1.91.22
+# github.com/cloudfoundry/libcfbuildpack v1.91.23
 github.com/cloudfoundry/libcfbuildpack/helper
 # github.com/cloudfoundry/occam v0.0.0-20200129203351-7929b00e4ffd
 github.com/cloudfoundry/occam
@@ -21,12 +26,21 @@ github.com/cloudfoundry/packit
 github.com/cloudfoundry/packit/fs
 github.com/cloudfoundry/packit/internal
 github.com/cloudfoundry/packit/pexec
+github.com/cloudfoundry/packit/scribe
+# github.com/fatih/color v1.9.0
+github.com/fatih/color
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 # github.com/google/go-github v17.0.0+incompatible
 github.com/google/go-github/github
 # github.com/google/go-querystring v1.0.0
 github.com/google/go-querystring/query
+# github.com/mattn/go-colorable v0.1.4
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.12
+github.com/mattn/go-isatty
+# github.com/mattn/go-runewidth v0.0.8
+github.com/mattn/go-runewidth
 # github.com/oklog/ulid v1.3.1
 github.com/oklog/ulid
 # github.com/onsi/gomega v1.8.1
@@ -58,6 +72,8 @@ golang.org/x/net/html/charset
 # golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
+# golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
+golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
