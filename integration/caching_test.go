@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -139,7 +140,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 		it("reuses the node modules layer", func() {
 			sourcePath := filepath.Join("testdata", "vendored")
 
-			build := pack.Build.WithBuildpacks(nodeURI, npmURI)
+			build := pack.WithNoColor().Build.WithBuildpacks(nodeURI, npmURI)
 
 			firstImage, logs, err := build.Execute(imageName, sourcePath)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -176,6 +177,27 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).To(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
+
+			buildpackVersion, err := GetGitVersion()
+			Expect(err).ToNot(HaveOccurred())
+
+			sequence := []interface{}{
+				//Title and version
+				fmt.Sprintf("NPM Buildpack %s", buildpackVersion),
+				//Resolve build process based on artifacts present"
+				"  Resolving installation process",
+				"    Process inputs:",
+				"      node_modules      -> Found",
+				"      npm-cache         -> Not found",
+				"      package-lock.json -> Found",
+				//print selection based on artifacts
+				MatchRegexp(`    Selected NPM build process:`),
+				"",
+				"  Reusing cached layer /layers/org.cloudfoundry.npm/modules",
+			}
+
+			splitLogs := GetBuildLogs(logs.String())
+			Expect(splitLogs).To(ContainSequence(sequence))
 		})
 	})
 }

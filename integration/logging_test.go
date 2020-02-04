@@ -8,14 +8,12 @@ import (
 	"github.com/cloudfoundry/occam"
 	"github.com/sclevine/spec"
 
-	. "github.com/cloudfoundry/occam/matchers"
 	. "github.com/onsi/gomega"
 )
 
 func testLogging(t *testing.T, context spec.G, it spec.S) {
 	var (
-		Expect     = NewWithT(t).Expect
-		Eventually = NewWithT(t).Eventually
+		Expect = NewWithT(t).Expect
 
 		pack   occam.Pack
 		docker occam.Docker
@@ -28,8 +26,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 
 	context("when the buildpack is run with pack build", func() {
 		var (
-			image     occam.Image
-			container occam.Container
+			image occam.Image
 
 			name string
 		)
@@ -41,23 +38,17 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it.After(func() {
-			Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed())
 			Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
 			Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
 		})
 
-		it.Focus("logs useful information for the user", func() {
+		it("logs useful information for the user", func() {
 			var err error
 			var logs fmt.Stringer
 			image, logs, err = pack.WithNoColor().Build.
 				WithBuildpacks(nodeURI, npmURI).
 				Execute(name, filepath.Join("testdata", "simple_app"))
 			Expect(err).NotTo(HaveOccurred(), logs.String)
-
-			container, err = docker.Container.Run.Execute(image.ID)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(container).Should(BeAvailable())
 
 			buildpackVersion, err := GetGitVersion()
 			Expect(err).ToNot(HaveOccurred())
@@ -67,18 +58,16 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				fmt.Sprintf("NPM Buildpack %s", buildpackVersion),
 				//Resolve build process based on artifacts present"
 				"  Resolving installation process",
-				"    Process Inputs",
-				"      package-lock.json -->",
-				"      node_modules -->",
-				"",
+				"    Process inputs:",
+				"      node_modules      -> Not found",
+				"      npm-cache         -> Not found",
+				"      package-lock.json -> Not found",
 				//print selection based on artifacts
 				MatchRegexp(`    Selected NPM build process:`),
-
+				"",
 				//execute chosen build process
 				"  Executing build process",
-				//pre install scripts, if present
-
-				//post install scripts, if present
+				MatchRegexp(`    Completed in (\d+\.\d+|\d{3})`),
 			}
 
 			splitLogs := GetBuildLogs(logs.String())

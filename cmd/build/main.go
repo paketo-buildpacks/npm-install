@@ -13,11 +13,12 @@ import (
 
 func main() {
 	executable := pexec.NewExecutable("npm", lager.NewLogger("npm"))
+	logger := scribe.NewLogger(os.Stdout)
+
 	packageJSONParser := npm.NewPackageJSONParser()
 	checksumCalculator := npm.NewChecksumCalculator()
-	resolver := npm.NewBuildProcessResolver(executable, packageJSONParser, checksumCalculator)
+	resolver := npm.NewBuildProcessResolver(executable, packageJSONParser, checksumCalculator, logger)
 	clock := npm.NewClock(time.Now)
-	logger := scribe.NewLogger(os.Stdout)
 
 	packit.Build(npm.Build(resolver, clock, logger))
 }

@@ -22,8 +22,7 @@ type BuildManager interface {
 
 func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
-		logger.Title("%s %s", "<Buildpack Name>", "<Buildpack Version>")
-		logger.Process("Resolving NPM build process")
+		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
 		nodeModulesLayer, err := context.Layers.Get(LayerNameNodeModules, packit.LaunchLayer)
 		if err != nil {
@@ -35,6 +34,7 @@ func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.
 			return packit.BuildResult{}, err
 		}
 
+		logger.Process("Resolving installation process")
 		process, err := buildManager.Resolve(context.WorkingDir, nodeCacheLayer.Path)
 		if err != nil {
 			return packit.BuildResult{}, err
@@ -46,6 +46,9 @@ func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.
 		}
 
 		if run {
+			logger.Process("Executing build process")
+			then := clock.Now()
+
 			if err = nodeModulesLayer.Reset(); err != nil {
 				return packit.BuildResult{}, err
 			}
@@ -55,11 +58,15 @@ func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.
 				return packit.BuildResult{}, err
 			}
 
+			logger.Subprocess("Completed in %s", time.Since(then).Round(time.Millisecond))
+
 			nodeModulesLayer.Metadata = map[string]interface{}{
 				"built_at":  clock.Now().Format(time.RFC3339Nano),
 				"cache_sha": sha,
 			}
+
 		} else {
+			logger.Process("Reusing cached layer %s", nodeModulesLayer.Path)
 			err := os.RemoveAll(filepath.Join(context.WorkingDir, "node_modules"))
 			if err != nil {
 				return packit.BuildResult{}, err

@@ -58,7 +58,7 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			container, err = docker.Container.Run.Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(container).Should(BeAvailable())
+			Eventually(container, "5s").Should(BeAvailable())
 
 			response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort()))
 			Expect(err).NotTo(HaveOccurred())
