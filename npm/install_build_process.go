@@ -46,7 +46,7 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
 	})
 	if err != nil {
-		r.logger.Process("%s", buffer.String())
+		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("npm install failed: %w", err)
 	}
 

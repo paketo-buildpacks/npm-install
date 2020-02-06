@@ -114,7 +114,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir)
-					Expect(buffer.String()).To(ContainSubstring("  install error on stdout\n  install error on stderr\n"))
+					Expect(buffer.String()).To(ContainSubstring("    install error on stdout\n    install error on stderr\n"))
 					Expect(err).To(MatchError("npm install failed: failed to execute"))
 				})
 			})

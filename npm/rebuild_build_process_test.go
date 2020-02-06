@@ -226,7 +226,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 					}
 
 					err := process.Run(modulesDir, cacheDir, workingDir)
-					Expect(buffer.String()).To(ContainSubstring("  stdout output\n  stderr output\n"))
+					Expect(buffer.String()).To(ContainSubstring("    stdout output\n    stderr output\n"))
 					Expect(err).To(MatchError("vendored node_modules have unmet dependencies: npm list failed: exit status 1"))
 				})
 			})
@@ -274,7 +274,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir)
-					Expect(buffer.String()).To(ContainSubstring("  pre-install on stdout\n  pre-install on stderr\n"))
+					Expect(buffer.String()).To(ContainSubstring("    pre-install on stdout\n    pre-install on stderr\n"))
 					Expect(err).To(MatchError("preinstall script failed on rebuild: an actual error"))
 				})
 			})
@@ -294,7 +294,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir)
-					Expect(buffer.String()).To(ContainSubstring("  rebuild error on stdout\n  rebuild error on stderr\n"))
+					Expect(buffer.String()).To(ContainSubstring("    rebuild error on stdout\n    rebuild error on stderr\n"))
 					Expect(err).To(MatchError("npm rebuild failed: failed to rebuild"))
 				})
 			})
@@ -316,7 +316,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir)
-					Expect(buffer.String()).To(ContainSubstring("  postinstall on stdout\n  postinstall on stderr\n"))
+					Expect(buffer.String()).To(ContainSubstring("    postinstall on stdout\n    postinstall on stderr\n"))
 					Expect(err).To(MatchError("postinstall script failed on rebuild: an actual error"))
 				})
 			})

@@ -50,7 +50,7 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		Stderr: buffer,
 	})
 	if err != nil {
-		r.logger.Process("%s", buffer.String())
+		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("vendored node_modules have unmet dependencies: npm list failed: %w", err)
 	}
 
@@ -78,7 +78,7 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		})
 
 		if err != nil {
-			r.logger.Process("%s", buffer.String())
+			r.logger.Subprocess("%s", buffer.String())
 			return fmt.Errorf("preinstall script failed on rebuild: %s", err)
 		}
 	}
@@ -91,7 +91,7 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		Stderr: buffer,
 	})
 	if err != nil {
-		r.logger.Process("%s", buffer.String())
+		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("npm rebuild failed: %s", err)
 	}
 
@@ -104,7 +104,7 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		})
 
 		if err != nil {
-			r.logger.Process("%s", buffer.String())
+			r.logger.Subprocess("%s", buffer.String())
 			return fmt.Errorf("postinstall script failed on rebuild: %s", err)
 		}
 	}
