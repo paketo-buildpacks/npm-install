@@ -1,12 +1,11 @@
 const http = require('http');
-const port = process.env.PORT || 8080;
 const leftpad = require('leftpad');
 
-const requestHandler = (request, response) => {
-  response.end("Hello, World!");
-};
+const port = process.env.PORT || 8080;
 
-const server = http.createServer(requestHandler);
+const server = http.createServer((request, response) => {
+  response.end(JSON.stringify(process.env))
+});
 
 server.listen(port, (err) => {
   if (err) {

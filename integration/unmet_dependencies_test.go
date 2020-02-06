@@ -40,6 +40,8 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 				Execute(name, filepath.Join("testdata", "unmet_dep"))
 			Expect(err).To(HaveOccurred())
 			Expect(logs).To(ContainSubstring("vendored node_modules have unmet dependencies"))
+			Expect(logs).To(ContainSubstring("npm list failed"))
+			Expect(logs).To(ContainSubstring("npm ERR! missing: express@4.0.0, required by node_web_app@0.0.0"))
 		})
 	})
 }

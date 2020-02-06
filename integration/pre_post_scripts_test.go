@@ -43,18 +43,19 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it.After(func() {
-			Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed())
+			Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed(), fmt.Sprintf("failed removing container %#v\n", container))
 			Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
 			Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
 		})
 
 		it("does not reach out to the internet", func() {
 			var err error
-			image, _, err = pack.Build.
+			var logs fmt.Stringer
+			image, logs, err = pack.Build.
 				WithBuildpacks(nodeCachedURI, npmCachedURI).
 				WithNetwork("none").
 				Execute(name, filepath.Join("testdata", "pre_post_scripts_vendored"))
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			container, err = docker.Container.Run.Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())

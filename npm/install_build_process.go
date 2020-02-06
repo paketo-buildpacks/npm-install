@@ -1,20 +1,25 @@
 package npm
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/cloudfoundry/packit/pexec"
+	"github.com/cloudfoundry/packit/scribe"
 )
 
-func NewInstallBuildProcess(executable Executable) InstallBuildProcess {
+func NewInstallBuildProcess(executable Executable, logger scribe.Logger) InstallBuildProcess {
 	return InstallBuildProcess{
 		executable: executable,
+		logger:     logger,
 	}
 }
 
 type InstallBuildProcess struct {
 	executable Executable
+	logger     scribe.Logger
 }
 
 func (r InstallBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
@@ -32,12 +37,17 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		return err
 	}
 
+	buffer := bytes.NewBuffer(nil)
 	_, _, err = r.executable.Execute(pexec.Execution{
-		Args: []string{"install", "--unsafe-perm", "--cache", cacheDir},
-		Dir:  workingDir,
+		Args:   []string{"install", "--unsafe-perm", "--cache", cacheDir},
+		Dir:    workingDir,
+		Stdout: buffer,
+		Stderr: buffer,
+		Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
 	})
 	if err != nil {
-		return err
+		r.logger.Process("%s", buffer.String())
+		return fmt.Errorf("npm install failed: %w", err)
 	}
 
 	return nil

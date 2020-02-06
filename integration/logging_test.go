@@ -68,6 +68,10 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				//execute chosen build process
 				"  Executing build process",
 				MatchRegexp(`    Completed in (\d+\.\d+|\d{3})`),
+				"    Configuring environment",
+				"      NPM_CONFIG_LOGLEVEL   -> error",
+				"      NPM_CONFIG_PRODUCTION -> true",
+				"      PATH                  -> $PATH:/layers/org.cloudfoundry.npm/modules/node_modules/.bin",
 			}
 
 			splitLogs := GetBuildLogs(logs.String())

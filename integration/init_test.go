@@ -10,6 +10,7 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/dagger"
+	"github.com/cloudfoundry/occam"
 	"github.com/cloudfoundry/packit/pexec"
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
@@ -71,9 +72,19 @@ func TestIntegration(t *testing.T) {
 	suite("SimpleApp", testSimpleApp)
 	suite("UnmetDependencies", testUnmetDependencies)
 	suite("Vendored", testVendored)
+	suite("VendoredWithBinaries", testVendoredWithBinaries)
 	suite("Versioning", testVersioning)
 
 	dagger.SyncParallelOutput(func() { suite.Run(t) })
+}
+
+func ContainerLogs(id string) func() string {
+	docker := occam.NewDocker()
+
+	return func() string {
+		logs, _ := docker.Container.Logs.Execute(id)
+		return logs.String()
+	}
 }
 
 func GetBuildLogs(raw string) []string {

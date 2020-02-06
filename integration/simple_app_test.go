@@ -1,8 +1,8 @@
 package integration_test
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"testing"
@@ -58,15 +58,19 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			container, err = docker.Container.Run.Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(container, "5s").Should(BeAvailable())
+			Eventually(container, "5s").Should(BeAvailable(), ContainerLogs(container.ID))
 
-			response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort()))
+			response, err := http.Get(fmt.Sprintf("http://localhost:%s/env", container.HostPort()))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response.StatusCode).To(Equal(http.StatusOK))
 
-			content, err := ioutil.ReadAll(response.Body)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(content)).To(ContainSubstring("Hello, World!"))
+			var env struct {
+				NpmConfigLoglevel   string `json:"NPM_CONFIG_LOGLEVEL"`
+				NpmConfigProduction string `json:"NPM_CONFIG_PRODUCTION"`
+			}
+			Expect(json.NewDecoder(response.Body).Decode(&env)).To(Succeed())
+			Expect(env.NpmConfigLoglevel).To(Equal("error"))
+			Expect(env.NpmConfigProduction).To(Equal("true"))
 		})
 	})
 }

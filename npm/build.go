@@ -1,6 +1,7 @@
 package npm
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -35,6 +36,7 @@ func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.
 		}
 
 		logger.Process("Resolving installation process")
+
 		process, err := buildManager.Resolve(context.WorkingDir, nodeCacheLayer.Path)
 		if err != nil {
 			return packit.BuildResult{}, err
@@ -47,6 +49,7 @@ func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.
 
 		if run {
 			logger.Process("Executing build process")
+
 			then := clock.Now()
 
 			if err = nodeModulesLayer.Reset(); err != nil {
@@ -65,6 +68,18 @@ func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.
 				"cache_sha": sha,
 			}
 
+			nodeModulesLayer.LaunchEnv.Override("NPM_CONFIG_LOGLEVEL", "error")
+			nodeModulesLayer.LaunchEnv.Override("NPM_CONFIG_PRODUCTION", "true")
+
+			path := filepath.Join(nodeModulesLayer.Path, "node_modules", ".bin")
+			nodeModulesLayer.SharedEnv.Append("PATH", path, string(os.PathListSeparator))
+
+			logger.Subprocess("Configuring environment")
+			logger.Action("%s", scribe.FormattedMap{
+				"NPM_CONFIG_LOGLEVEL":   "error",
+				"NPM_CONFIG_PRODUCTION": "true",
+				"PATH":                  fmt.Sprintf("$PATH:%s", path),
+			})
 		} else {
 			logger.Process("Reusing cached layer %s", nodeModulesLayer.Path)
 			err := os.RemoveAll(filepath.Join(context.WorkingDir, "node_modules"))

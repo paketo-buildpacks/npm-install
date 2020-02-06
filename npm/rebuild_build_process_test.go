@@ -13,6 +13,7 @@ import (
 	"github.com/cloudfoundry/npm-cnb/npm"
 	"github.com/cloudfoundry/npm-cnb/npm/fakes"
 	"github.com/cloudfoundry/packit/pexec"
+	"github.com/cloudfoundry/packit/scribe"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
@@ -31,6 +32,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		scriptsParser *fakes.ScriptsParser
 		executable    *fakes.Executable
 		summer        *fakes.Summer
+
+		buffer *bytes.Buffer
 
 		process npm.RebuildBuildProcess
 	)
@@ -60,7 +63,10 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		scriptsParser = &fakes.ScriptsParser{}
 		summer = &fakes.Summer{}
 
-		process = npm.NewRebuildBuildProcess(executable, scriptsParser, summer)
+		buffer = bytes.NewBuffer(nil)
+		logger := scribe.NewLogger(buffer)
+
+		process = npm.NewRebuildBuildProcess(executable, scriptsParser, summer, logger)
 	})
 
 	it.After(func() {
@@ -143,12 +149,15 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				{
 					Args:   []string{"list"},
 					Dir:    workingDir,
-					Stdout: bytes.NewBuffer(nil),
-					Stderr: bytes.NewBuffer(nil),
+					Stdout: buffer,
+					Stderr: buffer,
 				},
 				{
-					Args: []string{"rebuild", fmt.Sprintf("--nodedir=")},
-					Dir:  workingDir,
+					Args:   []string{"rebuild", fmt.Sprintf("--nodedir=")},
+					Dir:    workingDir,
+					Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
+					Stdout: buffer,
+					Stderr: buffer,
 				},
 			}))
 
@@ -173,20 +182,27 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 					{
 						Args:   []string{"list"},
 						Dir:    workingDir,
-						Stdout: bytes.NewBuffer(nil),
-						Stderr: bytes.NewBuffer(nil),
+						Stdout: buffer,
+						Stderr: buffer,
 					},
 					{
-						Args: []string{"run-script", "preinstall"},
-						Dir:  workingDir,
+						Args:   []string{"run-script", "preinstall"},
+						Dir:    workingDir,
+						Stdout: buffer,
+						Stderr: buffer,
 					},
 					{
-						Args: []string{"rebuild", fmt.Sprintf("--nodedir=")},
-						Dir:  workingDir,
+						Args:   []string{"rebuild", fmt.Sprintf("--nodedir=")},
+						Dir:    workingDir,
+						Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
+						Stdout: buffer,
+						Stderr: buffer,
 					},
 					{
-						Args: []string{"run-script", "postinstall"},
-						Dir:  workingDir,
+						Args:   []string{"run-script", "postinstall"},
+						Dir:    workingDir,
+						Stdout: buffer,
+						Stderr: buffer,
 					},
 				}))
 
@@ -210,7 +226,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 					}
 
 					err := process.Run(modulesDir, cacheDir, workingDir)
-					Expect(err).To(MatchError("vendored node_modules have unmet dependencies:\nstdout output\nstderr output\n\nexit status 1"))
+					Expect(buffer.String()).To(ContainSubstring("  stdout output\n  stderr output\n"))
+					Expect(err).To(MatchError("vendored node_modules have unmet dependencies: npm list failed: exit status 1"))
 				})
 			})
 
@@ -246,6 +263,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
 						if strings.Contains(strings.Join(execution.Args, " "), "preinstall") {
+							fmt.Fprintln(execution.Stderr, "pre-install on stdout")
+							fmt.Fprintln(execution.Stdout, "pre-install on stderr")
 							return "", "", fmt.Errorf("an actual error")
 						}
 
@@ -255,6 +274,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir)
+					Expect(buffer.String()).To(ContainSubstring("  pre-install on stdout\n  pre-install on stderr\n"))
 					Expect(err).To(MatchError("preinstall script failed on rebuild: an actual error"))
 				})
 			})
@@ -263,6 +283,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it.Before(func() {
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
 						if strings.Contains(strings.Join(execution.Args, " "), "rebuild") {
+							fmt.Fprintln(execution.Stderr, "rebuild error on stdout")
+							fmt.Fprintln(execution.Stdout, "rebuild error on stderr")
 							return "", "", errors.New("failed to rebuild")
 						}
 
@@ -272,6 +294,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir)
+					Expect(buffer.String()).To(ContainSubstring("  rebuild error on stdout\n  rebuild error on stderr\n"))
 					Expect(err).To(MatchError("npm rebuild failed: failed to rebuild"))
 				})
 			})
@@ -282,6 +305,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
 						if strings.Contains(strings.Join(execution.Args, " "), "postinstall") {
+							fmt.Fprintln(execution.Stderr, "postinstall on stdout")
+							fmt.Fprintln(execution.Stdout, "postinstall on stderr")
 							return "", "", fmt.Errorf("an actual error")
 						}
 
@@ -291,6 +316,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir)
+					Expect(buffer.String()).To(ContainSubstring("  postinstall on stdout\n  postinstall on stderr\n"))
 					Expect(err).To(MatchError("postinstall script failed on rebuild: an actual error"))
 				})
 			})

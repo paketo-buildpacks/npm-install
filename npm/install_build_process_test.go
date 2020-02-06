@@ -1,7 +1,9 @@
 package npm_test
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,6 +12,7 @@ import (
 	"github.com/cloudfoundry/npm-cnb/npm"
 	"github.com/cloudfoundry/npm-cnb/npm/fakes"
 	"github.com/cloudfoundry/packit/pexec"
+	"github.com/cloudfoundry/packit/scribe"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
@@ -23,6 +26,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		cacheDir   string
 		workingDir string
 		executable *fakes.Executable
+		buffer     *bytes.Buffer
 
 		process npm.InstallBuildProcess
 	)
@@ -40,7 +44,9 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 		executable = &fakes.Executable{}
 
-		process = npm.NewInstallBuildProcess(executable)
+		buffer = bytes.NewBuffer(nil)
+
+		process = npm.NewInstallBuildProcess(executable, scribe.NewLogger(buffer))
 	})
 
 	it.After(func() {
@@ -62,8 +68,11 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		it("succeeds", func() {
 			Expect(process.Run(modulesDir, cacheDir, workingDir)).To(Succeed())
 			Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
-				Args: []string{"install", "--unsafe-perm", "--cache", cacheDir},
-				Dir:  workingDir,
+				Args:   []string{"install", "--unsafe-perm", "--cache", cacheDir},
+				Dir:    workingDir,
+				Stdout: buffer,
+				Stderr: buffer,
+				Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
 			}))
 
 			path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
@@ -96,12 +105,17 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 			context("when the executable fails", func() {
 				it.Before(func() {
-					executable.ExecuteCall.Returns.Err = errors.New("failed to execute")
+					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
+						fmt.Fprintln(execution.Stdout, "install error on stdout")
+						fmt.Fprintln(execution.Stderr, "install error on stderr")
+						return "", "", errors.New("failed to execute")
+					}
 				})
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir)
-					Expect(err).To(MatchError("failed to execute"))
+					Expect(buffer.String()).To(ContainSubstring("  install error on stdout\n  install error on stderr\n"))
+					Expect(err).To(MatchError("npm install failed: failed to execute"))
 				})
 			})
 		})

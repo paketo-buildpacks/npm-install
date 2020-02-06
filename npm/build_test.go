@@ -106,14 +106,20 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			},
 			Layers: []packit.Layer{
 				{
-					Name:      npm.LayerNameNodeModules,
-					Path:      filepath.Join(layersDir, npm.LayerNameNodeModules),
-					SharedEnv: packit.Environment{},
-					BuildEnv:  packit.Environment{},
-					LaunchEnv: packit.Environment{},
-					Build:     false,
-					Launch:    true,
-					Cache:     false,
+					Name: npm.LayerNameNodeModules,
+					Path: filepath.Join(layersDir, npm.LayerNameNodeModules),
+					SharedEnv: packit.Environment{
+						"PATH.append": filepath.Join(layersDir, npm.LayerNameNodeModules, "node_modules", ".bin"),
+						"PATH.delim":  string(os.PathListSeparator),
+					},
+					BuildEnv: packit.Environment{},
+					LaunchEnv: packit.Environment{
+						"NPM_CONFIG_LOGLEVEL.override":   "error",
+						"NPM_CONFIG_PRODUCTION.override": "true",
+					},
+					Build:  false,
+					Launch: true,
+					Cache:  false,
 					Metadata: map[string]interface{}{
 						"built_at":  timestamp,
 						"cache_sha": "some-sha",
@@ -249,14 +255,21 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Layers).To(Equal([]packit.Layer{
 				{
-					Name:      npm.LayerNameNodeModules,
-					Path:      filepath.Join(layersDir, npm.LayerNameNodeModules),
-					SharedEnv: packit.Environment{},
-					BuildEnv:  packit.Environment{},
-					LaunchEnv: packit.Environment{},
-					Build:     false,
-					Launch:    true,
-					Cache:     false,
+					Name: npm.LayerNameNodeModules,
+					Path: filepath.Join(layersDir, npm.LayerNameNodeModules),
+
+					SharedEnv: packit.Environment{
+						"PATH.append": filepath.Join(layersDir, npm.LayerNameNodeModules, "node_modules", ".bin"),
+						"PATH.delim":  string(os.PathListSeparator),
+					},
+					BuildEnv: packit.Environment{},
+					LaunchEnv: packit.Environment{
+						"NPM_CONFIG_LOGLEVEL.override":   "error",
+						"NPM_CONFIG_PRODUCTION.override": "true",
+					},
+					Build:  false,
+					Launch: true,
+					Cache:  false,
 					Metadata: map[string]interface{}{
 						"built_at":  timestamp,
 						"cache_sha": "some-sha",
@@ -286,14 +299,20 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Layers).To(Equal([]packit.Layer{
 				{
-					Name:      npm.LayerNameNodeModules,
-					Path:      filepath.Join(layersDir, npm.LayerNameNodeModules),
-					SharedEnv: packit.Environment{},
-					BuildEnv:  packit.Environment{},
-					LaunchEnv: packit.Environment{},
-					Build:     false,
-					Launch:    true,
-					Cache:     false,
+					Name: npm.LayerNameNodeModules,
+					Path: filepath.Join(layersDir, npm.LayerNameNodeModules),
+					SharedEnv: packit.Environment{
+						"PATH.append": filepath.Join(layersDir, npm.LayerNameNodeModules, "node_modules", ".bin"),
+						"PATH.delim":  string(os.PathListSeparator),
+					},
+					BuildEnv: packit.Environment{},
+					LaunchEnv: packit.Environment{
+						"NPM_CONFIG_LOGLEVEL.override":   "error",
+						"NPM_CONFIG_PRODUCTION.override": "true",
+					},
+					Build:  false,
+					Launch: true,
+					Cache:  false,
 					Metadata: map[string]interface{}{
 						"built_at":  timestamp,
 						"cache_sha": "some-sha",
