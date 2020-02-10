@@ -1,4 +1,4 @@
-package npm
+package fs
 
 import (
 	"crypto/sha256"

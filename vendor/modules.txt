@@ -21,7 +21,7 @@ github.com/cloudfoundry/libcfbuildpack/helper
 # github.com/cloudfoundry/occam v0.0.0-20200129203351-7929b00e4ffd
 github.com/cloudfoundry/occam
 github.com/cloudfoundry/occam/matchers
-# github.com/cloudfoundry/packit v0.0.0-20200204201339-8aeeeb6bc795
+# github.com/cloudfoundry/packit v0.0.0-20200207154119-7358b0904c96
 github.com/cloudfoundry/packit
 github.com/cloudfoundry/packit/fs
 github.com/cloudfoundry/packit/internal
@@ -29,7 +29,7 @@ github.com/cloudfoundry/packit/pexec
 github.com/cloudfoundry/packit/scribe
 # github.com/fatih/color v1.9.0
 github.com/fatih/color
-# github.com/golang/protobuf v1.3.2
+# github.com/golang/protobuf v1.3.3
 github.com/golang/protobuf/proto
 # github.com/google/go-github v17.0.0+incompatible
 github.com/google/go-github/github
@@ -43,7 +43,7 @@ github.com/mattn/go-isatty
 github.com/mattn/go-runewidth
 # github.com/oklog/ulid v1.3.1
 github.com/oklog/ulid
-# github.com/onsi/gomega v1.8.1
+# github.com/onsi/gomega v1.9.0
 github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/internal/assertion
@@ -63,7 +63,7 @@ github.com/sclevine/spec
 github.com/sclevine/spec/report
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
-# golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
+# golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
