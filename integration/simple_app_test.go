@@ -52,6 +52,7 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			var err error
 			image, _, err = pack.Build.
 				WithBuildpacks(nodeURI, npmURI).
+				WithNoPull().
 				Execute(name, filepath.Join("testdata", "simple_app"))
 			Expect(err).NotTo(HaveOccurred())
 

@@ -53,7 +53,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 		it("reinstalls node_modules", func() {
 			sourcePath := filepath.Join("testdata", "simple_app")
 
-			build := pack.Build.WithBuildpacks(nodeURI, npmURI)
+			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, npmURI)
 
 			firstImage, logs, err := build.Execute(imageName, sourcePath)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -69,7 +69,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container, "5s").Should(BeAvailable(), ContainerLogs(container.ID))
 
 			secondImage, logs, err := build.Execute(imageName, sourcePath)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -85,7 +85,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container, "5s").Should(BeAvailable(), ContainerLogs(container.ID))
 
 			Expect(secondImage.ID).NotTo(Equal(firstImage.ID))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).NotTo(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
@@ -96,7 +96,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 		it("reuses the node modules layer", func() {
 			sourcePath := filepath.Join("testdata", "locked_app")
 
-			build := pack.Build.WithBuildpacks(nodeURI, npmURI)
+			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, npmURI)
 
 			firstImage, logs, err := build.Execute(imageName, sourcePath)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -112,7 +112,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container, "5s").Should(BeAvailable(), ContainerLogs(container.ID))
 
 			secondImage, logs, err := build.Execute(imageName, sourcePath)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -128,7 +128,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container, "5s").Should(BeAvailable(), ContainerLogs(container.ID))
 
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
@@ -140,7 +140,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 		it("reuses the node modules layer", func() {
 			sourcePath := filepath.Join("testdata", "vendored")
 
-			build := pack.WithNoColor().Build.WithBuildpacks(nodeURI, npmURI)
+			build := pack.WithNoColor().Build.WithNoPull().WithBuildpacks(nodeURI, npmURI)
 
 			firstImage, logs, err := build.Execute(imageName, sourcePath)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -156,7 +156,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container, "5s").Should(BeAvailable(), ContainerLogs(container.ID))
 
 			secondImage, logs, err := build.Execute(imageName, sourcePath)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -172,7 +172,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container, "5s").Should(BeAvailable(), ContainerLogs(container.ID))
 
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))

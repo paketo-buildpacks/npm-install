@@ -36,6 +36,7 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 	context("when the package manager is npm", func() {
 		it("warns that unmet dependencies may cause issues", func() {
 			_, logs, err := pack.Build.
+				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
 				Execute(name, filepath.Join("testdata", "unmet_dep"))
 			Expect(err).To(HaveOccurred())

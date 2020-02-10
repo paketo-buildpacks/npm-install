@@ -54,6 +54,7 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 		it("package.json takes precedence over it", func() {
 			var err error
 			image, _, err = pack.Build.
+				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
 				Execute(name, filepath.Join("testdata", "with_nvmrc"))
 			Expect(err).ToNot(HaveOccurred())
@@ -78,6 +79,7 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 		it("is honored if the package.json doesn't have an engine version", func() {
 			var err error
 			image, _, err = pack.Build.
+				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
 				Execute(name, filepath.Join("testdata", "with_nvmrc_and_no_engine"))
 			Expect(err).ToNot(HaveOccurred())
@@ -85,7 +87,7 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 			container, err = docker.Container.Run.Execute(image.ID)
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(container).Should(BeAvailable())
+			Eventually(container, "5s").Should(BeAvailable())
 
 			response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort()))
 			Expect(err).NotTo(HaveOccurred())

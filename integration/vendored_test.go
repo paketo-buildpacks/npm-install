@@ -51,6 +51,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 		it("builds a working OCI image for a simple app", func() {
 			var err error
 			image, _, err = pack.Build.
+				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
 				Execute(name, filepath.Join("testdata", "vendored"))
 			Expect(err).NotTo(HaveOccurred())
@@ -73,6 +74,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			it("does not reach out to the internet", func() {
 				var err error
 				image, _, err = pack.Build.
+					WithNoPull().
 					WithBuildpacks(nodeCachedURI, npmCachedURI).
 					WithNetwork("none").
 					Execute(name, filepath.Join("testdata", "vendored"))

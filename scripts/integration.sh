@@ -15,11 +15,13 @@ source "$SCRIPT_DIR"/install_tools.sh "$PACK_VERSION"
 
 export CNB_BUILD_IMAGE=${CNB_BUILD_IMAGE:-cloudfoundry/build:full-cnb}
 export CNB_RUN_IMAGE=${CNB_RUN_IMAGE:-cloudfoundry/run:full-cnb}
+export CNB_BUILDER_IMAGE=${CNB_RUN_IMAGE:-cloudfoundry/cnb:cflinuxfs3}
 
 # Always pull latest images
 # Most helpful for local testing consistency with CI (which would already pull the latest)
 docker pull "$CNB_BUILD_IMAGE"
 docker pull "$CNB_RUN_IMAGE"
+docker pull "$CNB_BUILDER_IMAGE"
 
 # Get GIT_TOKEN for github rate limiting
 GIT_TOKEN=${GIT_TOKEN:-"$(lpass show Shared-CF\ Buildpacks/concourse-private.yml | grep buildpacks-github-token | cut -d ' ' -f 2)"}

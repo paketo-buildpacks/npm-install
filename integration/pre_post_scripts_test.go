@@ -53,6 +53,7 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 			var logs fmt.Stringer
 			image, logs, err = pack.Build.
 				WithBuildpacks(nodeCachedURI, npmCachedURI).
+				WithNoPull().
 				WithNetwork("none").
 				Execute(name, filepath.Join("testdata", "pre_post_scripts_vendored"))
 			Expect(err).NotTo(HaveOccurred(), logs.String)
