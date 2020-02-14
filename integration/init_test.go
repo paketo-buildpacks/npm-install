@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/dagger"
@@ -62,6 +63,8 @@ func TestIntegration(t *testing.T) {
 	defer dagger.DeleteBuildpack(nodeURI)
 	defer os.RemoveAll(nodeRepo)
 	defer dagger.DeleteBuildpack(nodeCachedURI)
+
+	SetDefaultEventuallyTimeout(5 * time.Second)
 
 	suite := spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
 	suite("Caching", testCaching)
