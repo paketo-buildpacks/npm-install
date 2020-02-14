@@ -1,6 +1,6 @@
+!integration/testdata
+
 .DS_Store
 .idea
 /.bin
-*.tgz
-npm-cnb_*
-bin/
+/npm-cnb_*

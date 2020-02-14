@@ -55,6 +55,8 @@ github.com/cloudfoundry/packit v0.0.0-20200117181238-c9fbc0a623ec h1:DMK5ngDDzkh
 github.com/cloudfoundry/packit v0.0.0-20200117181238-c9fbc0a623ec/go.mod h1:p3aFtVhY7pMoXsIrp8vTk01FYaFebTURk5KYae5/Nnw=
 github.com/cloudfoundry/packit v0.0.0-20200212161128-b65b786aa38c h1:vR5SyJg73yRjincLyKYbrT811H08N0BuBm+MRnn20/0=
 github.com/cloudfoundry/packit v0.0.0-20200212161128-b65b786aa38c/go.mod h1:F0Mv2qgk1FJEMb5a5oP1SgsNJPWc2QUpCGBuTVaAe3A=
+github.com/cloudfoundry/packit v0.0.0-20200213185904-9d0fc689e7af h1:G6pQ5RECHT19D/xLRb25E/mYeTgTvD83PCRnrGlUaNE=
+github.com/cloudfoundry/packit v0.0.0-20200213185904-9d0fc689e7af/go.mod h1:L9r26GHPYpUReBWTpkU5BgyDuNVU01JSG4QsHybI0Bg=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
