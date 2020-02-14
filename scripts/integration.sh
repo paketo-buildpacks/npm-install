@@ -65,8 +65,6 @@ function token::fetch() {
 
 function tests::run() {
     util::print::title "Run Buildpack Runtime Integration Tests"
-
-
     pushd "${BUILDPACKDIR}" > /dev/null
         if GOMAXPROCS=4 go test -timeout 0 ./integration/... -v -mod=vendor -run Integration; then
             util::print::success "** GO Test Succeeded **"
