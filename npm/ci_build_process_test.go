@@ -171,10 +171,10 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 			context("when the executable fails", func() {
 				it.Before(func() {
-					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
+					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						fmt.Fprintln(execution.Stdout, "ci failure on stdout")
 						fmt.Fprintln(execution.Stderr, "ci failure on stderr")
-						return "", "", errors.New("failed to execute")
+						return errors.New("failed to execute")
 					}
 				})
 

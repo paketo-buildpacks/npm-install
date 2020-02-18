@@ -4,7 +4,6 @@ import (
 	"os"
 	"time"
 
-	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/npm-cnb/npm"
 	"github.com/cloudfoundry/packit"
 	"github.com/cloudfoundry/packit/fs"
@@ -13,7 +12,7 @@ import (
 )
 
 func main() {
-	executable := pexec.NewExecutable("npm", lager.NewLogger("npm"))
+	executable := pexec.NewExecutable("npm")
 	logger := scribe.NewLogger(os.Stdout)
 
 	packageJSONParser := npm.NewPackageJSONParser()

@@ -1,1 +1,1 @@
-web: figlet "Hello World" && node server.js
+web: chalk bold "Hello World" && node server.js

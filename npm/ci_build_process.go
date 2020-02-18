@@ -56,7 +56,7 @@ func (r CIBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
 	}
 
 	buffer := bytes.NewBuffer(nil)
-	_, _, err = r.executable.Execute(pexec.Execution{
+	err = r.executable.Execute(pexec.Execution{
 		Args:   []string{"ci", "--unsafe-perm", "--cache", cacheDir},
 		Dir:    workingDir,
 		Stdout: buffer,

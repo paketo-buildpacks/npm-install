@@ -12,7 +12,7 @@ import (
 
 //go:generate faux --interface Executable --output fakes/executable.go
 type Executable interface {
-	Execute(pexec.Execution) (stdout, stderr string, err error)
+	Execute(pexec.Execution) (err error)
 }
 
 //go:generate faux --interface ScriptsParser --output fakes/scripts_parser.go

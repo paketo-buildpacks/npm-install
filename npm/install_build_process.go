@@ -38,7 +38,7 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 	}
 
 	buffer := bytes.NewBuffer(nil)
-	_, _, err = r.executable.Execute(pexec.Execution{
+	err = r.executable.Execute(pexec.Execution{
 		Args:   []string{"install", "--unsafe-perm", "--cache", cacheDir},
 		Dir:    workingDir,
 		Stdout: buffer,

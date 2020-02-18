@@ -55,9 +55,9 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 
 		executable = &fakes.Executable{}
-		executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
+		executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 			executions = append(executions, execution)
-			return "", "", nil
+			return nil
 		}
 
 		scriptsParser = &fakes.ScriptsParser{}
@@ -215,14 +215,14 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		context("failure cases", func() {
 			context("when npm list fails", func() {
 				it("returns an error", func() {
-					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
+					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "list") {
 							fmt.Fprintln(execution.Stdout, "stdout output")
 							fmt.Fprintln(execution.Stderr, "stderr output")
-							return "", "", errors.New("exit status 1")
+							return errors.New("exit status 1")
 						}
 
-						return "", "", nil
+						return nil
 					}
 
 					err := process.Run(modulesDir, cacheDir, workingDir)
@@ -261,14 +261,14 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it.Before(func() {
 					scriptsParser.ParseScriptsCall.Returns.Scripts = map[string]string{"preinstall": "some pre-install scripts"}
 
-					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
+					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "preinstall") {
 							fmt.Fprintln(execution.Stderr, "pre-install on stdout")
 							fmt.Fprintln(execution.Stdout, "pre-install on stderr")
-							return "", "", fmt.Errorf("an actual error")
+							return fmt.Errorf("an actual error")
 						}
 
-						return "", "", nil
+						return nil
 					}
 				})
 
@@ -281,14 +281,14 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 			context("when the executable fails to run rebuild", func() {
 				it.Before(func() {
-					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
+					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "rebuild") {
 							fmt.Fprintln(execution.Stderr, "rebuild error on stdout")
 							fmt.Fprintln(execution.Stdout, "rebuild error on stderr")
-							return "", "", errors.New("failed to rebuild")
+							return errors.New("failed to rebuild")
 						}
 
-						return "", "", nil
+						return nil
 					}
 				})
 
@@ -303,14 +303,14 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it.Before(func() {
 					scriptsParser.ParseScriptsCall.Returns.Scripts = map[string]string{"postinstall": "some post-install scripts"}
 
-					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
+					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "postinstall") {
 							fmt.Fprintln(execution.Stderr, "postinstall on stdout")
 							fmt.Fprintln(execution.Stdout, "postinstall on stderr")
-							return "", "", fmt.Errorf("an actual error")
+							return fmt.Errorf("an actual error")
 						}
 
-						return "", "", nil
+						return nil
 					}
 				})
 

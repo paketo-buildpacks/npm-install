@@ -105,10 +105,10 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 			context("when the executable fails", func() {
 				it.Before(func() {
-					executable.ExecuteCall.Stub = func(execution pexec.Execution) (string, string, error) {
+					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						fmt.Fprintln(execution.Stdout, "install error on stdout")
 						fmt.Fprintln(execution.Stderr, "install error on stderr")
-						return "", "", errors.New("failed to execute")
+						return errors.New("failed to execute")
 					}
 				})
 

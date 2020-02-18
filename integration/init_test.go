@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/dagger"
 	"github.com/cloudfoundry/occam"
 	"github.com/cloudfoundry/packit/pexec"
@@ -102,15 +102,17 @@ func GetBuildLogs(raw string) []string {
 }
 
 func GetGitVersion() (string, error) {
-	gitExec := pexec.NewExecutable("git", lager.NewLogger("git logger"))
-	execOut, _, err := gitExec.Execute(pexec.Execution{
-		Args: []string{"describe", "--abbrev=0", "--tags"},
+	gitExec := pexec.NewExecutable("git")
+	stdout := bytes.NewBuffer(nil)
+	err := gitExec.Execute(pexec.Execution{
+		Args:   []string{"describe", "--abbrev=0", "--tags"},
+		Stdout: stdout,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSpace(strings.TrimPrefix(execOut, "v")), nil
+	return strings.TrimSpace(strings.TrimPrefix(stdout.String(), "v")), nil
 }
 
 func ContainSequence(expected interface{}) types.GomegaMatcher {

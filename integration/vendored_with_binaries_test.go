@@ -51,16 +51,16 @@ func testVendoredWithBinaries(t *testing.T, context spec.G, it spec.S) {
 		it("builds a working OCI image for a vendored app with binary", func() {
 			var err error
 			var logs fmt.Stringer
-			image, logs, err = pack.WithVerbose().Build.
+			image, logs, err = pack.WithVerbose().WithNoColor().Build.
 				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
 				Execute(name, filepath.Join("testdata", "vendored"))
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
-			container, err = docker.Container.Run.WithCommand(`figlet "PACKETO" -f Train && npm start`).Execute(image.ID)
+			container, err = docker.Container.Run.WithTTY().WithCommand(`chalk bold 'PAKETO' && npm start`).Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(container, "5s").Should(BeAvailable())
+			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
 
 			response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort()))
 			Expect(err).NotTo(HaveOccurred())

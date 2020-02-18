@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"sort"
 
-	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/packit/pexec"
 )
 
 //go:generate faux --interface Executable --output fakes/executable.go
 type Executable interface {
-	Execute(pexec.Execution) (stdout, stderr string, err error)
+	Execute(pexec.Execution) error
 }
 
 //go:generate faux --interface DockerImageInspectClient --output fakes/docker_image_inspect_client.go
@@ -26,7 +25,7 @@ type Pack struct {
 func NewPack() Pack {
 	return Pack{
 		Build: PackBuild{
-			executable:               pexec.NewExecutable("pack", lager.NewLogger("pack")),
+			executable:               pexec.NewExecutable("pack"),
 			dockerImageInspectClient: NewDocker().Image.Inspect,
 		},
 	}
@@ -144,7 +143,7 @@ func (pb PackBuild) Execute(name, path string) (Image, fmt.Stringer, error) {
 	}
 
 	buildLogBuffer := bytes.NewBuffer(nil)
-	_, _, err := pb.executable.Execute(pexec.Execution{
+	err := pb.executable.Execute(pexec.Execution{
 		Args:   args,
 		Stdout: buildLogBuffer,
 		Stderr: buildLogBuffer,
