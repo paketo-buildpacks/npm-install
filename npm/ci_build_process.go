@@ -40,6 +40,8 @@ func (r CIBuildProcess) ShouldRun(workingDir string, metadata map[string]interfa
 }
 
 func (r CIBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
+	r.logger.Subprocess("Running 'npm ci'")
+
 	err := os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)
 	if err != nil {
 		return err

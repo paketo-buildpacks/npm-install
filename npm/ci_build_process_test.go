@@ -22,12 +22,13 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		modulesDir string
-		cacheDir   string
-		workingDir string
-		executable *fakes.Executable
-		summer     *fakes.Summer
-		buffer     *bytes.Buffer
+		modulesDir    string
+		cacheDir      string
+		workingDir    string
+		executable    *fakes.Executable
+		summer        *fakes.Summer
+		buffer        *bytes.Buffer
+		commandOutput *bytes.Buffer
 
 		process npm.CIBuildProcess
 	)
@@ -47,6 +48,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		summer = &fakes.Summer{}
 
 		buffer = bytes.NewBuffer(nil)
+		commandOutput = bytes.NewBuffer(nil)
 
 		process = npm.NewCIBuildProcess(executable, summer, scribe.NewLogger(buffer))
 	})
@@ -128,8 +130,8 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 			Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
 				Args:   []string{"ci", "--unsafe-perm", "--cache", cacheDir},
 				Dir:    workingDir,
-				Stdout: buffer,
-				Stderr: buffer,
+				Stdout: commandOutput,
+				Stderr: commandOutput,
 				Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
 			}))
 

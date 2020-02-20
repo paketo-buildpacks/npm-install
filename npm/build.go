@@ -61,7 +61,8 @@ func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.
 				return packit.BuildResult{}, err
 			}
 
-			logger.Subprocess("Completed in %s", time.Since(then).Round(time.Millisecond))
+			logger.Action("Completed in %s", time.Since(then).Round(time.Millisecond))
+			logger.Break()
 
 			nodeModulesLayer.Metadata = map[string]interface{}{
 				"built_at":  clock.Now().Format(time.RFC3339Nano),
@@ -74,8 +75,8 @@ func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.
 			path := filepath.Join(nodeModulesLayer.Path, "node_modules", ".bin")
 			nodeModulesLayer.SharedEnv.Append("PATH", path, string(os.PathListSeparator))
 
-			logger.Subprocess("Configuring environment")
-			logger.Action("%s", scribe.FormattedMap{
+			logger.Process("Configuring environment")
+			logger.Subprocess("%s", scribe.FormattedMap{
 				"NPM_CONFIG_LOGLEVEL":   "error",
 				"NPM_CONFIG_PRODUCTION": "true",
 				"PATH":                  fmt.Sprintf("$PATH:%s", path),

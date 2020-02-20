@@ -182,15 +182,13 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 
 			sequence := []interface{}{
-				//Title and version
 				fmt.Sprintf("NPM Buildpack %s", buildpackVersion),
-				//Resolve build process based on artifacts present"
 				"  Resolving installation process",
 				"    Process inputs:",
 				"      node_modules      -> Found",
 				"      npm-cache         -> Not found",
 				"      package-lock.json -> Found",
-				//print selection based on artifacts
+				"",
 				MatchRegexp(`    Selected NPM build process:`),
 				"",
 				"  Reusing cached layer /layers/org.cloudfoundry.npm/modules",

@@ -55,28 +55,27 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 
 			sequence := []interface{}{
-				//Title and version
 				fmt.Sprintf("NPM Buildpack %s", buildpackVersion),
-				//Resolve build process based on artifacts present"
 				"  Resolving installation process",
 				"    Process inputs:",
 				"      node_modules      -> Not found",
 				"      npm-cache         -> Not found",
 				"      package-lock.json -> Not found",
-				//print selection based on artifacts
-				MatchRegexp(`    Selected NPM build process:`),
 				"",
-				//execute chosen build process
+				"    Selected NPM build process: 'npm install'",
+				"",
 				"  Executing build process",
-				MatchRegexp(`    Completed in (\d+\.\d+|\d{3})`),
-				"    Configuring environment",
-				"      NPM_CONFIG_LOGLEVEL   -> error",
-				"      NPM_CONFIG_PRODUCTION -> true",
-				"      PATH                  -> $PATH:/layers/org.cloudfoundry.npm/modules/node_modules/.bin",
+				"    Running 'npm install'",
+				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
+				"",
+				"  Configuring environment",
+				"    NPM_CONFIG_LOGLEVEL   -> error",
+				"    NPM_CONFIG_PRODUCTION -> true",
+				"    PATH                  -> $PATH:/layers/org.cloudfoundry.npm/modules/node_modules/.bin",
 			}
 
 			splitLogs := GetBuildLogs(logs.String())
-			Expect(splitLogs).To(ContainSequence(sequence))
+			Expect(splitLogs).To(ContainSequence(sequence), logs.String)
 		})
 	})
 }

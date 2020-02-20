@@ -22,11 +22,12 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		modulesDir string
-		cacheDir   string
-		workingDir string
-		executable *fakes.Executable
-		buffer     *bytes.Buffer
+		modulesDir    string
+		cacheDir      string
+		workingDir    string
+		executable    *fakes.Executable
+		buffer        *bytes.Buffer
+		commandOutput *bytes.Buffer
 
 		process npm.InstallBuildProcess
 	)
@@ -45,6 +46,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		executable = &fakes.Executable{}
 
 		buffer = bytes.NewBuffer(nil)
+		commandOutput = bytes.NewBuffer(nil)
 
 		process = npm.NewInstallBuildProcess(executable, scribe.NewLogger(buffer))
 	})
@@ -70,8 +72,8 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 			Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
 				Args:   []string{"install", "--unsafe-perm", "--cache", cacheDir},
 				Dir:    workingDir,
-				Stdout: buffer,
-				Stderr: buffer,
+				Stdout: commandOutput,
+				Stderr: commandOutput,
 				Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
 			}))
 

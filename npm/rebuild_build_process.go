@@ -42,6 +42,8 @@ func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]in
 }
 
 func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
+	r.logger.Subprocess("Running 'npm rebuild'")
+
 	buffer := bytes.NewBuffer(nil)
 	err := r.executable.Execute(pexec.Execution{
 		Args:   []string{"list"},

@@ -33,7 +33,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		executable    *fakes.Executable
 		summer        *fakes.Summer
 
-		buffer *bytes.Buffer
+		buffer        *bytes.Buffer
+		commandOutput *bytes.Buffer
 
 		process npm.RebuildBuildProcess
 	)
@@ -64,9 +65,9 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		summer = &fakes.Summer{}
 
 		buffer = bytes.NewBuffer(nil)
-		logger := scribe.NewLogger(buffer)
+		commandOutput = bytes.NewBuffer(nil)
 
-		process = npm.NewRebuildBuildProcess(executable, scriptsParser, summer, logger)
+		process = npm.NewRebuildBuildProcess(executable, scriptsParser, summer, scribe.NewLogger(buffer))
 	})
 
 	it.After(func() {
@@ -140,7 +141,6 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("Run", func() {
-
 		it("runs the npm rebuild command", func() {
 			Expect(process.Run(modulesDir, cacheDir, workingDir)).To(Succeed())
 
@@ -149,15 +149,15 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				{
 					Args:   []string{"list"},
 					Dir:    workingDir,
-					Stdout: buffer,
-					Stderr: buffer,
+					Stdout: commandOutput,
+					Stderr: commandOutput,
 				},
 				{
 					Args:   []string{"rebuild", fmt.Sprintf("--nodedir=")},
 					Dir:    workingDir,
 					Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
-					Stdout: buffer,
-					Stderr: buffer,
+					Stdout: commandOutput,
+					Stderr: commandOutput,
 				},
 			}))
 
@@ -182,27 +182,27 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 					{
 						Args:   []string{"list"},
 						Dir:    workingDir,
-						Stdout: buffer,
-						Stderr: buffer,
+						Stdout: commandOutput,
+						Stderr: commandOutput,
 					},
 					{
 						Args:   []string{"run-script", "preinstall"},
 						Dir:    workingDir,
-						Stdout: buffer,
-						Stderr: buffer,
+						Stdout: commandOutput,
+						Stderr: commandOutput,
 					},
 					{
 						Args:   []string{"rebuild", fmt.Sprintf("--nodedir=")},
 						Dir:    workingDir,
 						Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
-						Stdout: buffer,
-						Stderr: buffer,
+						Stdout: commandOutput,
+						Stderr: commandOutput,
 					},
 					{
 						Args:   []string{"run-script", "postinstall"},
 						Dir:    workingDir,
-						Stdout: buffer,
-						Stderr: buffer,
+						Stdout: commandOutput,
+						Stderr: commandOutput,
 					},
 				}))
 

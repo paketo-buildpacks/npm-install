@@ -86,20 +86,21 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 
 	r.logger.Subprocess("Process inputs:")
 	r.logger.Action("%s", inputsMap)
+	r.logger.Break()
 
 	switch {
 	case !locked && vendored, locked && vendored && !cached:
-		r.logger.Subprocess("Selected NPM build process: npm rebuild")
+		r.logger.Subprocess("Selected NPM build process: 'npm rebuild'")
 		r.logger.Break()
 		return NewRebuildBuildProcess(r.executable, r.scriptsParser, r.summer, scribe.NewLogger(os.Stderr)), nil
 
 	case !locked && !vendored:
-		r.logger.Subprocess("Selected NPM build process: npm install")
+		r.logger.Subprocess("Selected NPM build process: 'npm install'")
 		r.logger.Break()
 		return NewInstallBuildProcess(r.executable, scribe.NewLogger(os.Stderr)), nil
 
 	default:
-		r.logger.Subprocess("Selected NPM build process: npm ci")
+		r.logger.Subprocess("Selected NPM build process: 'npm ci'")
 		r.logger.Break()
 		return NewCIBuildProcess(r.executable, r.summer, scribe.NewLogger(os.Stderr)), nil
 	}

@@ -62,7 +62,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(buildProcess).To(Equal(npm.NewInstallBuildProcess(executable, scribe.NewLogger(os.Stderr))))
 
-				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: npm install"))
+				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm install'"))
 			})
 		})
 
@@ -98,7 +98,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, scriptsParser, summer, scribe.NewLogger(os.Stderr))))
 
-				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: npm rebuild"))
+				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm rebuild'"))
 			})
 		})
 
@@ -154,7 +154,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
 
-				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: npm ci"))
+				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm ci'"))
 			})
 		})
 
