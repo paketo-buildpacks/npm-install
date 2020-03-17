@@ -58,9 +58,9 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				fmt.Sprintf("NPM Buildpack %s", buildpackVersion),
 				"  Resolving installation process",
 				"    Process inputs:",
-				"      node_modules      -> Not found",
-				"      npm-cache         -> Not found",
-				"      package-lock.json -> Not found",
+				"      node_modules      -> \"Not found\"",
+				"      npm-cache         -> \"Not found\"",
+				"      package-lock.json -> \"Not found\"",
 				"",
 				"    Selected NPM build process: 'npm install'",
 				"",
@@ -69,9 +69,9 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
 				"",
 				"  Configuring environment",
-				"    NPM_CONFIG_LOGLEVEL   -> error",
-				"    NPM_CONFIG_PRODUCTION -> true",
-				"    PATH                  -> $PATH:/layers/org.cloudfoundry.npm/modules/node_modules/.bin",
+				"    NPM_CONFIG_LOGLEVEL   -> \"error\"",
+				"    NPM_CONFIG_PRODUCTION -> \"true\"",
+				"    PATH                  -> \"$PATH:/layers/org.cloudfoundry.npm/modules/node_modules/.bin\"",
 			}
 
 			splitLogs := GetBuildLogs(logs.String())

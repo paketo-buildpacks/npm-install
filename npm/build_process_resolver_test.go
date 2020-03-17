@@ -218,7 +218,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				_, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buffer.String()).To(MatchRegexp(`package-lock.json\s+-> Found`))
+				Expect(buffer.String()).To(MatchRegexp(`package-lock.json\s+-> "Found"`))
 			})
 		})
 
@@ -231,7 +231,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				_, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buffer.String()).To(MatchRegexp(`node_modules\s+-> Found`))
+				Expect(buffer.String()).To(MatchRegexp(`node_modules\s+-> "Found"`))
 			})
 		})
 
@@ -244,7 +244,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				_, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buffer.String()).To(MatchRegexp(`npm-cache\s+-> Found`))
+				Expect(buffer.String()).To(MatchRegexp(`npm-cache\s+-> "Found"`))
 			})
 		})
 	})
