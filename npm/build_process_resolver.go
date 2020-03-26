@@ -15,11 +15,6 @@ type Executable interface {
 	Execute(pexec.Execution) (err error)
 }
 
-//go:generate faux --interface ScriptsParser --output fakes/scripts_parser.go
-type ScriptsParser interface {
-	ParseScripts(path string) (scripts map[string]string, err error)
-}
-
 //go:generate faux --interface BuildProcess --output fakes/build_process.go
 type BuildProcess interface {
 	ShouldRun(workingDir string, metadata map[string]interface{}) (run bool, sha string, err error)
@@ -32,18 +27,16 @@ type Summer interface {
 }
 
 type BuildProcessResolver struct {
-	executable    Executable
-	scriptsParser ScriptsParser
-	summer        Summer
-	logger        scribe.Logger
+	executable Executable
+	summer     Summer
+	logger     scribe.Logger
 }
 
-func NewBuildProcessResolver(executable Executable, scriptsParser ScriptsParser, summer Summer, logger scribe.Logger) BuildProcessResolver {
+func NewBuildProcessResolver(executable Executable, summer Summer, logger scribe.Logger) BuildProcessResolver {
 	return BuildProcessResolver{
-		executable:    executable,
-		scriptsParser: scriptsParser,
-		summer:        summer,
-		logger:        logger,
+		executable: executable,
+		summer:     summer,
+		logger:     logger,
 	}
 }
 
@@ -92,7 +85,7 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 	case !locked && vendored, locked && vendored && !cached:
 		r.logger.Subprocess("Selected NPM build process: 'npm rebuild'")
 		r.logger.Break()
-		return NewRebuildBuildProcess(r.executable, r.scriptsParser, r.summer, scribe.NewLogger(os.Stderr)), nil
+		return NewRebuildBuildProcess(r.executable, r.summer, scribe.NewLogger(os.Stderr)), nil
 
 	case !locked && !vendored:
 		r.logger.Subprocess("Selected NPM build process: 'npm install'")

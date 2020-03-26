@@ -31,22 +31,3 @@ func (p PackageJSONParser) ParseVersion(path string) (string, error) {
 
 	return pkg.Engines.Node, nil
 }
-
-func (p PackageJSONParser) ParseScripts(path string) (map[string]string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var pkg struct {
-		Scripts map[string]string `json:"scripts"`
-	}
-
-	err = json.NewDecoder(file).Decode(&pkg)
-	if err != nil {
-		return nil, err
-	}
-
-	return pkg.Scripts, nil
-}

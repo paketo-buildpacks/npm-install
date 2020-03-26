@@ -74,8 +74,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"    PATH                  -> \"$PATH:/layers/org.cloudfoundry.npm/modules/node_modules/.bin\"",
 			}
 
-			splitLogs := GetBuildLogs(logs.String())
-			Expect(splitLogs).To(ContainSequence(sequence), logs.String)
+			Expect(GetBuildLogs(logs.String())).To(ContainSequence(sequence))
 		})
 	})
 }

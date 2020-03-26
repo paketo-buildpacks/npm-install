@@ -12,18 +12,16 @@ import (
 )
 
 type RebuildBuildProcess struct {
-	executable    Executable
-	scriptsParser ScriptsParser
-	summer        Summer
-	logger        scribe.Logger
+	executable Executable
+	summer     Summer
+	logger     scribe.Logger
 }
 
-func NewRebuildBuildProcess(executable Executable, scriptsParser ScriptsParser, summer Summer, logger scribe.Logger) RebuildBuildProcess {
+func NewRebuildBuildProcess(executable Executable, summer Summer, logger scribe.Logger) RebuildBuildProcess {
 	return RebuildBuildProcess{
-		executable:    executable,
-		scriptsParser: scriptsParser,
-		summer:        summer,
-		logger:        logger,
+		executable: executable,
+		summer:     summer,
+		logger:     logger,
 	}
 }
 
@@ -66,23 +64,16 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		return err
 	}
 
-	scripts, err := r.scriptsParser.ParseScripts(filepath.Join(workingDir, "package.json"))
+	err = r.executable.Execute(pexec.Execution{
+		Args:   []string{"run-script", "preinstall", "--if-present"},
+		Dir:    workingDir,
+		Stdout: buffer,
+		Stderr: buffer,
+	})
+
 	if err != nil {
-		return fmt.Errorf("failed to parse package.json: %s", err)
-	}
-
-	if _, exists := scripts["preinstall"]; exists {
-		err = r.executable.Execute(pexec.Execution{
-			Args:   []string{"run-script", "preinstall"},
-			Dir:    workingDir,
-			Stdout: buffer,
-			Stderr: buffer,
-		})
-
-		if err != nil {
-			r.logger.Subprocess("%s", buffer.String())
-			return fmt.Errorf("preinstall script failed on rebuild: %s", err)
-		}
+		r.logger.Subprocess("%s", buffer.String())
+		return fmt.Errorf("preinstall script failed on rebuild: %s", err)
 	}
 
 	err = r.executable.Execute(pexec.Execution{
@@ -97,18 +88,16 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		return fmt.Errorf("npm rebuild failed: %s", err)
 	}
 
-	if _, exists := scripts["postinstall"]; exists {
-		err = r.executable.Execute(pexec.Execution{
-			Args:   []string{"run-script", "postinstall"},
-			Dir:    workingDir,
-			Stdout: buffer,
-			Stderr: buffer,
-		})
+	err = r.executable.Execute(pexec.Execution{
+		Args:   []string{"run-script", "postinstall", "--if-present"},
+		Dir:    workingDir,
+		Stdout: buffer,
+		Stderr: buffer,
+	})
 
-		if err != nil {
-			r.logger.Subprocess("%s", buffer.String())
-			return fmt.Errorf("postinstall script failed on rebuild: %s", err)
-		}
+	if err != nil {
+		r.logger.Subprocess("%s", buffer.String())
+		return fmt.Errorf("postinstall script failed on rebuild: %s", err)
 	}
 
 	return nil

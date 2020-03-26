@@ -29,9 +29,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		cacheDir   string
 		workingDir string
 
-		scriptsParser *fakes.ScriptsParser
-		executable    *fakes.Executable
-		summer        *fakes.Summer
+		executable *fakes.Executable
+		summer     *fakes.Summer
 
 		buffer        *bytes.Buffer
 		commandOutput *bytes.Buffer
@@ -61,13 +60,12 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 			return nil
 		}
 
-		scriptsParser = &fakes.ScriptsParser{}
 		summer = &fakes.Summer{}
 
 		buffer = bytes.NewBuffer(nil)
 		commandOutput = bytes.NewBuffer(nil)
 
-		process = npm.NewRebuildBuildProcess(executable, scriptsParser, summer, scribe.NewLogger(buffer))
+		process = npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(buffer))
 	})
 
 	it.After(func() {
@@ -144,10 +142,16 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		it("runs the npm rebuild command", func() {
 			Expect(process.Run(modulesDir, cacheDir, workingDir)).To(Succeed())
 
-			Expect(executable.ExecuteCall.CallCount).To(Equal(2))
+			Expect(executable.ExecuteCall.CallCount).To(Equal(4))
 			Expect(executions).To(Equal([]pexec.Execution{
 				{
 					Args:   []string{"list"},
+					Dir:    workingDir,
+					Stdout: commandOutput,
+					Stderr: commandOutput,
+				},
+				{
+					Args:   []string{"run-script", "preinstall", "--if-present"},
 					Dir:    workingDir,
 					Stdout: commandOutput,
 					Stderr: commandOutput,
@@ -159,6 +163,12 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 					Stdout: commandOutput,
 					Stderr: commandOutput,
 				},
+				{
+					Args:   []string{"run-script", "postinstall", "--if-present"},
+					Dir:    workingDir,
+					Stdout: commandOutput,
+					Stderr: commandOutput,
+				},
 			}))
 
 			path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
@@ -167,13 +177,6 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		context("when the package.json includes preinstall and postinstall scripts", func() {
-			it.Before(func() {
-				scriptsParser.ParseScriptsCall.Returns.Scripts = map[string]string{
-					"preinstall":  "some-preinstall-script",
-					"postinstall": "some-postinstall-script",
-				}
-			})
-
 			it("runs the scripts before and after it runs the npm rebuild command", func() {
 				Expect(process.Run(modulesDir, cacheDir, workingDir)).To(Succeed())
 
@@ -186,7 +189,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 						Stderr: commandOutput,
 					},
 					{
-						Args:   []string{"run-script", "preinstall"},
+						Args:   []string{"run-script", "preinstall", "--if-present"},
 						Dir:    workingDir,
 						Stdout: commandOutput,
 						Stderr: commandOutput,
@@ -199,7 +202,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 						Stderr: commandOutput,
 					},
 					{
-						Args:   []string{"run-script", "postinstall"},
+						Args:   []string{"run-script", "postinstall", "--if-present"},
 						Dir:    workingDir,
 						Stdout: commandOutput,
 						Stderr: commandOutput,
@@ -246,21 +249,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 			})
 
-			context("parsing package.json for scripts", func() {
-				it.Before(func() {
-					scriptsParser.ParseScriptsCall.Returns.Err = errors.New("a parsing error")
-				})
-
-				it("returns an error", func() {
-					err := process.Run(modulesDir, cacheDir, workingDir)
-					Expect(err).To(MatchError("failed to parse package.json: a parsing error"))
-				})
-			})
-
 			context("when preinstall scripts fail", func() {
 				it.Before(func() {
-					scriptsParser.ParseScriptsCall.Returns.Scripts = map[string]string{"preinstall": "some pre-install scripts"}
-
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "preinstall") {
 							fmt.Fprintln(execution.Stderr, "pre-install on stdout")
@@ -301,8 +291,6 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 			context("when postinstall scripts fail", func() {
 				it.Before(func() {
-					scriptsParser.ParseScriptsCall.Returns.Scripts = map[string]string{"postinstall": "some post-install scripts"}
-
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "postinstall") {
 							fmt.Fprintln(execution.Stderr, "postinstall on stdout")

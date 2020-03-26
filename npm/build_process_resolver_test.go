@@ -22,9 +22,8 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 		cacheDir   string
 		workingDir string
 
-		scriptsParser *fakes.ScriptsParser
-		executable    *fakes.Executable
-		summer        *fakes.Summer
+		executable *fakes.Executable
+		summer     *fakes.Summer
 
 		resolver npm.BuildProcessResolver
 
@@ -41,13 +40,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 
 		executable = &fakes.Executable{}
-		scriptsParser = &fakes.ScriptsParser{}
 		summer = &fakes.Summer{}
 
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		resolver = npm.NewBuildProcessResolver(executable, scriptsParser, summer, logger)
+		resolver = npm.NewBuildProcessResolver(executable, summer, logger)
 	})
 	it.After(func() {
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
@@ -96,7 +94,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, scriptsParser, summer, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
 
 				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm rebuild'"))
 			})
@@ -116,7 +114,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, scriptsParser, summer, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
 
 				contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
 				Expect(err).NotTo(HaveOccurred())
@@ -136,7 +134,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, scriptsParser, summer, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
 			})
 		})
 	})
@@ -260,7 +258,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			workingDir, err = ioutil.TempDir("", "working-dir")
 			Expect(err).NotTo(HaveOccurred())
 
-			resolver = npm.NewBuildProcessResolver(executable, scriptsParser, summer, scribe.NewLogger(bytes.NewBuffer(nil)))
+			resolver = npm.NewBuildProcessResolver(executable, summer, scribe.NewLogger(bytes.NewBuffer(nil)))
 		})
 
 		it.After(func() {

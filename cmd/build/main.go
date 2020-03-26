@@ -15,9 +15,8 @@ func main() {
 	executable := pexec.NewExecutable("npm")
 	logger := scribe.NewLogger(os.Stdout)
 
-	packageJSONParser := npm.NewPackageJSONParser()
 	checksumCalculator := fs.NewChecksumCalculator()
-	resolver := npm.NewBuildProcessResolver(executable, packageJSONParser, checksumCalculator, logger)
+	resolver := npm.NewBuildProcessResolver(executable, checksumCalculator, logger)
 	clock := npm.NewClock(time.Now)
 
 	packit.Build(npm.Build(resolver, clock, logger))
