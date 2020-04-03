@@ -29,10 +29,10 @@ type Summer interface {
 type BuildProcessResolver struct {
 	executable Executable
 	summer     Summer
-	logger     scribe.Logger
+	logger     *scribe.Logger
 }
 
-func NewBuildProcessResolver(executable Executable, summer Summer, logger scribe.Logger) BuildProcessResolver {
+func NewBuildProcessResolver(executable Executable, summer Summer, logger *scribe.Logger) BuildProcessResolver {
 	return BuildProcessResolver{
 		executable: executable,
 		summer:     summer,

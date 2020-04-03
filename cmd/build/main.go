@@ -16,8 +16,8 @@ func main() {
 	logger := scribe.NewLogger(os.Stdout)
 
 	checksumCalculator := fs.NewChecksumCalculator()
-	resolver := npm.NewBuildProcessResolver(executable, checksumCalculator, logger)
+	resolver := npm.NewBuildProcessResolver(executable, checksumCalculator, &logger)
 	clock := npm.NewClock(time.Now)
 
-	packit.Build(npm.Build(resolver, clock, logger))
+	packit.Build(npm.Build(resolver, clock, &logger))
 }

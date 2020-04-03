@@ -45,7 +45,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		resolver = npm.NewBuildProcessResolver(executable, summer, logger)
+		resolver = npm.NewBuildProcessResolver(executable, summer, &logger)
 	})
 	it.After(func() {
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
@@ -258,7 +258,8 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			workingDir, err = ioutil.TempDir("", "working-dir")
 			Expect(err).NotTo(HaveOccurred())
 
-			resolver = npm.NewBuildProcessResolver(executable, summer, scribe.NewLogger(bytes.NewBuffer(nil)))
+			logger := scribe.NewLogger(bytes.NewBuffer(nil))
+			resolver = npm.NewBuildProcessResolver(executable, summer, &logger)
 		})
 
 		it.After(func() {

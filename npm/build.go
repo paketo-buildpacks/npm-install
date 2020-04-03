@@ -21,7 +21,7 @@ type BuildManager interface {
 	Resolve(workingDir, cacheDir string) (BuildProcess, error)
 }
 
-func Build(buildManager BuildManager, clock Clock, logger scribe.Logger) packit.BuildFunc {
+func Build(buildManager BuildManager, clock Clock, logger *scribe.Logger) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
