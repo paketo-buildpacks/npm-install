@@ -71,7 +71,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"  Configuring environment",
 				"    NPM_CONFIG_LOGLEVEL   -> \"error\"",
 				"    NPM_CONFIG_PRODUCTION -> \"true\"",
-				"    PATH                  -> \"$PATH:/layers/org.cloudfoundry.npm/modules/node_modules/.bin\"",
+				"    PATH                  -> \"$PATH:/layers/paketo-buildpacks_npm/modules/node_modules/.bin\"",
 			}
 
 			Expect(GetBuildLogs(logs.String())).To(ContainSequence(sequence))

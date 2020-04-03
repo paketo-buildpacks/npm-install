@@ -61,7 +61,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[firstImage.ID] = struct{}{}
 
 			Expect(firstImage.Buildpacks).To(HaveLen(2))
-			Expect(firstImage.Buildpacks[1].Key).To(Equal("org.cloudfoundry.npm"))
+			Expect(firstImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err := docker.Container.Run.Execute(firstImage.ID)
@@ -77,7 +77,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[secondImage.ID] = struct{}{}
 
 			Expect(secondImage.Buildpacks).To(HaveLen(2))
-			Expect(secondImage.Buildpacks[1].Key).To(Equal("org.cloudfoundry.npm"))
+			Expect(secondImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err = docker.Container.Run.Execute(secondImage.ID)
@@ -104,7 +104,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[firstImage.ID] = struct{}{}
 
 			Expect(firstImage.Buildpacks).To(HaveLen(2))
-			Expect(firstImage.Buildpacks[1].Key).To(Equal("org.cloudfoundry.npm"))
+			Expect(firstImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err := docker.Container.Run.Execute(firstImage.ID)
@@ -120,7 +120,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[secondImage.ID] = struct{}{}
 
 			Expect(secondImage.Buildpacks).To(HaveLen(2))
-			Expect(secondImage.Buildpacks[1].Key).To(Equal("org.cloudfoundry.npm"))
+			Expect(secondImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err = docker.Container.Run.Execute(secondImage.ID)
@@ -148,7 +148,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[firstImage.ID] = struct{}{}
 
 			Expect(firstImage.Buildpacks).To(HaveLen(2))
-			Expect(firstImage.Buildpacks[1].Key).To(Equal("org.cloudfoundry.npm"))
+			Expect(firstImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err := docker.Container.Run.Execute(firstImage.ID)
@@ -164,7 +164,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[secondImage.ID] = struct{}{}
 
 			Expect(secondImage.Buildpacks).To(HaveLen(2))
-			Expect(secondImage.Buildpacks[1].Key).To(Equal("org.cloudfoundry.npm"))
+			Expect(secondImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err = docker.Container.Run.Execute(secondImage.ID)
@@ -191,7 +191,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				"",
 				MatchRegexp(`    Selected NPM build process:`),
 				"",
-				"  Reusing cached layer /layers/org.cloudfoundry.npm/modules",
+				"  Reusing cached layer /layers/paketo-buildpacks_npm/modules",
 			}
 
 			splitLogs := GetBuildLogs(logs.String())
