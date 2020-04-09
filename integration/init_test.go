@@ -66,17 +66,17 @@ func TestIntegration(t *testing.T) {
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
 
-	suite := spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
+	suite := spec.New("Integration", spec.Random(), spec.Report(report.Terminal{}))
 	suite("Caching", testCaching)
-	suite("EmptyNodeModules", testEmptyNodeModules)
-	suite("Logging", testLogging)
-	suite("NoNodeModules", testNoNodeModules)
-	suite("PrePostScriptsRebuild", testPrePostScriptRebuild)
-	suite("SimpleApp", testSimpleApp)
-	suite("UnmetDependencies", testUnmetDependencies)
-	suite("Vendored", testVendored)
-	suite("VendoredWithBinaries", testVendoredWithBinaries)
-	suite("Versioning", testVersioning)
+	suite("EmptyNodeModules", testEmptyNodeModules, spec.Parallel())
+	suite("Logging", testLogging, spec.Parallel())
+	suite("NoNodeModules", testNoNodeModules, spec.Parallel())
+	suite("PrePostScriptsRebuild", testPrePostScriptRebuild, spec.Parallel())
+	suite("SimpleApp", testSimpleApp, spec.Parallel())
+	suite("UnmetDependencies", testUnmetDependencies, spec.Parallel())
+	suite("Vendored", testVendored, spec.Parallel())
+	suite("VendoredWithBinaries", testVendoredWithBinaries, spec.Parallel())
+	suite("Versioning", testVersioning, spec.Parallel())
 
 	dagger.SyncParallelOutput(func() { suite.Run(t) })
 }
