@@ -149,7 +149,7 @@ func (pb PackBuild) Execute(name, path string) (Image, fmt.Stringer, error) {
 		Stderr: buildLogBuffer,
 	})
 	if err != nil {
-		return Image{}, buildLogBuffer, fmt.Errorf("failed to pack build: %w", err)
+		return Image{}, buildLogBuffer, fmt.Errorf("failed to pack build: %w\n\nOutput:\n%s", err, buildLogBuffer)
 	}
 
 	image, err := pb.dockerImageInspectClient.Execute(name)
