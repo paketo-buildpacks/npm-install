@@ -56,6 +56,7 @@ func Build(buildManager BuildManager, clock Clock, logger *scribe.Logger) packit
 				return packit.BuildResult{}, err
 			}
 
+			logger.Subprocess("Running 'npm install'")
 			err = process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, context.WorkingDir)
 			if err != nil {
 				return packit.BuildResult{}, err

@@ -27,8 +27,6 @@ func (r InstallBuildProcess) ShouldRun(workingDir string, metadata map[string]in
 }
 
 func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
-	r.logger.Subprocess("Running 'npm install'")
-
 	err := os.Mkdir(filepath.Join(modulesDir, "node_modules"), os.ModePerm)
 	if err != nil {
 		return err
