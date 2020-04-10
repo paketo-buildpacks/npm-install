@@ -1,4 +1,4 @@
-module github.com/cloudfoundry/npm-cnb
+module github.com/paketo-buildpacks/npm
 
 require (
 	cloud.google.com/go v0.53.0 // indirect

@@ -3,7 +3,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry/npm-cnb/npm"
+	"github.com/paketo-buildpacks/npm/npm"
 )
 
 type BuildManager struct {
