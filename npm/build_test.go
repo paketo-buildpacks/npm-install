@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudfoundry/npm-cnb/npm"
-	"github.com/cloudfoundry/npm-cnb/npm/fakes"
 	"github.com/cloudfoundry/packit"
 	"github.com/cloudfoundry/packit/scribe"
+	"github.com/paketo-buildpacks/npm/npm"
+	"github.com/paketo-buildpacks/npm/npm/fakes"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"

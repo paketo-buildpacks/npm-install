@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cloudfoundry/npm-cnb/npm"
+	"github.com/paketo-buildpacks/npm/npm"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
