@@ -181,7 +181,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			buildpackVersion, err := GetGitVersion()
 			Expect(err).ToNot(HaveOccurred())
 
-			sequence := []interface{}{
+			Expect(logs).To(ContainLines(
 				fmt.Sprintf("NPM Buildpack %s", buildpackVersion),
 				"  Resolving installation process",
 				"    Process inputs:",
@@ -192,10 +192,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				MatchRegexp(`    Selected NPM build process:`),
 				"",
 				"  Reusing cached layer /layers/paketo-buildpacks_npm/modules",
-			}
-
-			splitLogs := GetBuildLogs(logs.String())
-			Expect(splitLogs).To(ContainSequence(sequence))
+			))
 		})
 	})
 }

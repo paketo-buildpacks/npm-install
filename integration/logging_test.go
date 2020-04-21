@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/occam"
 	"github.com/sclevine/spec"
 
+	. "github.com/cloudfoundry/occam/matchers"
 	. "github.com/onsi/gomega"
 )
 
@@ -54,7 +55,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 			buildpackVersion, err := GetGitVersion()
 			Expect(err).ToNot(HaveOccurred())
 
-			sequence := []interface{}{
+			Expect(logs).To(ContainLines(
 				fmt.Sprintf("NPM Buildpack %s", buildpackVersion),
 				"  Resolving installation process",
 				"    Process inputs:",
@@ -72,9 +73,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"    NPM_CONFIG_LOGLEVEL   -> \"error\"",
 				"    NPM_CONFIG_PRODUCTION -> \"true\"",
 				"    PATH                  -> \"$PATH:/layers/paketo-buildpacks_npm/modules/node_modules/.bin\"",
-			}
-
-			Expect(GetBuildLogs(logs.String())).To(ContainSequence(sequence))
+			))
 		})
 	})
 }
