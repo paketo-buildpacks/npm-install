@@ -49,6 +49,8 @@ github.com/cloudfoundry/libcfbuildpack v1.91.23 h1:RCorc4zL0D4+mG2z/qOueFyYGz1j3
 github.com/cloudfoundry/libcfbuildpack v1.91.23/go.mod h1:h95FwHvbelcd0cSOhLC8SGEZXLwCMYh1dZo2kCr7lsA=
 github.com/cloudfoundry/occam v0.0.1 h1:wF3xCm8HZDbuggxZE3+ndDQx4f3DS3F49qi9eZ4kXCI=
 github.com/cloudfoundry/occam v0.0.1/go.mod h1:stUR8Lj7wzXGPU7zjYqGdfk/Rtlgq44hD3Vf6lCswms=
+github.com/cloudfoundry/occam v0.0.2 h1:YMgij19bFO1zsCz7ttuIMC78J6JRp1hwZs+K2rE8JWM=
+github.com/cloudfoundry/occam v0.0.2/go.mod h1:1zcSwIX+VVUMGuKBNL+XASI5G5eqnDa8cTs6M+eonyU=
 github.com/cloudfoundry/packit v0.0.0-20200213185904-9d0fc689e7af h1:G6pQ5RECHT19D/xLRb25E/mYeTgTvD83PCRnrGlUaNE=
 github.com/cloudfoundry/packit v0.0.0-20200213185904-9d0fc689e7af/go.mod h1:L9r26GHPYpUReBWTpkU5BgyDuNVU01JSG4QsHybI0Bg=
 github.com/cloudfoundry/packit v0.0.3 h1:ABdSvNQ8g63bjiy3rFeoEkI/VYWftYySDYF6R1kmrsk=
