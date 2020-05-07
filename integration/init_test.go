@@ -73,6 +73,7 @@ func TestIntegration(t *testing.T) {
 	suite("Vendored", testVendored, spec.Parallel())
 	suite("VendoredWithBinaries", testVendoredWithBinaries, spec.Parallel())
 	suite("Versioning", testVersioning, spec.Parallel())
+	suite.Focus("Npmrc", testNpmrc, spec.Parallel())
 
 	dagger.SyncParallelOutput(func() { suite.Run(t) })
 }
