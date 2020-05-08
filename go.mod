@@ -9,7 +9,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/onsi/ginkgo v1.12.0 // indirect
-	github.com/onsi/gomega v1.9.0
+	github.com/onsi/gomega v1.10.0
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sclevine/spec v1.4.0
 	golang.org/x/sys v0.0.0-20200317113312-5766fd39f98d // indirect
