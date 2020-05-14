@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cloudfoundry/packit/pexec"
-	"github.com/cloudfoundry/packit/scribe"
+	"github.com/paketo-buildpacks/packit/pexec"
+	"github.com/paketo-buildpacks/packit/scribe"
 )
 
 func NewInstallBuildProcess(executable Executable, logger scribe.Logger) InstallBuildProcess {

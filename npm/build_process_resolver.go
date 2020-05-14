@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cloudfoundry/packit/fs"
-	"github.com/cloudfoundry/packit/pexec"
-	"github.com/cloudfoundry/packit/scribe"
+	"github.com/paketo-buildpacks/packit/fs"
+	"github.com/paketo-buildpacks/packit/pexec"
+	"github.com/paketo-buildpacks/packit/scribe"
 )
 
 //go:generate faux --interface Executable --output fakes/executable.go
