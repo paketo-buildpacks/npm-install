@@ -4,11 +4,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudfoundry/packit"
-	"github.com/cloudfoundry/packit/fs"
-	"github.com/cloudfoundry/packit/pexec"
-	"github.com/cloudfoundry/packit/scribe"
 	"github.com/paketo-buildpacks/npm/npm"
+	"github.com/paketo-buildpacks/packit"
+	"github.com/paketo-buildpacks/packit/fs"
+	"github.com/paketo-buildpacks/packit/pexec"
+	"github.com/paketo-buildpacks/packit/scribe"
 )
 
 func main() {
