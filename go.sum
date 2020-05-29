@@ -142,8 +142,11 @@ github.com/onsi/gomega v1.10.0/go.mod h1:Ho0h+IUsWyvy1OpqCwxlQ/21gkhVunqlU8fDGco
 github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
 github.com/paketo-buildpacks/occam v0.0.4 h1:NFvufTzuKaPkOhir+Rl2F6OCS5cdSYklwy88To3ZE2o=
 github.com/paketo-buildpacks/occam v0.0.4/go.mod h1:GNW2KzdEjWkcAJZj/aI+PSfXxGHkA8XxEkaUaCP5ttY=
+github.com/paketo-buildpacks/occam v0.0.10 h1:rx/eU6Qgqvzu8zeAjTzTxGGET+7chc6NDA/Drp70SJo=
+github.com/paketo-buildpacks/occam v0.0.10/go.mod h1:k+FU6/tXabu8rnmC+Kdk6pMzEDGF9GkGOZ3K12TI5/s=
 github.com/paketo-buildpacks/packit v0.0.8 h1:bDixAQpv33yf91eYY/WXJtRwP3LGwwJjCiWUAHjmk3o=
 github.com/paketo-buildpacks/packit v0.0.8/go.mod h1:S2ud8PcMgCjnOjIYnlituwDFL12uQ9eWy9qjTHlM/IM=
+github.com/paketo-buildpacks/packit v0.0.13/go.mod h1:b40wtWWAcgB47+vYGDD9KKhzOtBjI8KPqGxwGvV+XNs=
 github.com/paketo-buildpacks/packit v0.0.14 h1:ySq6WC/WKsOmUdsg9Uh1ggpDkyV0opJuJTus5DYv+lg=
 github.com/paketo-buildpacks/packit v0.0.14/go.mod h1:b40wtWWAcgB47+vYGDD9KKhzOtBjI8KPqGxwGvV+XNs=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

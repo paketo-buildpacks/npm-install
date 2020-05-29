@@ -7,7 +7,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/onsi/gomega v1.10.1
-	github.com/paketo-buildpacks/occam v0.0.4
+	github.com/paketo-buildpacks/occam v0.0.10
 	github.com/paketo-buildpacks/packit v0.0.14
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sclevine/spec v1.4.0
