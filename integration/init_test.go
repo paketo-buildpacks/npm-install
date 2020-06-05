@@ -54,11 +54,13 @@ func TestIntegration(t *testing.T) {
 	npmCachedURI = fmt.Sprintf("%s.tgz", npmCachedURI)
 	nodeCachedURI = fmt.Sprintf("%s.tgz", nodeCachedURI)
 
-	defer dagger.DeleteBuildpack(npmURI)
-	defer dagger.DeleteBuildpack(npmCachedURI)
-	defer dagger.DeleteBuildpack(nodeURI)
-	defer dagger.DeleteBuildpack(nodeCachedURI)
-	defer os.RemoveAll(nodeRepo)
+	defer func() {
+		Expect(dagger.DeleteBuildpack(npmURI)).To(Succeed())
+		Expect(dagger.DeleteBuildpack(npmCachedURI)).To(Succeed())
+		Expect(dagger.DeleteBuildpack(nodeURI)).To(Succeed())
+		os.RemoveAll(nodeRepo)
+		Expect(dagger.DeleteBuildpack(nodeCachedURI)).To(Succeed())
+	}()
 
 	SetDefaultEventuallyTimeout(10 * time.Second)
 

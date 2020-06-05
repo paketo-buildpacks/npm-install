@@ -157,7 +157,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 					Stderr: commandOutput,
 				},
 				{
-					Args:   []string{"rebuild", fmt.Sprintf("--nodedir=")},
+					Args:   []string{"rebuild", "--nodedir="},
 					Dir:    workingDir,
 					Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
 					Stdout: commandOutput,
@@ -195,7 +195,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 						Stderr: commandOutput,
 					},
 					{
-						Args:   []string{"rebuild", fmt.Sprintf("--nodedir=")},
+						Args:   []string{"rebuild", "--nodedir="},
 						Dir:    workingDir,
 						Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
 						Stdout: commandOutput,
