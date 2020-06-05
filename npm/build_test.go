@@ -12,6 +12,7 @@ import (
 	"github.com/paketo-buildpacks/npm/npm"
 	"github.com/paketo-buildpacks/npm/npm/fakes"
 	"github.com/paketo-buildpacks/packit"
+	"github.com/paketo-buildpacks/packit/chronos"
 	"github.com/paketo-buildpacks/packit/scribe"
 	"github.com/sclevine/spec"
 
@@ -33,7 +34,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		buildProcess *fakes.BuildProcess
 		buildManager *fakes.BuildManager
-		clock        npm.Clock
+		clock        chronos.Clock
 		build        packit.BuildFunc
 
 		buffer *bytes.Buffer
@@ -68,7 +69,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		}
 
 		now := time.Now()
-		clock = npm.NewClock(func() time.Time {
+		clock = chronos.NewClock(func() time.Time {
 			return now
 		})
 		timestamp = now.Format(time.RFC3339Nano)
