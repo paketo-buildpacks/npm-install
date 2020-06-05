@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -18,7 +19,6 @@ import (
 )
 
 var (
-	bpDir         string
 	npmURI        string
 	npmCachedURI  string
 	nodeURI       string
@@ -31,13 +31,13 @@ func TestIntegration(t *testing.T) {
 		err    error
 	)
 
-	bpDir, err = dagger.FindBPRoot()
+	root, err := filepath.Abs("./..")
 	Expect(err).NotTo(HaveOccurred())
 
-	npmURI, err = dagger.PackageBuildpack(bpDir)
+	npmURI, err = dagger.PackageBuildpack(root)
 	Expect(err).ToNot(HaveOccurred())
 
-	npmCachedURI, _, err = dagger.PackageCachedBuildpack(bpDir)
+	npmCachedURI, _, err = dagger.PackageCachedBuildpack(root)
 	Expect(err).ToNot(HaveOccurred())
 
 	nodeURI, err = dagger.GetLatestBuildpack("node-engine-cnb")
@@ -57,10 +57,10 @@ func TestIntegration(t *testing.T) {
 	defer dagger.DeleteBuildpack(npmURI)
 	defer dagger.DeleteBuildpack(npmCachedURI)
 	defer dagger.DeleteBuildpack(nodeURI)
-	defer os.RemoveAll(nodeRepo)
 	defer dagger.DeleteBuildpack(nodeCachedURI)
+	defer os.RemoveAll(nodeRepo)
 
-	SetDefaultEventuallyTimeout(5 * time.Second)
+	SetDefaultEventuallyTimeout(10 * time.Second)
 
 	suite := spec.New("Integration", spec.Random(), spec.Report(report.Terminal{}))
 	suite("Caching", testCaching)
@@ -74,8 +74,7 @@ func TestIntegration(t *testing.T) {
 	suite("VendoredWithBinaries", testVendoredWithBinaries, spec.Parallel())
 	suite("Versioning", testVersioning, spec.Parallel())
 	suite("Npmrc", testNpmrc, spec.Parallel())
-
-	dagger.SyncParallelOutput(func() { suite.Run(t) })
+	suite.Run(t)
 }
 
 func ContainerLogs(id string) func() string {

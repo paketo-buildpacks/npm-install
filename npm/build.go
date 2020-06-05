@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/paketo-buildpacks/packit"
+	"github.com/paketo-buildpacks/packit/chronos"
 	"github.com/paketo-buildpacks/packit/fs"
 	"github.com/paketo-buildpacks/packit/scribe"
 )
@@ -21,7 +22,7 @@ type BuildManager interface {
 	Resolve(workingDir, cacheDir string) (BuildProcess, error)
 }
 
-func Build(buildManager BuildManager, clock Clock, logger *scribe.Logger) packit.BuildFunc {
+func Build(buildManager BuildManager, clock chronos.Clock, logger *scribe.Logger) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
@@ -50,19 +51,19 @@ func Build(buildManager BuildManager, clock Clock, logger *scribe.Logger) packit
 		if run {
 			logger.Process("Executing build process")
 
-			then := clock.Now()
-
 			if err = nodeModulesLayer.Reset(); err != nil {
 				return packit.BuildResult{}, err
 			}
 
 			logger.Subprocess("Running 'npm install'")
-			err = process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, context.WorkingDir)
+			duration, err := clock.Measure(func() error {
+				return process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, context.WorkingDir)
+			})
 			if err != nil {
 				return packit.BuildResult{}, err
 			}
 
-			logger.Action("Completed in %s", time.Since(then).Round(time.Millisecond))
+			logger.Action("Completed in %s", duration.Round(time.Millisecond))
 			logger.Break()
 
 			nodeModulesLayer.Metadata = map[string]interface{}{
