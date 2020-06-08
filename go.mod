@@ -15,4 +15,8 @@ require (
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980 // indirect
 )
 
+replace github.com/paketo-buildpacks/occam => /Users/pivotal/dt/occam
+
+replace github.com/ForestEckhardt/freezer => /Users/pivotal/dt/freezer
+
 go 1.13
