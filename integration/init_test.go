@@ -3,7 +3,7 @@ package integration_test
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -30,33 +30,34 @@ func TestIntegration(t *testing.T) {
 		err    error
 	)
 
-	testConfig := struct {
+	var config struct {
 		NodeEngine string `json:"node-engine"`
-	}{}
+	}
 
-	configContents, err := ioutil.ReadFile("./../test_config.json")
+	file, err := os.Open("./../integration.json")
 	Expect(err).NotTo(HaveOccurred())
+	defer file.Close()
 
-	Expect(json.Unmarshal(configContents, &testConfig)).To(Succeed())
+	Expect(json.NewDecoder(file).Decode(&config)).To(Succeed())
 
 	root, err := filepath.Abs("./..")
 	Expect(err).NotTo(HaveOccurred())
 
+	buildpackStore := occam.NewBuildpackStore()
+
 	version, err := GetGitVersion()
 	Expect(err).NotTo(HaveOccurred())
 
-	buildpackStore := occam.NewBuildpackStore().WithVersion(version)
-
-	npmURI, err = buildpackStore.Get(root)
+	npmURI, err = buildpackStore.Get.WithVersion(version).Execute(root)
 	Expect(err).ToNot(HaveOccurred())
 
-	npmCachedURI, err = buildpackStore.WithOffline().Get(root)
+	npmCachedURI, err = buildpackStore.Get.WithOfflineDependencies().WithVersion(version).Execute(root)
 	Expect(err).ToNot(HaveOccurred())
 
-	nodeURI, err = buildpackStore.Get(testConfig.NodeEngine)
+	nodeURI, err = buildpackStore.Get.Execute(config.NodeEngine)
 	Expect(err).ToNot(HaveOccurred())
 
-	nodeCachedURI, err = buildpackStore.WithOffline().Get(testConfig.NodeEngine)
+	nodeCachedURI, err = buildpackStore.Get.WithOfflineDependencies().Execute(config.NodeEngine)
 	Expect(err).ToNot(HaveOccurred())
 
 	SetDefaultEventuallyTimeout(10 * time.Second)

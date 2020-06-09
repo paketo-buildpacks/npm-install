@@ -59,7 +59,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			container, err = docker.Container.Run.Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(container, "5s").Should(BeAvailable())
+			Eventually(container).Should(BeAvailable())
 
 			response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort()))
 			Expect(err).NotTo(HaveOccurred())
