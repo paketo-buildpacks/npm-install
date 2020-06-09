@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/paketo-buildpacks/npm/npm"
-	"github.com/paketo-buildpacks/npm/npm/fakes"
+	"github.com/paketo-buildpacks/npm"
+	"github.com/paketo-buildpacks/npm/fakes"
 	"github.com/paketo-buildpacks/packit/pexec"
 	"github.com/paketo-buildpacks/packit/scribe"
 	"github.com/sclevine/spec"

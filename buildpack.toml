@@ -6,7 +6,7 @@ name = "NPM Buildpack"
 homepage = "https://github.com/paketo-buildpacks/npm"
 
 [metadata]
-include_files = ["bin/build","bin/detect","buildpack.toml"]
+include_files = [ "bin/build", "bin/detect", "bin/run", "buildpack.toml" ]
 pre_package = "./scripts/build.sh"
 
 [[stacks]]

@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/paketo-buildpacks/npm/npm"
+	"github.com/paketo-buildpacks/npm"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"

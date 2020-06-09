@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/paketo-buildpacks/npm/npm"
-	"github.com/paketo-buildpacks/npm/npm/fakes"
+	"github.com/paketo-buildpacks/npm"
+	"github.com/paketo-buildpacks/npm/fakes"
 	"github.com/paketo-buildpacks/packit"
 	"github.com/sclevine/spec"
 
