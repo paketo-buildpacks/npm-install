@@ -2,14 +2,13 @@ package integration_test
 
 import (
 	"bytes"
-	"fmt"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/cloudfoundry/dagger"
 	"github.com/paketo-buildpacks/occam"
 	"github.com/paketo-buildpacks/packit/pexec"
 	"github.com/sclevine/spec"
@@ -31,36 +30,35 @@ func TestIntegration(t *testing.T) {
 		err    error
 	)
 
+	var config struct {
+		NodeEngine string `json:"node-engine"`
+	}
+
+	file, err := os.Open("./../integration.json")
+	Expect(err).NotTo(HaveOccurred())
+	defer file.Close()
+
+	Expect(json.NewDecoder(file).Decode(&config)).To(Succeed())
+
 	root, err := filepath.Abs("./..")
 	Expect(err).NotTo(HaveOccurred())
 
-	npmURI, err = dagger.PackageBuildpack(root)
+	buildpackStore := occam.NewBuildpackStore()
+
+	version, err := GetGitVersion()
+	Expect(err).NotTo(HaveOccurred())
+
+	npmURI, err = buildpackStore.Get.WithVersion(version).Execute(root)
 	Expect(err).ToNot(HaveOccurred())
 
-	npmCachedURI, _, err = dagger.PackageCachedBuildpack(root)
+	npmCachedURI, err = buildpackStore.Get.WithOfflineDependencies().WithVersion(version).Execute(root)
 	Expect(err).ToNot(HaveOccurred())
 
-	nodeURI, err = dagger.GetLatestBuildpack("node-engine-cnb")
+	nodeURI, err = buildpackStore.Get.Execute(config.NodeEngine)
 	Expect(err).ToNot(HaveOccurred())
 
-	nodeRepo, err := dagger.GetLatestUnpackagedBuildpack("node-engine-cnb")
+	nodeCachedURI, err = buildpackStore.Get.WithOfflineDependencies().Execute(config.NodeEngine)
 	Expect(err).ToNot(HaveOccurred())
-
-	nodeCachedURI, _, err = dagger.PackageCachedBuildpack(nodeRepo)
-	Expect(err).ToNot(HaveOccurred())
-
-	// HACK: we need to fix dagger and the package.sh scripts so that this isn't required
-	npmURI = fmt.Sprintf("%s.tgz", npmURI)
-	npmCachedURI = fmt.Sprintf("%s.tgz", npmCachedURI)
-	nodeCachedURI = fmt.Sprintf("%s.tgz", nodeCachedURI)
-
-	defer func() {
-		Expect(dagger.DeleteBuildpack(npmURI)).To(Succeed())
-		Expect(dagger.DeleteBuildpack(npmCachedURI)).To(Succeed())
-		Expect(dagger.DeleteBuildpack(nodeURI)).To(Succeed())
-		os.RemoveAll(nodeRepo)
-		Expect(dagger.DeleteBuildpack(nodeCachedURI)).To(Succeed())
-	}()
 
 	SetDefaultEventuallyTimeout(10 * time.Second)
 
