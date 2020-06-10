@@ -3,6 +3,7 @@ package integration_test
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/paketo-buildpacks/occam"
@@ -61,7 +62,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[firstImage.ID] = struct{}{}
 
 			Expect(firstImage.Buildpacks).To(HaveLen(2))
-			Expect(firstImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
+			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err := docker.Container.Run.Execute(firstImage.ID)
@@ -77,7 +78,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[secondImage.ID] = struct{}{}
 
 			Expect(secondImage.Buildpacks).To(HaveLen(2))
-			Expect(secondImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
+			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err = docker.Container.Run.Execute(secondImage.ID)
@@ -104,7 +105,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[firstImage.ID] = struct{}{}
 
 			Expect(firstImage.Buildpacks).To(HaveLen(2))
-			Expect(firstImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
+			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err := docker.Container.Run.Execute(firstImage.ID)
@@ -120,7 +121,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[secondImage.ID] = struct{}{}
 
 			Expect(secondImage.Buildpacks).To(HaveLen(2))
-			Expect(secondImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
+			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err = docker.Container.Run.Execute(secondImage.ID)
@@ -148,7 +149,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[firstImage.ID] = struct{}{}
 
 			Expect(firstImage.Buildpacks).To(HaveLen(2))
-			Expect(firstImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
+			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err := docker.Container.Run.Execute(firstImage.ID)
@@ -164,7 +165,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			imageIDs[secondImage.ID] = struct{}{}
 
 			Expect(secondImage.Buildpacks).To(HaveLen(2))
-			Expect(secondImage.Buildpacks[1].Key).To(Equal("paketo-buildpacks/npm"))
+			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
 			container, err = docker.Container.Run.Execute(secondImage.ID)
@@ -182,7 +183,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("NPM Buildpack %s", buildpackVersion),
+				fmt.Sprintf("%s %s", buildpackInfo.Buildpack.Name, buildpackVersion),
 				"  Resolving installation process",
 				"    Process inputs:",
 				"      node_modules      -> \"Found\"",
@@ -191,7 +192,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				"",
 				MatchRegexp(`    Selected NPM build process:`),
 				"",
-				"  Reusing cached layer /layers/paketo-buildpacks_npm/modules",
+				fmt.Sprintf("  Reusing cached layer /layers/%s/modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 			))
 		})
 	})

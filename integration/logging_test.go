@@ -3,6 +3,7 @@ package integration_test
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/paketo-buildpacks/occam"
@@ -56,7 +57,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("NPM Buildpack %s", buildpackVersion),
+				fmt.Sprintf("%s %s", buildpackInfo.Buildpack.Name, buildpackVersion),
 				"  Resolving installation process",
 				"    Process inputs:",
 				"      node_modules      -> \"Not found\"",
@@ -72,7 +73,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"  Configuring environment",
 				"    NPM_CONFIG_LOGLEVEL   -> \"error\"",
 				"    NPM_CONFIG_PRODUCTION -> \"true\"",
-				"    PATH                  -> \"$PATH:/layers/paketo-buildpacks_npm/modules/node_modules/.bin\"",
+				fmt.Sprintf("    PATH                  -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 			))
 		})
 	})
