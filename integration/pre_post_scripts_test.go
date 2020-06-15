@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -33,7 +34,8 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 			image     occam.Image
 			container occam.Container
 
-			name string
+			name   string
+			source string
 		)
 
 		it.Before(func() {
@@ -46,16 +48,20 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed(), fmt.Sprintf("failed removing container %#v\n", container))
 			Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
 			Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
+			Expect(os.RemoveAll(source)).To(Succeed())
 		})
 
 		it("does not reach out to the internet", func() {
 			var err error
+			source, err = occam.Source(filepath.Join("testdata", "pre_post_scripts_vendored"))
+			Expect(err).NotTo(HaveOccurred())
+
 			var logs fmt.Stringer
 			image, logs, err = pack.Build.
 				WithBuildpacks(nodeCachedURI, npmCachedURI).
 				WithNoPull().
 				WithNetwork("none").
-				Execute(name, filepath.Join("testdata", "pre_post_scripts_vendored"))
+				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			container, err = docker.Container.Run.Execute(image.ID)

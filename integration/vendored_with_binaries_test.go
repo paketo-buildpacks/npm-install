@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -33,7 +34,8 @@ func testVendoredWithBinaries(t *testing.T, context spec.G, it spec.S) {
 			image     occam.Image
 			container occam.Container
 
-			name string
+			name   string
+			source string
 		)
 
 		it.Before(func() {
@@ -46,15 +48,19 @@ func testVendoredWithBinaries(t *testing.T, context spec.G, it spec.S) {
 			Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed())
 			Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
 			Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
+			Expect(os.RemoveAll(source)).To(Succeed())
 		})
 
 		it("builds a working OCI image for a vendored app with binary", func() {
 			var err error
+			source, err = occam.Source(filepath.Join("testdata", "vendored"))
+			Expect(err).NotTo(HaveOccurred())
+
 			var logs fmt.Stringer
 			image, logs, err = pack.WithVerbose().WithNoColor().Build.
 				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
-				Execute(name, filepath.Join("testdata", "vendored"))
+				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			container, err = docker.Container.Run.WithTTY().WithCommand(`chalk bold 'PAKETO' && npm start`).Execute(image.ID)

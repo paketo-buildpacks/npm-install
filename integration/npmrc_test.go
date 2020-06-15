@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -30,7 +31,8 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 			image     occam.Image
 			container occam.Container
 
-			name string
+			name   string
+			source string
 		)
 
 		it.Before(func() {
@@ -43,15 +45,19 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 			Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed(), fmt.Sprintf("failed removing container %#v\n", container))
 			Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
 			Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
+			Expect(os.RemoveAll(source)).To(Succeed())
 		})
 
 		it("is respected during npm install", func() {
 			var err error
+			source, err = occam.Source(filepath.Join("testdata", "npmrc"))
+			Expect(err).NotTo(HaveOccurred())
+
 			var logs fmt.Stringer
 			image, logs, err = pack.Build.
 				WithBuildpacks(nodeCachedURI, npmCachedURI).
 				WithNoPull().
-				Execute(name, filepath.Join("testdata", "npmrc"))
+				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			container, err = docker.Container.Run.

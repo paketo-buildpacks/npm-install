@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -17,7 +18,8 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 		pack   occam.Pack
 		docker occam.Docker
 
-		name string
+		name   string
+		source string
 	)
 
 	it.Before(func() {
@@ -31,14 +33,19 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 
 	it.After(func() {
 		Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
+		Expect(os.RemoveAll(source)).To(Succeed())
 	})
 
 	context("when the package manager is npm", func() {
 		it("warns that unmet dependencies may cause issues", func() {
+			var err error
+			source, err = occam.Source(filepath.Join("testdata", "unmet_dep"))
+			Expect(err).NotTo(HaveOccurred())
+
 			_, logs, err := pack.Build.
 				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
-				Execute(name, filepath.Join("testdata", "unmet_dep"))
+				Execute(name, source)
 			Expect(err).To(HaveOccurred())
 			Expect(logs).To(ContainSubstring("vendored node_modules have unmet dependencies"))
 			Expect(logs).To(ContainSubstring("npm list failed"))

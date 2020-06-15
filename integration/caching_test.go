@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -23,7 +24,8 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 		imageIDs     map[string]struct{}
 		containerIDs map[string]struct{}
 
-		imageName string
+		name   string
+		source string
 	)
 
 	it.Before(func() {
@@ -34,7 +36,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 		docker = occam.NewDocker()
 
 		var err error
-		imageName, err = occam.RandomName()
+		name, err = occam.RandomName()
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -47,16 +49,19 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(docker.Image.Remove.Execute(id)).To(Succeed())
 		}
 
-		Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(imageName))).To(Succeed())
+		Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
+		Expect(os.RemoveAll(source)).To(Succeed())
 	})
 
 	context("when the app is not locked or vendored", func() {
 		it("reinstalls node_modules", func() {
-			sourcePath := filepath.Join("testdata", "simple_app")
+			var err error
+			source, err = occam.Source(filepath.Join("testdata", "simple_app"))
+			Expect(err).NotTo(HaveOccurred())
 
 			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, npmURI)
 
-			firstImage, logs, err := build.Execute(imageName, sourcePath)
+			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			imageIDs[firstImage.ID] = struct{}{}
@@ -72,7 +77,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
 
-			secondImage, logs, err := build.Execute(imageName, sourcePath)
+			secondImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			imageIDs[secondImage.ID] = struct{}{}
@@ -95,11 +100,13 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 	context("when the app is locked", func() {
 		it("reuses the node modules layer", func() {
-			sourcePath := filepath.Join("testdata", "locked_app")
+			var err error
+			source, err = occam.Source(filepath.Join("testdata", "locked_app"))
+			Expect(err).NotTo(HaveOccurred())
 
 			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, npmURI)
 
-			firstImage, logs, err := build.Execute(imageName, sourcePath)
+			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			imageIDs[firstImage.ID] = struct{}{}
@@ -115,7 +122,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
 
-			secondImage, logs, err := build.Execute(imageName, sourcePath)
+			secondImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			imageIDs[secondImage.ID] = struct{}{}
@@ -139,11 +146,13 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 	context("when the app is vendored", func() {
 		it("reuses the node modules layer", func() {
-			sourcePath := filepath.Join("testdata", "vendored")
+			var err error
+			source, err = occam.Source(filepath.Join("testdata", "vendored"))
+			Expect(err).NotTo(HaveOccurred())
 
 			build := pack.WithNoColor().Build.WithNoPull().WithBuildpacks(nodeURI, npmURI)
 
-			firstImage, logs, err := build.Execute(imageName, sourcePath)
+			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			imageIDs[firstImage.ID] = struct{}{}
@@ -159,7 +168,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
 
-			secondImage, logs, err := build.Execute(imageName, sourcePath)
+			secondImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			imageIDs[secondImage.ID] = struct{}{}
