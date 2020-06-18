@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -36,7 +37,8 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 			image     occam.Image
 			container occam.Container
 
-			name string
+			name   string
+			source string
 		)
 
 		it.Before(func() {
@@ -49,14 +51,18 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 			Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed())
 			Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
 			Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name)))
+			Expect(os.RemoveAll(source)).To(Succeed())
 		})
 
 		it("package.json takes precedence over it", func() {
 			var err error
+			source, err = occam.Source(filepath.Join("testdata", "with_nvmrc"))
+			Expect(err).ToNot(HaveOccurred())
+
 			image, _, err = pack.Build.
 				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
-				Execute(name, filepath.Join("testdata", "with_nvmrc"))
+				Execute(name, source)
 			Expect(err).ToNot(HaveOccurred())
 
 			container, err = docker.Container.Run.Execute(image.ID)
@@ -78,10 +84,13 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 
 		it("is honored if the package.json doesn't have an engine version", func() {
 			var err error
+			source, err = occam.Source(filepath.Join("testdata", "with_nvmrc_and_no_engine"))
+			Expect(err).ToNot(HaveOccurred())
+
 			image, _, err = pack.Build.
 				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
-				Execute(name, filepath.Join("testdata", "with_nvmrc_and_no_engine"))
+				Execute(name, source)
 			Expect(err).ToNot(HaveOccurred())
 
 			container, err = docker.Container.Run.Execute(image.ID)
