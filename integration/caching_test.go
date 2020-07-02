@@ -75,7 +75,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container).Should(BeAvailable())
 
 			secondImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -91,7 +91,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container).Should(BeAvailable())
 
 			Expect(secondImage.ID).NotTo(Equal(firstImage.ID))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).NotTo(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
@@ -120,7 +120,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container).Should(BeAvailable())
 
 			secondImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -136,7 +136,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container).Should(BeAvailable())
 
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
@@ -166,7 +166,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container).Should(BeAvailable())
 
 			secondImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -182,7 +182,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable(), ContainerLogs(container.ID))
+			Eventually(container).Should(BeAvailable())
 
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
