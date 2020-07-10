@@ -3,4 +3,4 @@
 .DS_Store
 .idea
 /.bin
-/npm-cnb_*
+/build
