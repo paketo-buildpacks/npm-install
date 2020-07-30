@@ -1,3 +1,4 @@
 {
+  "builder": "index.docker.io/paketobuildpacks/builder:full-cf",
   "node-engine": "github.com/paketo-buildpacks/node-engine"
 }
