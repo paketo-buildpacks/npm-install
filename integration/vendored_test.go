@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/paketo-buildpacks/occam"
@@ -25,7 +26,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 	)
 
 	it.Before(func() {
-		pack = occam.NewPack()
+		pack = occam.NewPack().WithNoColor()
 		docker = occam.NewDocker()
 	})
 
@@ -55,8 +56,12 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it("builds a working OCI image for a simple app", func() {
-			var err error
-			image, _, err = pack.Build.
+			var (
+				err  error
+				logs fmt.Stringer
+			)
+
+			image, logs, err = pack.Build.
 				WithNoPull().
 				WithBuildpacks(nodeURI, npmURI).
 				Execute(name, source)
@@ -74,6 +79,28 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			content, err := ioutil.ReadAll(response.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(ContainSubstring("Hello, World!"))
+
+			Expect(logs).To(ContainLines(
+				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+				"  Resolving installation process",
+				"    Process inputs:",
+				"      node_modules      -> \"Found\"",
+				"      npm-cache         -> \"Not found\"",
+				"      package-lock.json -> \"Found\"",
+				"",
+				"    Selected NPM build process: 'npm rebuild'",
+				"",
+				"  Executing build process",
+				"    Running 'npm run-script preinstall --if-present'",
+				MatchRegexp(`    Running 'npm rebuild --nodedir=/layers/.+/node'`),
+				"    Running 'npm run-script postinstall --if-present'",
+				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
+				"",
+				"  Configuring environment",
+				"    NPM_CONFIG_LOGLEVEL   -> \"error\"",
+				"    NPM_CONFIG_PRODUCTION -> \"true\"",
+				fmt.Sprintf("    PATH                  -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+			))
 		})
 
 		context("when the npm and node buildpacks are cached", func() {

@@ -32,7 +32,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 		imageIDs = make(map[string]struct{})
 		containerIDs = make(map[string]struct{})
 
-		pack = occam.NewPack()
+		pack = occam.NewPack().WithNoColor()
 		docker = occam.NewDocker()
 
 		var err error
@@ -115,6 +115,26 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
+			Expect(logs).To(ContainLines(
+				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+				"  Resolving installation process",
+				"    Process inputs:",
+				"      node_modules      -> \"Not found\"",
+				"      npm-cache         -> \"Not found\"",
+				"      package-lock.json -> \"Found\"",
+				"",
+				"    Selected NPM build process: 'npm ci'",
+				"",
+				"  Executing build process",
+				fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
+				"",
+				"  Configuring environment",
+				"    NPM_CONFIG_LOGLEVEL   -> \"error\"",
+				"    NPM_CONFIG_PRODUCTION -> \"true\"",
+				fmt.Sprintf("    PATH                  -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+			))
+
 			container, err := docker.Container.Run.Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -188,11 +208,8 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).To(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
 
-			buildpackVersion, err := GetGitVersion()
-			Expect(err).ToNot(HaveOccurred())
-
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s %s", buildpackInfo.Buildpack.Name, buildpackVersion),
+				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
 				"  Resolving installation process",
 				"    Process inputs:",
 				"      node_modules      -> \"Found\"",

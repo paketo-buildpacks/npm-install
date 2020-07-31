@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/paketo-buildpacks/packit/fs"
 	"github.com/paketo-buildpacks/packit/pexec"
@@ -40,8 +41,6 @@ func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]in
 }
 
 func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
-	r.logger.Subprocess("Running 'npm rebuild'")
-
 	buffer := bytes.NewBuffer(nil)
 	err := r.executable.Execute(pexec.Execution{
 		Args:   []string{"list"},
@@ -64,8 +63,10 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		return err
 	}
 
+	args := []string{"run-script", "preinstall", "--if-present"}
+	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 	err = r.executable.Execute(pexec.Execution{
-		Args:   []string{"run-script", "preinstall", "--if-present"},
+		Args:   args,
 		Dir:    workingDir,
 		Stdout: buffer,
 		Stderr: buffer,
@@ -76,8 +77,10 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		return fmt.Errorf("preinstall script failed on rebuild: %s", err)
 	}
 
+	args = []string{"rebuild", fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))}
+	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 	err = r.executable.Execute(pexec.Execution{
-		Args:   []string{"rebuild", fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))},
+		Args:   args,
 		Dir:    workingDir,
 		Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
 		Stdout: buffer,
@@ -88,8 +91,10 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		return fmt.Errorf("npm rebuild failed: %s", err)
 	}
 
+	args = []string{"run-script", "postinstall", "--if-present"}
+	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 	err = r.executable.Execute(pexec.Execution{
-		Args:   []string{"run-script", "postinstall", "--if-present"},
+		Args:   args,
 		Dir:    workingDir,
 		Stdout: buffer,
 		Stderr: buffer,

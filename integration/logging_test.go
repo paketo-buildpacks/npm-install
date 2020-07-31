@@ -59,11 +59,8 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
-			buildpackVersion, err := GetGitVersion()
-			Expect(err).ToNot(HaveOccurred())
-
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s %s", buildpackInfo.Buildpack.Name, buildpackVersion),
+				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
 				"  Resolving installation process",
 				"    Process inputs:",
 				"      node_modules      -> \"Not found\"",
@@ -73,7 +70,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"    Selected NPM build process: 'npm install'",
 				"",
 				"  Executing build process",
-				"    Running 'npm install'",
+				fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
 				"",
 				"  Configuring environment",

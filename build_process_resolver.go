@@ -29,10 +29,10 @@ type Summer interface {
 type BuildProcessResolver struct {
 	executable Executable
 	summer     Summer
-	logger     *scribe.Logger
+	logger     scribe.Logger
 }
 
-func NewBuildProcessResolver(executable Executable, summer Summer, logger *scribe.Logger) BuildProcessResolver {
+func NewBuildProcessResolver(executable Executable, summer Summer, logger scribe.Logger) BuildProcessResolver {
 	return BuildProcessResolver{
 		executable: executable,
 		summer:     summer,
@@ -85,17 +85,17 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 	case !locked && vendored, locked && vendored && !cached:
 		r.logger.Subprocess("Selected NPM build process: 'npm rebuild'")
 		r.logger.Break()
-		return NewRebuildBuildProcess(r.executable, r.summer, scribe.NewLogger(os.Stderr)), nil
+		return NewRebuildBuildProcess(r.executable, r.summer, scribe.NewLogger(os.Stdout)), nil
 
 	case !locked && !vendored:
 		r.logger.Subprocess("Selected NPM build process: 'npm install'")
 		r.logger.Break()
-		return NewInstallBuildProcess(r.executable, scribe.NewLogger(os.Stderr)), nil
+		return NewInstallBuildProcess(r.executable, scribe.NewLogger(os.Stdout)), nil
 
 	default:
 		r.logger.Subprocess("Selected NPM build process: 'npm ci'")
 		r.logger.Break()
-		return NewCIBuildProcess(r.executable, r.summer, scribe.NewLogger(os.Stderr)), nil
+		return NewCIBuildProcess(r.executable, r.summer, scribe.NewLogger(os.Stdout)), nil
 	}
 }
 
