@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/paketo-buildpacks/packit/pexec"
 	"github.com/paketo-buildpacks/packit/scribe"
@@ -38,8 +39,11 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 	}
 
 	buffer := bytes.NewBuffer(nil)
+	args := []string{"install", "--unsafe-perm", "--cache", cacheDir}
+
+	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 	err = r.executable.Execute(pexec.Execution{
-		Args:   []string{"install", "--unsafe-perm", "--cache", cacheDir},
+		Args:   args,
 		Dir:    workingDir,
 		Stdout: buffer,
 		Stderr: buffer,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/paketo-buildpacks/packit/fs"
 	"github.com/paketo-buildpacks/packit/pexec"
@@ -40,8 +41,6 @@ func (r CIBuildProcess) ShouldRun(workingDir string, metadata map[string]interfa
 }
 
 func (r CIBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
-	r.logger.Subprocess("Running 'npm ci'")
-
 	err := os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)
 	if err != nil {
 		return err
@@ -58,8 +57,11 @@ func (r CIBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
 	}
 
 	buffer := bytes.NewBuffer(nil)
+	args := []string{"ci", "--unsafe-perm", "--cache", cacheDir}
+
+	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 	err = r.executable.Execute(pexec.Execution{
-		Args:   []string{"ci", "--unsafe-perm", "--cache", cacheDir},
+		Args:   args,
 		Dir:    workingDir,
 		Stdout: buffer,
 		Stderr: buffer,

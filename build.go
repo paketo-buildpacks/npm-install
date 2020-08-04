@@ -22,7 +22,7 @@ type BuildManager interface {
 	Resolve(workingDir, cacheDir string) (BuildProcess, error)
 }
 
-func Build(buildManager BuildManager, clock chronos.Clock, logger *scribe.Logger) packit.BuildFunc {
+func Build(buildManager BuildManager, clock chronos.Clock, logger scribe.Logger) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
@@ -55,7 +55,6 @@ func Build(buildManager BuildManager, clock chronos.Clock, logger *scribe.Logger
 				return packit.BuildResult{}, err
 			}
 
-			logger.Subprocess("Running 'npm install'")
 			duration, err := clock.Measure(func() error {
 				return process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, context.WorkingDir)
 			})

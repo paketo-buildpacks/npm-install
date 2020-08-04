@@ -16,10 +16,10 @@ func main() {
 	executable := pexec.NewExecutable("npm")
 	logger := scribe.NewLogger(os.Stdout)
 	checksumCalculator := fs.NewChecksumCalculator()
-	resolver := npm.NewBuildProcessResolver(executable, checksumCalculator, &logger)
+	resolver := npm.NewBuildProcessResolver(executable, checksumCalculator, logger)
 
 	packit.Run(
 		npm.Detect(packageJSONParser),
-		npm.Build(resolver, chronos.DefaultClock, &logger),
+		npm.Build(resolver, chronos.DefaultClock, logger),
 	)
 }

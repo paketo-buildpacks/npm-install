@@ -80,7 +80,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		build = npm.Build(buildManager, clock, &logger)
+		build = npm.Build(buildManager, clock, logger)
 	})
 
 	it.After(func() {
@@ -240,8 +240,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				return nil
 			}
 
-			logger := scribe.NewLogger(buffer)
-			build = npm.Build(buildManager, clock, &logger)
+			build = npm.Build(buildManager, clock, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -285,8 +284,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		it.Before(func() {
 			buildProcess.RunCall.Stub = func(ld, cd, wd string) error { return nil }
 
-			logger := scribe.NewLogger(buffer)
-			build = npm.Build(buildManager, clock, &logger)
+			build = npm.Build(buildManager, clock, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {

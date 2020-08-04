@@ -45,7 +45,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		resolver = npm.NewBuildProcessResolver(executable, summer, &logger)
+		resolver = npm.NewBuildProcessResolver(executable, summer, logger)
 	})
 	it.After(func() {
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
@@ -58,7 +58,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewInstallBuildProcess(executable, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewInstallBuildProcess(executable, scribe.NewLogger(os.Stdout))))
 
 				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm install'"))
 			})
@@ -75,7 +75,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewInstallBuildProcess(executable, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewInstallBuildProcess(executable, scribe.NewLogger(os.Stdout))))
 
 				contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
 				Expect(err).NotTo(HaveOccurred())
@@ -94,7 +94,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(os.Stdout))))
 
 				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm rebuild'"))
 			})
@@ -114,7 +114,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(os.Stdout))))
 
 				contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
 				Expect(err).NotTo(HaveOccurred())
@@ -134,7 +134,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(os.Stdout))))
 			})
 		})
 	})
@@ -150,7 +150,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer, scribe.NewLogger(os.Stdout))))
 
 				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm ci'"))
 			})
@@ -171,7 +171,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer, scribe.NewLogger(os.Stdout))))
 
 				contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
 				Expect(err).NotTo(HaveOccurred())
@@ -196,7 +196,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer, scribe.NewLogger(os.Stderr))))
+				Expect(buildProcess).To(Equal(npm.NewCIBuildProcess(executable, summer, scribe.NewLogger(os.Stdout))))
 
 				contents, err := ioutil.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
 				Expect(err).NotTo(HaveOccurred())
@@ -259,7 +259,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			logger := scribe.NewLogger(bytes.NewBuffer(nil))
-			resolver = npm.NewBuildProcessResolver(executable, summer, &logger)
+			resolver = npm.NewBuildProcessResolver(executable, summer, logger)
 		})
 
 		it.After(func() {
