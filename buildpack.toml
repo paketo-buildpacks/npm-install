@@ -2,7 +2,7 @@ api = "0.2"
 
 [buildpack]
 id = "paketo-buildpacks/npm"
-name = "NPM Buildpack"
+name = "Paketo NPM Buildpack"
 homepage = "https://github.com/paketo-buildpacks/npm"
 
 [metadata]
