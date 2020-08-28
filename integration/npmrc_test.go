@@ -61,7 +61,8 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			container, err = docker.Container.Run.
-				WithCommand("stat /workspace/postinstall.log").
+				WithEntrypoint("stat").
+				WithCommand("/workspace/postinstall.log").
 				Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
