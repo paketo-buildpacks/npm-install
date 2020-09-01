@@ -40,9 +40,9 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 			Requires: []packit.BuildPlanRequirement{
 				{Name: npm.PlanDependencyNodeModules},
 				{
-					Name:    npm.PlanDependencyNode,
-					Version: "1.2.3",
+					Name: npm.PlanDependencyNode,
 					Metadata: npm.BuildPlanMetadata{
+						Version:       "1.2.3",
 						VersionSource: "package.json",
 						Build:         true,
 						Launch:        true,
