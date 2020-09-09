@@ -35,17 +35,21 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result.Plan).To(Equal(packit.BuildPlan{
 			Provides: []packit.BuildPlanProvision{
-				{Name: npm.PlanDependencyNodeModules},
+				{Name: npm.NodeModules},
 			},
 			Requires: []packit.BuildPlanRequirement{
-				{Name: npm.PlanDependencyNodeModules},
 				{
-					Name: npm.PlanDependencyNode,
+					Name: npm.Node,
 					Metadata: npm.BuildPlanMetadata{
 						Version:       "1.2.3",
 						VersionSource: "package.json",
 						Build:         true,
-						Launch:        true,
+					},
+				},
+				{
+					Name: npm.Npm,
+					Metadata: npm.BuildPlanMetadata{
+						Build: true,
 					},
 				},
 			},
@@ -66,15 +70,19 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Plan).To(Equal(packit.BuildPlan{
 				Provides: []packit.BuildPlanProvision{
-					{Name: npm.PlanDependencyNodeModules},
+					{Name: npm.NodeModules},
 				},
 				Requires: []packit.BuildPlanRequirement{
-					{Name: npm.PlanDependencyNodeModules},
 					{
-						Name: npm.PlanDependencyNode,
+						Name: npm.Node,
 						Metadata: npm.BuildPlanMetadata{
-							Build:  true,
-							Launch: true,
+							Build: true,
+						},
+					},
+					{
+						Name: npm.Npm,
+						Metadata: npm.BuildPlanMetadata{
+							Build: true,
 						},
 					},
 				},

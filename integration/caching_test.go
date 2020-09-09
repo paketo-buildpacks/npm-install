@@ -59,18 +59,18 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "simple_app"))
 			Expect(err).NotTo(HaveOccurred())
 
-			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, npmURI)
+			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
 
 			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			imageIDs[firstImage.ID] = struct{}{}
 
-			Expect(firstImage.Buildpacks).To(HaveLen(2))
+			Expect(firstImage.Buildpacks).To(HaveLen(3))
 			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err := docker.Container.Run.Execute(firstImage.ID)
+			container, err := docker.Container.Run.WithCommand("npm start").Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -82,11 +82,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			imageIDs[secondImage.ID] = struct{}{}
 
-			Expect(secondImage.Buildpacks).To(HaveLen(2))
+			Expect(secondImage.Buildpacks).To(HaveLen(3))
 			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err = docker.Container.Run.Execute(secondImage.ID)
+			container, err = docker.Container.Run.WithCommand("npm start").Execute(secondImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -104,14 +104,14 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "locked_app"))
 			Expect(err).NotTo(HaveOccurred())
 
-			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, npmURI)
+			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
 
 			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			imageIDs[firstImage.ID] = struct{}{}
 
-			Expect(firstImage.Buildpacks).To(HaveLen(2))
+			Expect(firstImage.Buildpacks).To(HaveLen(3))
 			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
@@ -135,7 +135,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				fmt.Sprintf("    PATH                  -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 			))
 
-			container, err := docker.Container.Run.Execute(firstImage.ID)
+			container, err := docker.Container.Run.WithCommand("npm start").Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -147,11 +147,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			imageIDs[secondImage.ID] = struct{}{}
 
-			Expect(secondImage.Buildpacks).To(HaveLen(2))
+			Expect(secondImage.Buildpacks).To(HaveLen(3))
 			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err = docker.Container.Run.Execute(secondImage.ID)
+			container, err = docker.Container.Run.WithCommand("npm start").Execute(secondImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -170,18 +170,18 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "vendored"))
 			Expect(err).NotTo(HaveOccurred())
 
-			build := pack.WithNoColor().Build.WithNoPull().WithBuildpacks(nodeURI, npmURI)
+			build := pack.WithNoColor().Build.WithNoPull().WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
 
 			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			imageIDs[firstImage.ID] = struct{}{}
 
-			Expect(firstImage.Buildpacks).To(HaveLen(2))
+			Expect(firstImage.Buildpacks).To(HaveLen(3))
 			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err := docker.Container.Run.Execute(firstImage.ID)
+			container, err := docker.Container.Run.WithCommand("npm start").Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -193,11 +193,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			imageIDs[secondImage.ID] = struct{}{}
 
-			Expect(secondImage.Buildpacks).To(HaveLen(2))
+			Expect(secondImage.Buildpacks).To(HaveLen(3))
 			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err = docker.Container.Run.Execute(secondImage.ID)
+			container, err = docker.Container.Run.WithCommand("npm start").Execute(secondImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}

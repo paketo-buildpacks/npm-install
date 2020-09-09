@@ -59,7 +59,11 @@ func testVendoredWithBinaries(t *testing.T, context spec.G, it spec.S) {
 			var logs fmt.Stringer
 			image, logs, err = pack.WithVerbose().WithNoColor().Build.
 				WithNoPull().
-				WithBuildpacks(nodeURI, npmURI).
+				WithBuildpacks(
+					nodeURI,
+					buildpackURI,
+					buildPlanURI,
+				).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 

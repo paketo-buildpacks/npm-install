@@ -16,11 +16,12 @@ import (
 )
 
 var (
-	npmURI        string
-	npmCachedURI  string
-	nodeURI       string
-	nodeCachedURI string
-	buildpackInfo struct {
+	buildpackURI        string
+	buildpackOfflineURI string
+	nodeURI             string
+	nodeOfflineURI      string
+	buildPlanURI        string
+	buildpackInfo       struct {
 		Buildpack struct {
 			ID   string
 			Name string
@@ -36,6 +37,7 @@ func TestIntegration(t *testing.T) {
 
 	var config struct {
 		NodeEngine string `json:"node-engine"`
+		BuildPlan  string `json:"build-plan"`
 	}
 
 	file, err := os.Open("../integration.json")
@@ -55,12 +57,12 @@ func TestIntegration(t *testing.T) {
 
 	buildpackStore := occam.NewBuildpackStore()
 
-	npmURI, err = buildpackStore.Get.
+	buildpackURI, err = buildpackStore.Get.
 		WithVersion("1.2.3").
 		Execute(root)
 	Expect(err).ToNot(HaveOccurred())
 
-	npmCachedURI, err = buildpackStore.Get.
+	buildpackOfflineURI, err = buildpackStore.Get.
 		WithOfflineDependencies().
 		WithVersion("1.2.3").
 		Execute(root)
@@ -70,10 +72,14 @@ func TestIntegration(t *testing.T) {
 		Execute(config.NodeEngine)
 	Expect(err).ToNot(HaveOccurred())
 
-	nodeCachedURI, err = buildpackStore.Get.
+	nodeOfflineURI, err = buildpackStore.Get.
 		WithOfflineDependencies().
 		Execute(config.NodeEngine)
 	Expect(err).ToNot(HaveOccurred())
+
+	buildPlanURI, err = buildpackStore.Get.
+		Execute(config.BuildPlan)
+	Expect(err).NotTo(HaveOccurred())
 
 	SetDefaultEventuallyTimeout(10 * time.Second)
 

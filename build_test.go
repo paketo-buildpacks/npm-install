@@ -119,7 +119,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						"NPM_CONFIG_PRODUCTION.override": "true",
 					},
 					Build:  false,
-					Launch: true,
+					Launch: false,
 					Cache:  false,
 					Metadata: map[string]interface{}{
 						"built_at":  timestamp,
@@ -133,13 +133,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					LaunchEnv: packit.Environment{},
 					Build:     false,
 					Launch:    false,
-					Cache:     true,
-				},
-			},
-			Processes: []packit.Process{
-				{
-					Type:    "web",
-					Command: "npm start",
+					Cache:     false,
 				},
 			},
 		}))
@@ -149,6 +143,77 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npm.LayerNameNodeModules)))
 		Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npm.LayerNameCache)))
 		Expect(processWorkingDir).To(Equal(workingDir))
+	})
+
+	context("when node_modules is required at build and launch", func() {
+		it("resolves and calls the build process", func() {
+			result, err := build(packit.BuildContext{
+				WorkingDir: workingDir,
+				Layers:     packit.Layers{Path: layersDir},
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{
+							Name: "node_modules",
+							Metadata: map[string]interface{}{
+								"build":  true,
+								"launch": true,
+							},
+						},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(packit.BuildResult{
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{
+							Name: "node_modules",
+							Metadata: map[string]interface{}{
+								"build":  true,
+								"launch": true,
+							},
+						},
+					},
+				},
+				Layers: []packit.Layer{
+					{
+						Name: npm.LayerNameNodeModules,
+						Path: filepath.Join(layersDir, npm.LayerNameNodeModules),
+						SharedEnv: packit.Environment{
+							"PATH.append": filepath.Join(layersDir, npm.LayerNameNodeModules, "node_modules", ".bin"),
+							"PATH.delim":  string(os.PathListSeparator),
+						},
+						BuildEnv: packit.Environment{},
+						LaunchEnv: packit.Environment{
+							"NPM_CONFIG_LOGLEVEL.override":   "error",
+							"NPM_CONFIG_PRODUCTION.override": "true",
+						},
+						Build:  true,
+						Launch: true,
+						Cache:  true,
+						Metadata: map[string]interface{}{
+							"built_at":  timestamp,
+							"cache_sha": "some-sha",
+						},
+					}, {
+						Name:      npm.LayerNameCache,
+						Path:      filepath.Join(layersDir, npm.LayerNameCache),
+						SharedEnv: packit.Environment{},
+						BuildEnv:  packit.Environment{},
+						LaunchEnv: packit.Environment{},
+						Build:     true,
+						Launch:    true,
+						Cache:     true,
+					},
+				},
+			}))
+
+			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
+
+			Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npm.LayerNameNodeModules)))
+			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npm.LayerNameCache)))
+			Expect(processWorkingDir).To(Equal(workingDir))
+		})
 	})
 
 	context("when the build process should not run", func() {
@@ -182,15 +247,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						BuildEnv:  packit.Environment{},
 						LaunchEnv: packit.Environment{},
 						Build:     false,
-						Launch:    true,
+						Launch:    false,
 						Cache:     false,
 						Metadata:  nil,
-					},
-				},
-				Processes: []packit.Process{
-					{
-						Type:    "web",
-						Command: "npm start",
 					},
 				},
 			}))
@@ -269,7 +328,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						"NPM_CONFIG_PRODUCTION.override": "true",
 					},
 					Build:  false,
-					Launch: true,
+					Launch: false,
 					Cache:  false,
 					Metadata: map[string]interface{}{
 						"built_at":  timestamp,
@@ -312,7 +371,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						"NPM_CONFIG_PRODUCTION.override": "true",
 					},
 					Build:  false,
-					Launch: true,
+					Launch: false,
 					Cache:  false,
 					Metadata: map[string]interface{}{
 						"built_at":  timestamp,

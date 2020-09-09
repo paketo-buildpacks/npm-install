@@ -63,11 +63,15 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 
 			image, logs, err = pack.Build.
 				WithNoPull().
-				WithBuildpacks(nodeURI, npmURI).
+				WithBuildpacks(
+					nodeURI,
+					buildpackURI,
+					buildPlanURI,
+				).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
-			container, err = docker.Container.Run.Execute(image.ID)
+			container, err = docker.Container.Run.WithCommand("npm start").Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(container).Should(BeAvailable())
@@ -108,12 +112,16 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				var err error
 				image, _, err = pack.Build.
 					WithNoPull().
-					WithBuildpacks(nodeCachedURI, npmCachedURI).
+					WithBuildpacks(
+						nodeOfflineURI,
+						buildpackOfflineURI,
+						buildPlanURI,
+					).
 					WithNetwork("none").
 					Execute(name, source)
 				Expect(err).NotTo(HaveOccurred())
 
-				container, err = docker.Container.Run.Execute(image.ID)
+				container, err = docker.Container.Run.WithCommand("npm start").Execute(image.ID)
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(container).Should(BeAvailable())

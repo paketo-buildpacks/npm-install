@@ -12,11 +12,6 @@ import (
 	"github.com/paketo-buildpacks/packit/scribe"
 )
 
-const (
-	LayerNameNodeModules = "modules"
-	LayerNameCache       = "npm-cache"
-)
-
 //go:generate faux --interface BuildManager --output fakes/build_manager.go
 type BuildManager interface {
 	Resolve(workingDir, cacheDir string) (BuildProcess, error)
@@ -26,12 +21,13 @@ func Build(buildManager BuildManager, clock chronos.Clock, logger scribe.Logger)
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
-		nodeModulesLayer, err := context.Layers.Get(LayerNameNodeModules, packit.LaunchLayer)
+		planFlags := layerFlags(context.Plan.Entries)
+		nodeModulesLayer, err := context.Layers.Get(LayerNameNodeModules, planFlags...)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
 
-		nodeCacheLayer, err := context.Layers.Get(LayerNameCache, packit.CacheLayer)
+		nodeCacheLayer, err := context.Layers.Get(LayerNameCache, planFlags...)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
@@ -106,12 +102,28 @@ func Build(buildManager BuildManager, clock chronos.Clock, logger scribe.Logger)
 		return packit.BuildResult{
 			Plan:   context.Plan,
 			Layers: layers,
-			Processes: []packit.Process{
-				{
-					Type:    "web",
-					Command: "npm start",
-				},
-			},
 		}, nil
 	}
+}
+
+func layerFlags(entries []packit.BuildpackPlanEntry) []packit.LayerType {
+	var flags []packit.LayerType
+
+	for _, entry := range entries {
+		launch, ok := entry.Metadata["launch"].(bool)
+		if ok && launch {
+			flags = append(flags, packit.LaunchLayer)
+			flags = append(flags, packit.CacheLayer)
+		}
+	}
+
+	for _, entry := range entries {
+		build, ok := entry.Metadata["build"].(bool)
+		if ok && build {
+			flags = append(flags, packit.BuildLayer)
+			flags = append(flags, packit.CacheLayer)
+		}
+	}
+
+	return flags
 }

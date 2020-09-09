@@ -8,11 +8,6 @@ import (
 	"github.com/paketo-buildpacks/packit"
 )
 
-const (
-	PlanDependencyNodeModules = "node_modules"
-	PlanDependencyNode        = "node"
-)
-
 type BuildPlanMetadata struct {
 	Version       string `toml:"version"`
 	VersionSource string `toml:"version-source"`
@@ -37,10 +32,9 @@ func Detect(packageJSONParser VersionParser) packit.DetectFunc {
 		}
 
 		nodeDependency := packit.BuildPlanRequirement{
-			Name: PlanDependencyNode,
+			Name: Node,
 			Metadata: BuildPlanMetadata{
-				Build:  true,
-				Launch: true,
+				Build: true,
 			},
 		}
 
@@ -49,18 +43,22 @@ func Detect(packageJSONParser VersionParser) packit.DetectFunc {
 				Version:       version,
 				VersionSource: "package.json",
 				Build:         true,
-				Launch:        true,
 			}
 		}
 
 		return packit.DetectResult{
 			Plan: packit.BuildPlan{
 				Provides: []packit.BuildPlanProvision{
-					{Name: PlanDependencyNodeModules},
+					{Name: NodeModules},
 				},
 				Requires: []packit.BuildPlanRequirement{
-					{Name: PlanDependencyNodeModules},
 					nodeDependency,
+					{
+						Name: Npm,
+						Metadata: BuildPlanMetadata{
+							Build: true,
+						},
+					},
 				},
 			},
 		}, nil

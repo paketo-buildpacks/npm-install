@@ -55,7 +55,11 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 
 			var logs fmt.Stringer
 			image, logs, err = pack.Build.
-				WithBuildpacks(nodeCachedURI, npmCachedURI).
+				WithBuildpacks(
+					nodeOfflineURI,
+					buildpackOfflineURI,
+					buildPlanURI,
+				).
 				WithNoPull().
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)

@@ -1,18 +1,16 @@
 package integration_test
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/paketo-buildpacks/occam"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
-	. "github.com/paketo-buildpacks/occam/matchers"
 )
 
 func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
@@ -57,27 +55,24 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			image, _, err = pack.Build.
-				WithBuildpacks(nodeURI, npmURI).
+				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
 				WithNoPull().
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
-			container, err = docker.Container.Run.Execute(image.ID)
+			container, err = docker.Container.Run.
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/modules/node_modules && env", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+				Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(container).Should(BeAvailable())
-
-			response, err := http.Get(fmt.Sprintf("http://localhost:%s/env", container.HostPort()))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(response.StatusCode).To(Equal(http.StatusOK))
-
-			var env struct {
-				NpmConfigLoglevel   string `json:"NPM_CONFIG_LOGLEVEL"`
-				NpmConfigProduction string `json:"NPM_CONFIG_PRODUCTION"`
+			cLogs := func() string {
+				cLogs, err := docker.Container.Logs.Execute(container.ID)
+				Expect(err).NotTo(HaveOccurred())
+				return cLogs.String()
 			}
-			Expect(json.NewDecoder(response.Body).Decode(&env)).To(Succeed())
-			Expect(env.NpmConfigLoglevel).To(Equal("error"))
-			Expect(env.NpmConfigProduction).To(Equal("true"))
+			Eventually(cLogs).Should(ContainSubstring("leftpad"))
+			Eventually(cLogs).Should(ContainSubstring("NPM_CONFIG_LOGLEVEL=error"))
+			Eventually(cLogs).Should(ContainSubstring("NPM_CONFIG_PRODUCTION=true"))
 		})
 	})
 }
