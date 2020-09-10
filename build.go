@@ -99,6 +99,8 @@ func Build(buildManager BuildManager, clock chronos.Clock, logger scribe.Logger)
 			}
 		}
 
+		logger.Break()
+
 		return packit.BuildResult{
 			Plan:   context.Plan,
 			Layers: layers,
