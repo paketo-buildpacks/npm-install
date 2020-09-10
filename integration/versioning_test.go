@@ -61,11 +61,11 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 
 			image, _, err = pack.Build.
 				WithNoPull().
-				WithBuildpacks(nodeURI, npmURI).
+				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
 				Execute(name, source)
 			Expect(err).ToNot(HaveOccurred())
 
-			container, err = docker.Container.Run.Execute(image.ID)
+			container, err = docker.Container.Run.WithCommand("npm start").Execute(image.ID)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(container).Should(BeAvailable())
@@ -89,11 +89,11 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 
 			image, _, err = pack.Build.
 				WithNoPull().
-				WithBuildpacks(nodeURI, npmURI).
+				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
 				Execute(name, source)
 			Expect(err).ToNot(HaveOccurred())
 
-			container, err = docker.Container.Run.Execute(image.ID)
+			container, err = docker.Container.Run.WithCommand("npm start").Execute(image.ID)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(container).Should(BeAvailable())

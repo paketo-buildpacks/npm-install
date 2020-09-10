@@ -1,9 +1,9 @@
 api = "0.2"
 
 [buildpack]
-id = "paketo-buildpacks/npm"
-name = "Paketo NPM Buildpack"
-homepage = "https://github.com/paketo-buildpacks/npm"
+id = "paketo-buildpacks/npm-install"
+name = "Paketo NPM Install Buildpack"
+homepage = "https://github.com/paketo-buildpacks/npm-install"
 
 [metadata]
 include_files = [ "bin/build", "bin/detect", "bin/run", "buildpack.toml" ]

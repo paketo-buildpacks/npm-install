@@ -44,7 +44,11 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 
 			_, logs, err := pack.Build.
 				WithNoPull().
-				WithBuildpacks(nodeURI, npmURI).
+				WithBuildpacks(
+					nodeURI,
+					buildpackURI,
+					buildPlanURI,
+				).
 				Execute(name, source)
 			Expect(err).To(HaveOccurred())
 			Expect(logs).To(ContainSubstring("vendored node_modules have unmet dependencies"))
