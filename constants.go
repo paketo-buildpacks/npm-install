@@ -1,4 +1,4 @@
-package npm
+package npminstall
 
 const (
 	NodeModules = "node_modules"

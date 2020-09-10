@@ -1,4 +1,4 @@
-module github.com/paketo-buildpacks/npm
+module github.com/paketo-buildpacks/npm-install
 
 go 1.13
 

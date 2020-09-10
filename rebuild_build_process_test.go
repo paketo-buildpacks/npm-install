@@ -1,4 +1,4 @@
-package npm_test
+package npminstall_test
 
 import (
 	"bytes"
@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/paketo-buildpacks/npm"
-	"github.com/paketo-buildpacks/npm/fakes"
+	npminstall "github.com/paketo-buildpacks/npm-install"
+	"github.com/paketo-buildpacks/npm-install/fakes"
 	"github.com/paketo-buildpacks/packit/pexec"
 	"github.com/paketo-buildpacks/packit/scribe"
 	"github.com/sclevine/spec"
@@ -35,7 +35,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		buffer        *bytes.Buffer
 		commandOutput *bytes.Buffer
 
-		process npm.RebuildBuildProcess
+		process npminstall.RebuildBuildProcess
 	)
 
 	it.Before(func() {
@@ -65,7 +65,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		buffer = bytes.NewBuffer(nil)
 		commandOutput = bytes.NewBuffer(nil)
 
-		process = npm.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(buffer))
+		process = npminstall.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(buffer))
 	})
 
 	it.After(func() {

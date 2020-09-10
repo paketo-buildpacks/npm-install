@@ -1,4 +1,4 @@
-package npm_test
+package npminstall_test
 
 import (
 	"bytes"
@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/paketo-buildpacks/npm"
-	"github.com/paketo-buildpacks/npm/fakes"
+	npminstall "github.com/paketo-buildpacks/npm-install"
+	"github.com/paketo-buildpacks/npm-install/fakes"
 	"github.com/paketo-buildpacks/packit"
 	"github.com/paketo-buildpacks/packit/chronos"
 	"github.com/paketo-buildpacks/packit/scribe"
@@ -80,7 +80,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		build = npm.Build(buildManager, clock, logger)
+		build = npminstall.Build(buildManager, clock, logger)
 	})
 
 	it.After(func() {
@@ -107,10 +107,10 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			},
 			Layers: []packit.Layer{
 				{
-					Name: npm.LayerNameNodeModules,
-					Path: filepath.Join(layersDir, npm.LayerNameNodeModules),
+					Name: npminstall.LayerNameNodeModules,
+					Path: filepath.Join(layersDir, npminstall.LayerNameNodeModules),
 					SharedEnv: packit.Environment{
-						"PATH.append": filepath.Join(layersDir, npm.LayerNameNodeModules, "node_modules", ".bin"),
+						"PATH.append": filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules", ".bin"),
 						"PATH.delim":  string(os.PathListSeparator),
 					},
 					BuildEnv: packit.Environment{},
@@ -126,8 +126,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						"cache_sha": "some-sha",
 					},
 				}, {
-					Name:      npm.LayerNameCache,
-					Path:      filepath.Join(layersDir, npm.LayerNameCache),
+					Name:      npminstall.LayerNameCache,
+					Path:      filepath.Join(layersDir, npminstall.LayerNameCache),
 					SharedEnv: packit.Environment{},
 					BuildEnv:  packit.Environment{},
 					LaunchEnv: packit.Environment{},
@@ -140,8 +140,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 
-		Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npm.LayerNameNodeModules)))
-		Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npm.LayerNameCache)))
+		Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
+		Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 		Expect(processWorkingDir).To(Equal(workingDir))
 	})
 
@@ -177,10 +177,10 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 				Layers: []packit.Layer{
 					{
-						Name: npm.LayerNameNodeModules,
-						Path: filepath.Join(layersDir, npm.LayerNameNodeModules),
+						Name: npminstall.LayerNameNodeModules,
+						Path: filepath.Join(layersDir, npminstall.LayerNameNodeModules),
 						SharedEnv: packit.Environment{
-							"PATH.append": filepath.Join(layersDir, npm.LayerNameNodeModules, "node_modules", ".bin"),
+							"PATH.append": filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules", ".bin"),
 							"PATH.delim":  string(os.PathListSeparator),
 						},
 						BuildEnv: packit.Environment{},
@@ -196,8 +196,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 							"cache_sha": "some-sha",
 						},
 					}, {
-						Name:      npm.LayerNameCache,
-						Path:      filepath.Join(layersDir, npm.LayerNameCache),
+						Name:      npminstall.LayerNameCache,
+						Path:      filepath.Join(layersDir, npminstall.LayerNameCache),
 						SharedEnv: packit.Environment{},
 						BuildEnv:  packit.Environment{},
 						LaunchEnv: packit.Environment{},
@@ -210,8 +210,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 
-			Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npm.LayerNameNodeModules)))
-			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npm.LayerNameCache)))
+			Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
+			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 			Expect(processWorkingDir).To(Equal(workingDir))
 		})
 	})
@@ -241,8 +241,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 				Layers: []packit.Layer{
 					{
-						Name:      npm.LayerNameNodeModules,
-						Path:      filepath.Join(layersDir, npm.LayerNameNodeModules),
+						Name:      npminstall.LayerNameNodeModules,
+						Path:      filepath.Join(layersDir, npminstall.LayerNameNodeModules),
 						SharedEnv: packit.Environment{},
 						BuildEnv:  packit.Environment{},
 						LaunchEnv: packit.Environment{},
@@ -259,7 +259,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			link, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(link).To(Equal(filepath.Join(layersDir, npm.LayerNameNodeModules, "node_modules")))
+			Expect(link).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules")))
 		})
 
 		context("failure cases", func() {
@@ -299,7 +299,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				return nil
 			}
 
-			build = npm.Build(buildManager, clock, scribe.NewLogger(buffer))
+			build = npminstall.Build(buildManager, clock, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -315,11 +315,11 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Layers).To(Equal([]packit.Layer{
 				{
-					Name: npm.LayerNameNodeModules,
-					Path: filepath.Join(layersDir, npm.LayerNameNodeModules),
+					Name: npminstall.LayerNameNodeModules,
+					Path: filepath.Join(layersDir, npminstall.LayerNameNodeModules),
 
 					SharedEnv: packit.Environment{
-						"PATH.append": filepath.Join(layersDir, npm.LayerNameNodeModules, "node_modules", ".bin"),
+						"PATH.append": filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules", ".bin"),
 						"PATH.delim":  string(os.PathListSeparator),
 					},
 					BuildEnv: packit.Environment{},
@@ -343,7 +343,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		it.Before(func() {
 			buildProcess.RunCall.Stub = func(ld, cd, wd string) error { return nil }
 
-			build = npm.Build(buildManager, clock, scribe.NewLogger(buffer))
+			build = npminstall.Build(buildManager, clock, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -359,10 +359,10 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Layers).To(Equal([]packit.Layer{
 				{
-					Name: npm.LayerNameNodeModules,
-					Path: filepath.Join(layersDir, npm.LayerNameNodeModules),
+					Name: npminstall.LayerNameNodeModules,
+					Path: filepath.Join(layersDir, npminstall.LayerNameNodeModules),
 					SharedEnv: packit.Environment{
-						"PATH.append": filepath.Join(layersDir, npm.LayerNameNodeModules, "node_modules", ".bin"),
+						"PATH.append": filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules", ".bin"),
 						"PATH.delim":  string(os.PathListSeparator),
 					},
 					BuildEnv: packit.Environment{},
@@ -465,16 +465,16 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		context("when the node_modules layer cannot be reset", func() {
 			it.Before(func() {
-				Expect(os.Mkdir(filepath.Join(layersDir, npm.LayerNameNodeModules), os.ModePerm)).To(Succeed())
+				Expect(os.Mkdir(filepath.Join(layersDir, npminstall.LayerNameNodeModules), os.ModePerm)).To(Succeed())
 
-				_, err := os.OpenFile(filepath.Join(layersDir, npm.LayerNameNodeModules, "some-file"), os.O_CREATE, 0000)
+				_, err := os.OpenFile(filepath.Join(layersDir, npminstall.LayerNameNodeModules, "some-file"), os.O_CREATE, 0000)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(os.Chmod(filepath.Join(layersDir, npm.LayerNameNodeModules), 0000)).To(Succeed())
+				Expect(os.Chmod(filepath.Join(layersDir, npminstall.LayerNameNodeModules), 0000)).To(Succeed())
 			})
 
 			it.After(func() {
-				Expect(os.Chmod(filepath.Join(layersDir, npm.LayerNameNodeModules), os.ModePerm)).To(Succeed())
+				Expect(os.Chmod(filepath.Join(layersDir, npminstall.LayerNameNodeModules), os.ModePerm)).To(Succeed())
 			})
 
 			it("returns an error", func() {

@@ -1,4 +1,4 @@
-package npm_test
+package npminstall_test
 
 import (
 	"testing"
@@ -7,8 +7,8 @@ import (
 	"github.com/sclevine/spec/report"
 )
 
-func TestUnitNPM(t *testing.T) {
-	suite := spec.New("npm", spec.Report(report.Terminal{}))
+func TestUnitNPMInstall(t *testing.T) {
+	suite := spec.New("npm-install", spec.Report(report.Terminal{}))
 	suite("Build", testBuild)
 	suite("BuildProcessResolver", testBuildProcessResolver)
 	suite("CIBuildProcess", testCIBuildProcess)
