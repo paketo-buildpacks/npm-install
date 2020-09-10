@@ -104,6 +104,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				"    NPM_CONFIG_LOGLEVEL   -> \"error\"",
 				"    NPM_CONFIG_PRODUCTION -> \"true\"",
 				fmt.Sprintf("    PATH                  -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				"",
 			))
 		})
 
