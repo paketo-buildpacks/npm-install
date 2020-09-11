@@ -1,12 +1,12 @@
-package npm_test
+package npminstall_test
 
 import (
 	"errors"
 	"os"
 	"testing"
 
-	"github.com/paketo-buildpacks/npm"
-	"github.com/paketo-buildpacks/npm/fakes"
+	npminstall "github.com/paketo-buildpacks/npm-install"
+	"github.com/paketo-buildpacks/npm-install/fakes"
 	"github.com/paketo-buildpacks/packit"
 	"github.com/sclevine/spec"
 
@@ -25,7 +25,7 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		packageJSONParser = &fakes.VersionParser{}
 		packageJSONParser.ParseVersionCall.Returns.Version = "1.2.3"
 
-		detect = npm.Detect(packageJSONParser)
+		detect = npminstall.Detect(packageJSONParser)
 	})
 
 	it("returns a plan that provides node_modules", func() {
@@ -35,20 +35,20 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result.Plan).To(Equal(packit.BuildPlan{
 			Provides: []packit.BuildPlanProvision{
-				{Name: npm.NodeModules},
+				{Name: npminstall.NodeModules},
 			},
 			Requires: []packit.BuildPlanRequirement{
 				{
-					Name: npm.Node,
-					Metadata: npm.BuildPlanMetadata{
+					Name: npminstall.Node,
+					Metadata: npminstall.BuildPlanMetadata{
 						Version:       "1.2.3",
 						VersionSource: "package.json",
 						Build:         true,
 					},
 				},
 				{
-					Name: npm.Npm,
-					Metadata: npm.BuildPlanMetadata{
+					Name: npminstall.Npm,
+					Metadata: npminstall.BuildPlanMetadata{
 						Build: true,
 					},
 				},
@@ -70,18 +70,18 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Plan).To(Equal(packit.BuildPlan{
 				Provides: []packit.BuildPlanProvision{
-					{Name: npm.NodeModules},
+					{Name: npminstall.NodeModules},
 				},
 				Requires: []packit.BuildPlanRequirement{
 					{
-						Name: npm.Node,
-						Metadata: npm.BuildPlanMetadata{
+						Name: npminstall.Node,
+						Metadata: npminstall.BuildPlanMetadata{
 							Build: true,
 						},
 					},
 					{
-						Name: npm.Npm,
-						Metadata: npm.BuildPlanMetadata{
+						Name: npminstall.Npm,
+						Metadata: npminstall.BuildPlanMetadata{
 							Build: true,
 						},
 					},

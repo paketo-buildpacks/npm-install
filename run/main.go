@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/paketo-buildpacks/npm"
+	npminstall "github.com/paketo-buildpacks/npm-install"
 	"github.com/paketo-buildpacks/packit"
 	"github.com/paketo-buildpacks/packit/chronos"
 	"github.com/paketo-buildpacks/packit/fs"
@@ -12,14 +12,14 @@ import (
 )
 
 func main() {
-	packageJSONParser := npm.NewPackageJSONParser()
+	packageJSONParser := npminstall.NewPackageJSONParser()
 	executable := pexec.NewExecutable("npm")
 	logger := scribe.NewLogger(os.Stdout)
 	checksumCalculator := fs.NewChecksumCalculator()
-	resolver := npm.NewBuildProcessResolver(executable, checksumCalculator, logger)
+	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, logger)
 
 	packit.Run(
-		npm.Detect(packageJSONParser),
-		npm.Build(resolver, chronos.DefaultClock, logger),
+		npminstall.Detect(packageJSONParser),
+		npminstall.Build(resolver, chronos.DefaultClock, logger),
 	)
 }

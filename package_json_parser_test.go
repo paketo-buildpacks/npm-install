@@ -1,11 +1,11 @@
-package npm_test
+package npminstall_test
 
 import (
 	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/paketo-buildpacks/npm"
+	npminstall "github.com/paketo-buildpacks/npm-install"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
@@ -17,7 +17,7 @@ func testPackageJSONParser(t *testing.T, context spec.G, it spec.S) {
 	context("ParseVersion", func() {
 		var (
 			path   string
-			parser npm.PackageJSONParser
+			parser npminstall.PackageJSONParser
 		)
 
 		it.Before(func() {
@@ -34,7 +34,7 @@ func testPackageJSONParser(t *testing.T, context spec.G, it spec.S) {
 
 			path = file.Name()
 
-			parser = npm.NewPackageJSONParser()
+			parser = npminstall.NewPackageJSONParser()
 		})
 
 		it.After(func() {

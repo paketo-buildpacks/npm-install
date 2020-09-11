@@ -3,7 +3,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/paketo-buildpacks/npm"
+	npminstall "github.com/paketo-buildpacks/npm-install"
 )
 
 type BuildManager struct {
@@ -15,14 +15,14 @@ type BuildManager struct {
 			CacheDir   string
 		}
 		Returns struct {
-			BuildProcess npm.BuildProcess
+			BuildProcess npminstall.BuildProcess
 			Error        error
 		}
-		Stub func(string, string) (npm.BuildProcess, error)
+		Stub func(string, string) (npminstall.BuildProcess, error)
 	}
 }
 
-func (f *BuildManager) Resolve(param1 string, param2 string) (npm.BuildProcess, error) {
+func (f *BuildManager) Resolve(param1 string, param2 string) (npminstall.BuildProcess, error) {
 	f.ResolveCall.Lock()
 	defer f.ResolveCall.Unlock()
 	f.ResolveCall.CallCount++
