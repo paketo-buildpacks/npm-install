@@ -62,7 +62,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			)
 
 			image, logs, err = pack.Build.
-				WithNoPull().
+				WithPullPolicy("never").
 				WithBuildpacks(
 					nodeURI,
 					buildpackURI,
@@ -112,7 +112,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			it("does not reach out to the internet", func() {
 				var err error
 				image, _, err = pack.Build.
-					WithNoPull().
+					WithPullPolicy("never").
 					WithBuildpacks(
 						nodeOfflineURI,
 						buildpackOfflineURI,

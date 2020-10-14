@@ -63,7 +63,7 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 					buildpackURI,
 					buildPlanURI,
 				).
-				WithNoPull().
+				WithPullPolicy("never").
 				WithNetwork("none").
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
