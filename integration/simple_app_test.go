@@ -56,7 +56,7 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 
 			image, _, err = pack.Build.
 				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
-				WithNoPull().
+				WithPullPolicy("never").
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 

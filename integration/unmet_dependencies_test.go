@@ -43,7 +43,7 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			_, logs, err := pack.Build.
-				WithNoPull().
+				WithPullPolicy("never").
 				WithBuildpacks(
 					nodeURI,
 					buildpackURI,

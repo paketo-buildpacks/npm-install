@@ -59,7 +59,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "simple_app"))
 			Expect(err).NotTo(HaveOccurred())
 
-			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
+			build := pack.Build.WithPullPolicy("never").WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
 
 			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -104,7 +104,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "locked_app"))
 			Expect(err).NotTo(HaveOccurred())
 
-			build := pack.Build.WithNoPull().WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
+			build := pack.Build.WithPullPolicy("never").WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
 
 			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -171,7 +171,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "vendored"))
 			Expect(err).NotTo(HaveOccurred())
 
-			build := pack.WithNoColor().Build.WithNoPull().WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
+			build := pack.WithNoColor().Build.WithPullPolicy("never").WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
 
 			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)

@@ -60,7 +60,7 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 
 			image, _, err = pack.Build.
-				WithNoPull().
+				WithPullPolicy("never").
 				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
 				Execute(name, source)
 			Expect(err).ToNot(HaveOccurred())
@@ -88,7 +88,7 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 
 			image, _, err = pack.Build.
-				WithNoPull().
+				WithPullPolicy("never").
 				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
 				Execute(name, source)
 			Expect(err).ToNot(HaveOccurred())
