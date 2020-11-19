@@ -15,19 +15,26 @@ import (
 type CIBuildProcess struct {
 	executable Executable
 	summer     Summer
+	concat     Concat
 	logger     scribe.Logger
 }
 
-func NewCIBuildProcess(executable Executable, summer Summer, logger scribe.Logger) CIBuildProcess {
+func NewCIBuildProcess(executable Executable, summer Summer, concat Concat, logger scribe.Logger) CIBuildProcess {
 	return CIBuildProcess{
 		executable: executable,
 		summer:     summer,
+		concat:     concat,
 		logger:     logger,
 	}
 }
 
 func (r CIBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
-	sum, err := r.summer.Sum(filepath.Join(workingDir, "package-lock.json"))
+	concatFile, err := r.concat.Concat(filepath.Join(workingDir, "package.json"), filepath.Join(workingDir, "package-lock.json"))
+	if err != nil {
+		return false, "", err
+	}
+
+	sum, err := r.summer.Sum(concatFile)
 	if err != nil {
 		return false, "", err
 	}
@@ -35,6 +42,11 @@ func (r CIBuildProcess) ShouldRun(workingDir string, metadata map[string]interfa
 	cacheSha, ok := metadata["cache_sha"].(string)
 	if !ok || sum != cacheSha {
 		return true, sum, nil
+	}
+
+	err = os.Remove(concatFile)
+	if err != nil {
+		return false, "", fmt.Errorf("could not remove temp file: %w", err)
 	}
 
 	return false, "", nil
