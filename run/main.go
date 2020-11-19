@@ -16,7 +16,8 @@ func main() {
 	executable := pexec.NewExecutable("npm")
 	logger := scribe.NewLogger(os.Stdout)
 	checksumCalculator := fs.NewChecksumCalculator()
-	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, logger)
+	fileConcat := npminstall.NewFileConcat()
+	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, fileConcat, logger)
 
 	packit.Run(
 		npminstall.Detect(packageJSONParser),
