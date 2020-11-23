@@ -88,7 +88,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(run).To(BeFalse())
 				Expect(sha).To(BeEmpty())
 
-				Expect(summer.SumCall.Receives.Path).To(Equal(filepath.Join(workingDir, "node_modules")))
+				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "node_modules")}))
 			})
 		})
 
@@ -105,7 +105,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
 
-				Expect(summer.SumCall.Receives.Path).To(Equal(filepath.Join(workingDir, "node_modules")))
+				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "node_modules")}))
 			})
 		})
 
@@ -120,7 +120,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
 
-				Expect(summer.SumCall.Receives.Path).To(Equal(filepath.Join(workingDir, "node_modules")))
+				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "node_modules")}))
 			})
 		})
 

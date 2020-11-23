@@ -27,7 +27,6 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		workingDir    string
 		executable    *fakes.Executable
 		summer        *fakes.Summer
-		concat        *fakes.Concat
 		buffer        *bytes.Buffer
 		commandOutput *bytes.Buffer
 
@@ -47,12 +46,11 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 		executable = &fakes.Executable{}
 		summer = &fakes.Summer{}
-		concat = &fakes.Concat{}
 
 		buffer = bytes.NewBuffer(nil)
 		commandOutput = bytes.NewBuffer(nil)
 
-		process = npminstall.NewCIBuildProcess(executable, summer, concat, scribe.NewLogger(buffer))
+		process = npminstall.NewCIBuildProcess(executable, summer, scribe.NewLogger(buffer))
 	})
 
 	it.After(func() {
@@ -62,15 +60,6 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("ShouldRun", func() {
-		var tmpFilePath string
-
-		it.Before(func() {
-			tmpFile, err := ioutil.TempFile("", "")
-			Expect(err).NotTo(HaveOccurred())
-			tmpFilePath = tmpFile.Name()
-
-			concat.ConcatCall.Returns.String = tmpFilePath
-		})
 
 		context("when the checksum matches the layer metadata shasum", func() {
 			it.Before(func() {
@@ -83,11 +72,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(concat.ConcatCall.CallCount).To(Equal(1))
-				Expect(concat.ConcatCall.Receives.Files[0]).To(Equal(filepath.Join(workingDir, "package.json")))
-				Expect(concat.ConcatCall.Receives.Files[1]).To(Equal(filepath.Join(workingDir, "package-lock.json")))
-
-				Expect(summer.SumCall.Receives.Path).To(Equal(tmpFilePath))
+				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "package.json"), filepath.Join(workingDir, "package-lock.json")}))
 
 				Expect(run).To(BeFalse())
 				Expect(sha).To(BeEmpty())
@@ -105,12 +90,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(concat.ConcatCall.CallCount).To(Equal(1))
-				Expect(concat.ConcatCall.Receives.Files[0]).To(Equal(filepath.Join(workingDir, "package.json")))
-				Expect(concat.ConcatCall.Receives.Files[1]).To(Equal(filepath.Join(workingDir, "package-lock.json")))
-
-				Expect(summer.SumCall.Receives.Path).To(Equal(tmpFilePath))
-
+				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "package.json"), filepath.Join(workingDir, "package-lock.json")}))
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
 			})
@@ -125,11 +105,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				run, sha, err := process.ShouldRun(workingDir, nil)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(concat.ConcatCall.CallCount).To(Equal(1))
-				Expect(concat.ConcatCall.Receives.Files[0]).To(Equal(filepath.Join(workingDir, "package.json")))
-				Expect(concat.ConcatCall.Receives.Files[1]).To(Equal(filepath.Join(workingDir, "package-lock.json")))
-
-				Expect(summer.SumCall.Receives.Path).To(Equal(tmpFilePath))
+				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "package.json"), filepath.Join(workingDir, "package-lock.json")}))
 
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
@@ -148,27 +124,6 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 			})
 
-			context("when the there is an error in the concat process", func() {
-				it.Before(func() {
-					concat.ConcatCall.Returns.Error = errors.New("concat error")
-				})
-
-				it("returns an error", func() {
-					_, _, err := process.ShouldRun(workingDir, nil)
-					Expect(err).To(MatchError("concat error"))
-				})
-			})
-
-			// context("when the temp file created by concat can not be removed", func() {
-			// 	it.Before(func() {
-			// 		Expect(os.Chmod(tmpFilePath, 0000)).To(Succeed())
-			// 	})
-			// 	it.Focus("returns an error", func() {
-			// 		_, _, err := process.ShouldRun(workingDir, nil)
-			// 		Expect(err).To(HaveOccurred())
-			// 		Expect(err.Error()).To(ContainSubstring("could not remove temp file: "))
-			// 	})
-			// })
 		})
 	})
 

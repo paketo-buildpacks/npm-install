@@ -23,26 +23,19 @@ type BuildProcess interface {
 
 //go:generate faux --interface Summer --output fakes/summer.go
 type Summer interface {
-	Sum(path string) (string, error)
-}
-
-//go:generate faux --interface Concat --output fakes/concat.go
-type Concat interface {
-	Concat(files ...string) (string, error)
+	Sum(paths ...string) (string, error)
 }
 
 type BuildProcessResolver struct {
 	executable Executable
 	summer     Summer
-	concat     Concat
 	logger     scribe.Logger
 }
 
-func NewBuildProcessResolver(executable Executable, summer Summer, concat Concat, logger scribe.Logger) BuildProcessResolver {
+func NewBuildProcessResolver(executable Executable, summer Summer, logger scribe.Logger) BuildProcessResolver {
 	return BuildProcessResolver{
 		executable: executable,
 		summer:     summer,
-		concat:     concat,
 		logger:     logger,
 	}
 }
@@ -102,7 +95,7 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 	default:
 		r.logger.Subprocess("Selected NPM build process: 'npm ci'")
 		r.logger.Break()
-		return NewCIBuildProcess(r.executable, r.summer, r.concat, scribe.NewLogger(os.Stdout)), nil
+		return NewCIBuildProcess(r.executable, r.summer, scribe.NewLogger(os.Stdout)), nil
 	}
 }
 

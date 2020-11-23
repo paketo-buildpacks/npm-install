@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -91,8 +92,13 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
+			imageIDs[firstImage.ID] = struct{}{}
+
 			container, err := docker.Container.Run.WithCommand("npm start").Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
+
+			containerIDs[container.ID] = struct{}{}
+
 			Eventually(container).Should(BeAvailable())
 
 			// manipulate package.json
@@ -108,6 +114,20 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 
 			_, logs, err = build.Execute(name, source)
 			Expect(err).To(HaveOccurred(), logs.String)
+
+			Expect(logs).To(ContainLines(
+				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+				"  Resolving installation process",
+				"    Process inputs:",
+				"      node_modules      -> \"Not found\"",
+				"      npm-cache         -> \"Not found\"",
+				"      package-lock.json -> \"Found\"",
+				"",
+				"    Selected NPM build process: 'npm ci'",
+				"",
+				"  Executing build process",
+				fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+			))
 
 			Expect(logs).To(ContainSubstring(
 				"Please update your lock file with `npm install` before continuing",
