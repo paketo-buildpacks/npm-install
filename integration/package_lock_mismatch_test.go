@@ -94,7 +94,11 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 
 			imageIDs[firstImage.ID] = struct{}{}
 
-			container, err := docker.Container.Run.WithCommand("npm start").Execute(firstImage.ID)
+			container, err := docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}

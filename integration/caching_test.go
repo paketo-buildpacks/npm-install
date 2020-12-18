@@ -70,7 +70,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err := docker.Container.Run.WithCommand("npm start").Execute(firstImage.ID)
+			container, err := docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -86,7 +90,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err = docker.Container.Run.WithCommand("npm start").Execute(secondImage.ID)
+			container, err = docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(secondImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -136,7 +144,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				"",
 			))
 
-			container, err := docker.Container.Run.WithCommand("npm start").Execute(firstImage.ID)
+			container, err := docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -152,7 +164,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err = docker.Container.Run.WithCommand("npm start").Execute(secondImage.ID)
+			container, err = docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(secondImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -182,7 +198,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err := docker.Container.Run.WithCommand("npm start").Execute(firstImage.ID)
+			container, err := docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(firstImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}
@@ -198,7 +218,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
 			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
 
-			container, err = docker.Container.Run.WithCommand("npm start").Execute(secondImage.ID)
+			container, err = docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(secondImage.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			containerIDs[container.ID] = struct{}{}

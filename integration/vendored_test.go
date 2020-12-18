@@ -71,12 +71,16 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
-			container, err = docker.Container.Run.WithCommand("npm start").Execute(image.ID)
+			container, err = docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(container).Should(BeAvailable())
 
-			response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort()))
+			response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort("8080")))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response.StatusCode).To(Equal(http.StatusOK))
 
@@ -122,12 +126,16 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 					Execute(name, source)
 				Expect(err).NotTo(HaveOccurred())
 
-				container, err = docker.Container.Run.WithCommand("npm start").Execute(image.ID)
+				container, err = docker.Container.Run.
+					WithCommand("npm start").
+					WithEnv(map[string]string{"PORT": "8080"}).
+					WithPublish("8080").
+					Execute(image.ID)
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(container).Should(BeAvailable())
 
-				response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort()))
+				response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort("8080")))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response.StatusCode).To(Equal(http.StatusOK))
 			})
