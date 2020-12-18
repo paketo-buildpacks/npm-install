@@ -21,16 +21,17 @@ func Build(buildManager BuildManager, clock chronos.Clock, logger scribe.Logger)
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
-		planFlags := layerFlags(context.Plan.Entries)
-		nodeModulesLayer, err := context.Layers.Get(LayerNameNodeModules, planFlags...)
+		nodeModulesLayer, err := context.Layers.Get(LayerNameNodeModules)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
+		nodeModulesLayer = setLayerFlags(nodeModulesLayer, context.Plan.Entries)
 
-		nodeCacheLayer, err := context.Layers.Get(LayerNameCache, planFlags...)
+		nodeCacheLayer, err := context.Layers.Get(LayerNameCache)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
+		nodeCacheLayer = setLayerFlags(nodeCacheLayer, context.Plan.Entries)
 
 		logger.Process("Resolving installation process")
 
@@ -47,9 +48,11 @@ func Build(buildManager BuildManager, clock chronos.Clock, logger scribe.Logger)
 		if run {
 			logger.Process("Executing build process")
 
-			if err = nodeModulesLayer.Reset(); err != nil {
+			nodeModulesLayer, err = nodeModulesLayer.Reset()
+			if err != nil {
 				return packit.BuildResult{}, err
 			}
+			nodeModulesLayer = setLayerFlags(nodeModulesLayer, context.Plan.Entries)
 
 			duration, err := clock.Measure(func() error {
 				return process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, context.WorkingDir)
@@ -108,24 +111,21 @@ func Build(buildManager BuildManager, clock chronos.Clock, logger scribe.Logger)
 	}
 }
 
-func layerFlags(entries []packit.BuildpackPlanEntry) []packit.LayerType {
-	var flags []packit.LayerType
-
+func setLayerFlags(layer packit.Layer, entries []packit.BuildpackPlanEntry) packit.Layer {
 	for _, entry := range entries {
 		launch, ok := entry.Metadata["launch"].(bool)
 		if ok && launch {
-			flags = append(flags, packit.LaunchLayer)
-			flags = append(flags, packit.CacheLayer)
+			layer.Launch = entry.Metadata["launch"] == true
+			layer.Cache = entry.Metadata["launch"] == true
 		}
 	}
 
 	for _, entry := range entries {
 		build, ok := entry.Metadata["build"].(bool)
 		if ok && build {
-			flags = append(flags, packit.BuildLayer)
-			flags = append(flags, packit.CacheLayer)
+			layer.Build = entry.Metadata["build"] == true
+			layer.Cache = entry.Metadata["build"] == true
 		}
 	}
-
-	return flags
+	return layer
 }
