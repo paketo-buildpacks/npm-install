@@ -115,17 +115,16 @@ func setLayerFlags(layer packit.Layer, entries []packit.BuildpackPlanEntry) pack
 	for _, entry := range entries {
 		launch, ok := entry.Metadata["launch"].(bool)
 		if ok && launch {
-			layer.Launch = entry.Metadata["launch"] == true
-			layer.Cache = entry.Metadata["launch"] == true
+			layer.Launch = true
+			layer.Cache = true
+		}
+
+		build, ok := entry.Metadata["build"].(bool)
+		if ok && build {
+			layer.Build = true
+			layer.Cache = true
 		}
 	}
 
-	for _, entry := range entries {
-		build, ok := entry.Metadata["build"].(bool)
-		if ok && build {
-			layer.Build = entry.Metadata["build"] == true
-			layer.Cache = entry.Metadata["build"] == true
-		}
-	}
 	return layer
 }
