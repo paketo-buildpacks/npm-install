@@ -13,6 +13,7 @@ func TestUnitNPMInstall(t *testing.T) {
 	suite("BuildProcessResolver", testBuildProcessResolver)
 	suite("CIBuildProcess", testCIBuildProcess)
 	suite("Detect", testDetect)
+	suite("Environment", testEnvironment)
 	suite("InstallBuildProcess", testInstallBuildProcess)
 	suite("PackageJSONParser", testPackageJSONParser)
 	suite("RebuildBuildProcess", testRebuildBuildProcess)

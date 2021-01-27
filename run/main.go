@@ -16,10 +16,15 @@ func main() {
 	executable := pexec.NewExecutable("npm")
 	logger := scribe.NewLogger(os.Stdout)
 	checksumCalculator := fs.NewChecksumCalculator()
-	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, logger)
+	environment := npminstall.NewEnvironment(logger)
+	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, environment, logger)
 
 	packit.Run(
 		npminstall.Detect(packageJSONParser),
-		npminstall.Build(resolver, chronos.DefaultClock, logger),
+		npminstall.Build(
+			resolver,
+			chronos.DefaultClock,
+			environment,
+			logger),
 	)
 }

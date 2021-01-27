@@ -13,16 +13,18 @@ import (
 )
 
 type CIBuildProcess struct {
-	executable Executable
-	summer     Summer
-	logger     scribe.Logger
+	executable  Executable
+	summer      Summer
+	environment EnvironmentConfig
+	logger      scribe.Logger
 }
 
-func NewCIBuildProcess(executable Executable, summer Summer, logger scribe.Logger) CIBuildProcess {
+func NewCIBuildProcess(executable Executable, summer Summer, environment EnvironmentConfig, logger scribe.Logger) CIBuildProcess {
 	return CIBuildProcess{
-		executable: executable,
-		summer:     summer,
-		logger:     logger,
+		executable:  executable,
+		summer:      summer,
+		environment: environment,
+		logger:      logger,
 	}
 }
 
@@ -65,7 +67,10 @@ func (r CIBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
 		Dir:    workingDir,
 		Stdout: buffer,
 		Stderr: buffer,
-		Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
+		Env: append(
+			os.Environ(),
+			fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")),
+		),
 	})
 	if err != nil {
 		r.logger.Subprocess("%s", buffer.String())

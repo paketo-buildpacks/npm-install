@@ -72,7 +72,6 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			}
 			Eventually(cLogs).Should(ContainSubstring("leftpad"))
 			Eventually(cLogs).Should(ContainSubstring("NPM_CONFIG_LOGLEVEL=error"))
-			Eventually(cLogs).Should(ContainSubstring("NPM_CONFIG_PRODUCTION=true"))
 		})
 	})
 }
