@@ -26,6 +26,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		cacheDir      string
 		workingDir    string
 		executable    *fakes.Executable
+		environment   *fakes.EnvironmentConfig
 		buffer        *bytes.Buffer
 		commandOutput *bytes.Buffer
 
@@ -44,11 +45,14 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 
 		executable = &fakes.Executable{}
+		environment = &fakes.EnvironmentConfig{}
+
+		environment.GetValueCall.Returns.String = "some-val"
 
 		buffer = bytes.NewBuffer(nil)
 		commandOutput = bytes.NewBuffer(nil)
 
-		process = npminstall.NewInstallBuildProcess(executable, scribe.NewLogger(buffer))
+		process = npminstall.NewInstallBuildProcess(executable, environment, scribe.NewLogger(buffer))
 	})
 
 	it.After(func() {
@@ -74,7 +78,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Dir:    workingDir,
 				Stdout: commandOutput,
 				Stderr: commandOutput,
-				Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
+				Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val"),
 			}))
 
 			path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))

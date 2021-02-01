@@ -27,6 +27,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		workingDir    string
 		executable    *fakes.Executable
 		summer        *fakes.Summer
+		environment   *fakes.EnvironmentConfig
 		buffer        *bytes.Buffer
 		commandOutput *bytes.Buffer
 
@@ -46,11 +47,14 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 		executable = &fakes.Executable{}
 		summer = &fakes.Summer{}
+		environment = &fakes.EnvironmentConfig{}
+
+		environment.GetValueCall.Returns.String = "some-val"
 
 		buffer = bytes.NewBuffer(nil)
 		commandOutput = bytes.NewBuffer(nil)
 
-		process = npminstall.NewCIBuildProcess(executable, summer, scribe.NewLogger(buffer))
+		process = npminstall.NewCIBuildProcess(executable, summer, environment, scribe.NewLogger(buffer))
 	})
 
 	it.After(func() {
@@ -136,7 +140,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Dir:    workingDir,
 				Stdout: commandOutput,
 				Stderr: commandOutput,
-				Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
+				Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val"),
 			}))
 
 			path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))

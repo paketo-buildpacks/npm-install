@@ -1,7 +1,6 @@
 package npminstall
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,7 +16,13 @@ type BuildManager interface {
 	Resolve(workingDir, cacheDir string) (BuildProcess, error)
 }
 
-func Build(buildManager BuildManager, clock chronos.Clock, logger scribe.Logger) packit.BuildFunc {
+//go:generate faux --interface EnvironmentConfig --output fakes/environment_config.go
+type EnvironmentConfig interface {
+	Configure(layer packit.Layer) error
+	GetValue(key string) string
+}
+
+func Build(buildManager BuildManager, clock chronos.Clock, environment EnvironmentConfig, logger scribe.Logger) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
@@ -69,18 +74,10 @@ func Build(buildManager BuildManager, clock chronos.Clock, logger scribe.Logger)
 				"cache_sha": sha,
 			}
 
-			nodeModulesLayer.LaunchEnv.Override("NPM_CONFIG_LOGLEVEL", "error")
-			nodeModulesLayer.LaunchEnv.Override("NPM_CONFIG_PRODUCTION", "true")
-
-			path := filepath.Join(nodeModulesLayer.Path, "node_modules", ".bin")
-			nodeModulesLayer.SharedEnv.Append("PATH", path, string(os.PathListSeparator))
-
-			logger.Process("Configuring environment")
-			logger.Subprocess("%s", scribe.FormattedMap{
-				"NPM_CONFIG_LOGLEVEL":   "error",
-				"NPM_CONFIG_PRODUCTION": "true",
-				"PATH":                  fmt.Sprintf("$PATH:%s", path),
-			})
+			err = environment.Configure(nodeModulesLayer)
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
 		} else {
 			logger.Process("Reusing cached layer %s", nodeModulesLayer.Path)
 			err := os.RemoveAll(filepath.Join(context.WorkingDir, "node_modules"))

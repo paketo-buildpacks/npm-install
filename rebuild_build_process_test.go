@@ -29,8 +29,9 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		cacheDir   string
 		workingDir string
 
-		executable *fakes.Executable
-		summer     *fakes.Summer
+		executable  *fakes.Executable
+		summer      *fakes.Summer
+		environment *fakes.EnvironmentConfig
 
 		buffer        *bytes.Buffer
 		commandOutput *bytes.Buffer
@@ -61,11 +62,14 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		}
 
 		summer = &fakes.Summer{}
+		environment = &fakes.EnvironmentConfig{}
+
+		environment.GetValueCall.Returns.String = "some-val"
 
 		buffer = bytes.NewBuffer(nil)
 		commandOutput = bytes.NewBuffer(nil)
 
-		process = npminstall.NewRebuildBuildProcess(executable, summer, scribe.NewLogger(buffer))
+		process = npminstall.NewRebuildBuildProcess(executable, summer, environment, scribe.NewLogger(buffer))
 	})
 
 	it.After(func() {
@@ -159,7 +163,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				{
 					Args:   []string{"rebuild", "--nodedir="},
 					Dir:    workingDir,
-					Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
+					Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val"),
 					Stdout: commandOutput,
 					Stderr: commandOutput,
 				},
@@ -197,7 +201,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 					{
 						Args:   []string{"rebuild", "--nodedir="},
 						Dir:    workingDir,
-						Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
+						Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val"),
 						Stdout: commandOutput,
 						Stderr: commandOutput,
 					},

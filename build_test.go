@@ -34,6 +34,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		buildProcess *fakes.BuildProcess
 		buildManager *fakes.BuildManager
+		environment  *fakes.EnvironmentConfig
 		clock        chronos.Clock
 		build        packit.BuildFunc
 
@@ -77,10 +78,12 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buildManager = &fakes.BuildManager{}
 		buildManager.ResolveCall.Returns.BuildProcess = buildProcess
 
+		environment = &fakes.EnvironmentConfig{}
+
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		build = npminstall.Build(buildManager, clock, logger)
+		build = npminstall.Build(buildManager, clock, environment, logger)
 	})
 
 	it.After(func() {
@@ -107,20 +110,14 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			},
 			Layers: []packit.Layer{
 				{
-					Name: npminstall.LayerNameNodeModules,
-					Path: filepath.Join(layersDir, npminstall.LayerNameNodeModules),
-					SharedEnv: packit.Environment{
-						"PATH.append": filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules", ".bin"),
-						"PATH.delim":  string(os.PathListSeparator),
-					},
-					BuildEnv: packit.Environment{},
-					LaunchEnv: packit.Environment{
-						"NPM_CONFIG_LOGLEVEL.override":   "error",
-						"NPM_CONFIG_PRODUCTION.override": "true",
-					},
-					Build:  false,
-					Launch: false,
-					Cache:  false,
+					Name:      npminstall.LayerNameNodeModules,
+					Path:      filepath.Join(layersDir, npminstall.LayerNameNodeModules),
+					SharedEnv: packit.Environment{},
+					BuildEnv:  packit.Environment{},
+					LaunchEnv: packit.Environment{},
+					Build:     false,
+					Launch:    false,
+					Cache:     false,
 					Metadata: map[string]interface{}{
 						"built_at":  timestamp,
 						"cache_sha": "some-sha",
@@ -139,6 +136,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		}))
 
 		Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
+		Expect(environment.ConfigureCall.CallCount).To(Equal(1))
+		Expect(environment.ConfigureCall.Receives.Layer.Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
 
 		Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
 		Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
@@ -177,20 +176,14 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 				Layers: []packit.Layer{
 					{
-						Name: npminstall.LayerNameNodeModules,
-						Path: filepath.Join(layersDir, npminstall.LayerNameNodeModules),
-						SharedEnv: packit.Environment{
-							"PATH.append": filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules", ".bin"),
-							"PATH.delim":  string(os.PathListSeparator),
-						},
-						BuildEnv: packit.Environment{},
-						LaunchEnv: packit.Environment{
-							"NPM_CONFIG_LOGLEVEL.override":   "error",
-							"NPM_CONFIG_PRODUCTION.override": "true",
-						},
-						Build:  true,
-						Launch: true,
-						Cache:  true,
+						Name:      npminstall.LayerNameNodeModules,
+						Path:      filepath.Join(layersDir, npminstall.LayerNameNodeModules),
+						SharedEnv: packit.Environment{},
+						BuildEnv:  packit.Environment{},
+						LaunchEnv: packit.Environment{},
+						Build:     true,
+						Launch:    true,
+						Cache:     true,
 						Metadata: map[string]interface{}{
 							"built_at":  timestamp,
 							"cache_sha": "some-sha",
@@ -299,7 +292,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				return nil
 			}
 
-			build = npminstall.Build(buildManager, clock, scribe.NewLogger(buffer))
+			build = npminstall.Build(buildManager, clock, environment, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -318,18 +311,12 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					Name: npminstall.LayerNameNodeModules,
 					Path: filepath.Join(layersDir, npminstall.LayerNameNodeModules),
 
-					SharedEnv: packit.Environment{
-						"PATH.append": filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules", ".bin"),
-						"PATH.delim":  string(os.PathListSeparator),
-					},
-					BuildEnv: packit.Environment{},
-					LaunchEnv: packit.Environment{
-						"NPM_CONFIG_LOGLEVEL.override":   "error",
-						"NPM_CONFIG_PRODUCTION.override": "true",
-					},
-					Build:  false,
-					Launch: false,
-					Cache:  false,
+					SharedEnv: packit.Environment{},
+					BuildEnv:  packit.Environment{},
+					LaunchEnv: packit.Environment{},
+					Build:     false,
+					Launch:    false,
+					Cache:     false,
 					Metadata: map[string]interface{}{
 						"built_at":  timestamp,
 						"cache_sha": "some-sha",
@@ -343,7 +330,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		it.Before(func() {
 			buildProcess.RunCall.Stub = func(ld, cd, wd string) error { return nil }
 
-			build = npminstall.Build(buildManager, clock, scribe.NewLogger(buffer))
+			build = npminstall.Build(buildManager, clock, environment, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -359,20 +346,14 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Layers).To(Equal([]packit.Layer{
 				{
-					Name: npminstall.LayerNameNodeModules,
-					Path: filepath.Join(layersDir, npminstall.LayerNameNodeModules),
-					SharedEnv: packit.Environment{
-						"PATH.append": filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules", ".bin"),
-						"PATH.delim":  string(os.PathListSeparator),
-					},
-					BuildEnv: packit.Environment{},
-					LaunchEnv: packit.Environment{
-						"NPM_CONFIG_LOGLEVEL.override":   "error",
-						"NPM_CONFIG_PRODUCTION.override": "true",
-					},
-					Build:  false,
-					Launch: false,
-					Cache:  false,
+					Name:      npminstall.LayerNameNodeModules,
+					Path:      filepath.Join(layersDir, npminstall.LayerNameNodeModules),
+					SharedEnv: packit.Environment{},
+					BuildEnv:  packit.Environment{},
+					LaunchEnv: packit.Environment{},
+					Build:     false,
+					Launch:    false,
+					Cache:     false,
 					Metadata: map[string]interface{}{
 						"built_at":  timestamp,
 						"cache_sha": "some-sha",

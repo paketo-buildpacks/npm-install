@@ -11,16 +11,18 @@ import (
 	"github.com/paketo-buildpacks/packit/scribe"
 )
 
-func NewInstallBuildProcess(executable Executable, logger scribe.Logger) InstallBuildProcess {
+func NewInstallBuildProcess(executable Executable, environment EnvironmentConfig, logger scribe.Logger) InstallBuildProcess {
 	return InstallBuildProcess{
-		executable: executable,
-		logger:     logger,
+		executable:  executable,
+		environment: environment,
+		logger:      logger,
 	}
 }
 
 type InstallBuildProcess struct {
-	executable Executable
-	logger     scribe.Logger
+	executable  Executable
+	environment EnvironmentConfig
+	logger      scribe.Logger
 }
 
 func (r InstallBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
@@ -47,7 +49,10 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		Dir:    workingDir,
 		Stdout: buffer,
 		Stderr: buffer,
-		Env:    append(os.Environ(), "NPM_CONFIG_PRODUCTION=true", "NPM_CONFIG_LOGLEVEL=error"),
+		Env: append(
+			os.Environ(),
+			fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")),
+		),
 	})
 	if err != nil {
 		r.logger.Subprocess("%s", buffer.String())
