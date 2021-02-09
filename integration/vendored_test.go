@@ -104,8 +104,10 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				"    Running 'npm run-script postinstall --if-present'",
 				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
 				"",
-				"  Configuring environment",
+				"  Configuring launch environment",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
+				"",
+				"  Configuring environment shared by build and launch",
 				fmt.Sprintf("    PATH -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				"",
 			))

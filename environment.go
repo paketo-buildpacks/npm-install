@@ -23,16 +23,19 @@ func NewEnvironment(logger scribe.Logger) Environment {
 }
 
 func (e Environment) Configure(layer packit.Layer) error {
-	for envvar := range e.defaultValues {
-		layer.LaunchEnv.Default(envvar, e.GetValue(envvar))
+	for envvar, val := range e.defaultValues {
+		layer.LaunchEnv.Default(envvar, val)
 	}
 
 	path := filepath.Join(layer.Path, "node_modules", ".bin")
 	layer.SharedEnv.Append("PATH", path, string(os.PathListSeparator))
 
-	e.logger.Process("Configuring environment")
+	e.logger.Process("Configuring launch environment")
 	e.logger.Subprocess("%s", scribe.NewFormattedMapFromEnvironment(layer.LaunchEnv))
+	e.logger.Break()
+	e.logger.Process("Configuring environment shared by build and launch")
 	e.logger.Subprocess("%s", scribe.NewFormattedMapFromEnvironment(layer.SharedEnv))
+	e.logger.Break()
 
 	return nil
 }

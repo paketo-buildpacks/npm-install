@@ -77,8 +77,10 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
 				"",
-				"  Configuring environment",
+				"  Configuring launch environment",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
+				"",
+				"  Configuring environment shared by build and launch",
 				fmt.Sprintf("    PATH -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				"",
 			))

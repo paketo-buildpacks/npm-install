@@ -2,6 +2,7 @@ package npminstall_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -57,6 +58,12 @@ func testEnvironment(t *testing.T, context spec.G, it spec.S) {
 				"PATH.append": filepath.Join(layer.Path, "node_modules", ".bin"),
 				"PATH.delim":  string(os.PathListSeparator),
 			}))
+
+			Expect(buffer.String()).To(ContainSubstring("  Configuring launch environment"))
+			Expect(buffer.String()).To(ContainSubstring("    NPM_CONFIG_LOGLEVEL -> \"error\""))
+			Expect(buffer.String()).To(ContainSubstring("  Configuring environment shared by build and launch"))
+			Expect(buffer.String()).To(ContainSubstring(fmt.Sprintf("    PATH -> \"$PATH:%s\"",
+				filepath.Join(layer.Path, "node_modules", ".bin"))))
 		})
 
 		context("when NPM_CONFIG_LOGLEVEL is set", func() {
@@ -68,12 +75,12 @@ func testEnvironment(t *testing.T, context spec.G, it spec.S) {
 				os.Unsetenv("NPM_CONFIG_LOGLEVEL")
 			})
 
-			it("configures variables using given value", func() {
+			it("does not influence the launch time env value", func() {
 				err := environment.Configure(layer)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(layer.LaunchEnv).To(Equal(packit.Environment{
-					"NPM_CONFIG_LOGLEVEL.default": "some-val",
+					"NPM_CONFIG_LOGLEVEL.default": "error",
 				}))
 			})
 		})
