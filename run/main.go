@@ -23,6 +23,7 @@ func main() {
 	packit.Run(
 		npminstall.Detect(projectPathParser, packageJSONParser),
 		npminstall.Build(
+			projectPathParser,
 			resolver,
 			chronos.DefaultClock,
 			environment,

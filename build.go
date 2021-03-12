@@ -22,7 +22,7 @@ type EnvironmentConfig interface {
 	GetValue(key string) string
 }
 
-func Build(buildManager BuildManager, clock chronos.Clock, environment EnvironmentConfig, logger scribe.Logger) packit.BuildFunc {
+func Build(projectPathParser PathParser, buildManager BuildManager, clock chronos.Clock, environment EnvironmentConfig, logger scribe.Logger) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
@@ -40,12 +40,19 @@ func Build(buildManager BuildManager, clock chronos.Clock, environment Environme
 
 		logger.Process("Resolving installation process")
 
-		process, err := buildManager.Resolve(context.WorkingDir, nodeCacheLayer.Path)
+		projectPath, err := projectPathParser.Get(context.WorkingDir)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
 
-		run, sha, err := process.ShouldRun(context.WorkingDir, nodeModulesLayer.Metadata)
+		projectPath = filepath.Join(context.WorkingDir, projectPath)
+
+		process, err := buildManager.Resolve(projectPath, nodeCacheLayer.Path)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+
+		run, sha, err := process.ShouldRun(projectPath, nodeModulesLayer.Metadata)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
@@ -60,7 +67,7 @@ func Build(buildManager BuildManager, clock chronos.Clock, environment Environme
 			nodeModulesLayer = setLayerFlags(nodeModulesLayer, context.Plan.Entries)
 
 			duration, err := clock.Measure(func() error {
-				return process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, context.WorkingDir)
+				return process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, projectPath)
 			})
 			if err != nil {
 				return packit.BuildResult{}, err
@@ -80,12 +87,12 @@ func Build(buildManager BuildManager, clock chronos.Clock, environment Environme
 			}
 		} else {
 			logger.Process("Reusing cached layer %s", nodeModulesLayer.Path)
-			err := os.RemoveAll(filepath.Join(context.WorkingDir, "node_modules"))
+			err := os.RemoveAll(filepath.Join(projectPath, "node_modules"))
 			if err != nil {
 				return packit.BuildResult{}, err
 			}
 
-			err = os.Symlink(filepath.Join(nodeModulesLayer.Path, "node_modules"), filepath.Join(context.WorkingDir, "node_modules"))
+			err = os.Symlink(filepath.Join(nodeModulesLayer.Path, "node_modules"), filepath.Join(projectPath, "node_modules"))
 			if err != nil {
 				return packit.BuildResult{}, err
 			}
