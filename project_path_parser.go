@@ -16,9 +16,8 @@ func NewProjectPathParser() ProjectPathParser {
 	return ProjectPathParser{}
 }
 
-// Get will resolve the absolute path of the directory specified by the
-// $BP_NODE_PROJECT_PATH environment variable. It assumes that
-// $BP_NODE_PROJECT_PATH is relative to the provided path argument.
+// Get will resolve the $BP_NODE_PROJECT_PATH environment variable. It
+// validates that $BP_NODE_PROJECT_PATH is valid relative to the provided path.
 func (p ProjectPathParser) Get(path string) (string, error) {
 	customProjPath := os.Getenv("BP_NODE_PROJECT_PATH")
 	if customProjPath == "" {
