@@ -20,9 +20,20 @@ type VersionParser interface {
 	ParseVersion(path string) (version string, err error)
 }
 
-func Detect(packageJSONParser VersionParser) packit.DetectFunc {
+//go:generate faux --interface PathParser --output fakes/path_parser.go
+type PathParser interface {
+	Get(path string) (projectPath string, err error)
+}
+
+func Detect(projectPathParser PathParser, packageJSONParser VersionParser) packit.DetectFunc {
 	return func(context packit.DetectContext) (packit.DetectResult, error) {
-		version, err := packageJSONParser.ParseVersion(filepath.Join(context.WorkingDir, "package.json"))
+
+		projectPath, err := projectPathParser.Get(context.WorkingDir)
+		if err != nil {
+			return packit.DetectResult{}, err
+		}
+
+		version, err := packageJSONParser.ParseVersion(filepath.Join(context.WorkingDir, projectPath, "package.json"))
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return packit.DetectResult{}, packit.Fail

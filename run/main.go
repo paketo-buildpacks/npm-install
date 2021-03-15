@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	projectPathParser := npminstall.NewProjectPathParser()
 	packageJSONParser := npminstall.NewPackageJSONParser()
 	executable := pexec.NewExecutable("npm")
 	logger := scribe.NewLogger(os.Stdout)
@@ -20,8 +21,9 @@ func main() {
 	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, environment, logger)
 
 	packit.Run(
-		npminstall.Detect(packageJSONParser),
+		npminstall.Detect(projectPathParser, packageJSONParser),
 		npminstall.Build(
+			projectPathParser,
 			resolver,
 			chronos.DefaultClock,
 			environment,

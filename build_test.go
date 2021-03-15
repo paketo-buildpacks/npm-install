@@ -32,11 +32,12 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		timestamp string
 
-		buildProcess *fakes.BuildProcess
-		buildManager *fakes.BuildManager
-		environment  *fakes.EnvironmentConfig
-		clock        chronos.Clock
-		build        packit.BuildFunc
+		projectPathParser *fakes.PathParser
+		buildProcess      *fakes.BuildProcess
+		buildManager      *fakes.BuildManager
+		environment       *fakes.EnvironmentConfig
+		clock             chronos.Clock
+		build             packit.BuildFunc
 
 		buffer *bytes.Buffer
 	)
@@ -48,6 +49,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		workingDir, err = ioutil.TempDir("", "working-dir")
 		Expect(err).NotTo(HaveOccurred())
+
+		projectPathParser = &fakes.PathParser{}
+		projectPathParser.GetCall.Returns.ProjectPath = ""
 
 		buildProcess = &fakes.BuildProcess{}
 		buildProcess.ShouldRunCall.Returns.Run = true
@@ -83,7 +87,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		build = npminstall.Build(buildManager, clock, environment, logger)
+		build = npminstall.Build(projectPathParser, buildManager, clock, environment, logger)
 	})
 
 	it.After(func() {
@@ -137,6 +141,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			},
 		}))
 
+		Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
 		Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 		Expect(environment.ConfigureCall.CallCount).To(Equal(1))
 		Expect(environment.ConfigureCall.Receives.Layer.Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
@@ -205,6 +210,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 			}))
 
+			Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
 			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 
 			Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
@@ -252,12 +258,77 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 			}))
 
+			Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
 			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 			Expect(buildProcess.RunCall.CallCount).To(Equal(0))
 
 			link, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(link).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules")))
+		})
+
+		context("when BP_NODE_PROJECT_PATH is set", func() {
+			it.Before(func() {
+				buildProcess.ShouldRunCall.Returns.Run = true
+				projectPathParser.GetCall.Returns.ProjectPath = "some-dir"
+				Expect(os.MkdirAll(filepath.Join(workingDir, "some-dir", "node_modules"), os.ModePerm))
+			})
+
+			it("resolves and calls the build process", func() {
+				result, err := build(packit.BuildContext{
+					WorkingDir: workingDir,
+					Layers:     packit.Layers{Path: layersDir},
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(packit.BuildResult{
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+					Layers: []packit.Layer{
+						{
+							Name:             npminstall.LayerNameNodeModules,
+							Path:             filepath.Join(layersDir, npminstall.LayerNameNodeModules),
+							SharedEnv:        packit.Environment{},
+							BuildEnv:         packit.Environment{},
+							LaunchEnv:        packit.Environment{},
+							ProcessLaunchEnv: map[string]packit.Environment{},
+							Build:            false,
+							Launch:           false,
+							Cache:            false,
+							Metadata: map[string]interface{}{
+								"built_at":  timestamp,
+								"cache_sha": "some-sha",
+							},
+						}, {
+							Name:             npminstall.LayerNameCache,
+							Path:             filepath.Join(layersDir, npminstall.LayerNameCache),
+							SharedEnv:        packit.Environment{},
+							BuildEnv:         packit.Environment{},
+							LaunchEnv:        packit.Environment{},
+							ProcessLaunchEnv: map[string]packit.Environment{},
+							Build:            false,
+							Launch:           false,
+							Cache:            false,
+						},
+					},
+				}))
+
+				Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
+				Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(filepath.Join(workingDir, "some-dir")))
+				Expect(environment.ConfigureCall.CallCount).To(Equal(1))
+				Expect(environment.ConfigureCall.Receives.Layer.Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
+
+				Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
+				Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
+				Expect(processWorkingDir).To(Equal(filepath.Join(workingDir, "some-dir")))
+			})
 		})
 
 		context("failure cases", func() {
@@ -297,7 +368,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				return nil
 			}
 
-			build = npminstall.Build(buildManager, clock, environment, scribe.NewLogger(buffer))
+			build = npminstall.Build(projectPathParser, buildManager, clock, environment, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -336,7 +407,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		it.Before(func() {
 			buildProcess.RunCall.Stub = func(ld, cd, wd string) error { return nil }
 
-			build = npminstall.Build(buildManager, clock, environment, scribe.NewLogger(buffer))
+			build = npminstall.Build(projectPathParser, buildManager, clock, environment, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -497,6 +568,25 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					},
 				})
 				Expect(err).To(MatchError("given build process failed"))
+			})
+		})
+
+		context("when the project path parser provided fails", func() {
+			it.Before(func() {
+				projectPathParser.GetCall.Returns.Err = errors.New("some-error")
+			})
+
+			it("returns an error", func() {
+				_, err := build(packit.BuildContext{
+					WorkingDir: workingDir,
+					Layers:     packit.Layers{Path: layersDir},
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+				})
+				Expect(err).To(MatchError("some-error"))
 			})
 		})
 	})

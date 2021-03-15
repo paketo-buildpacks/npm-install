@@ -96,5 +96,6 @@ func TestIntegration(t *testing.T) {
 	suite("VendoredWithBinaries", testVendoredWithBinaries)
 	suite("Versioning", testVersioning)
 	suite("PackageLockMismatch", testPackageLockMismatch)
+	suite("ProjectPath", testProjectPath)
 	suite.Run(t)
 }
