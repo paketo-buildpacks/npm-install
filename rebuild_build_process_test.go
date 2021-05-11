@@ -91,8 +91,14 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(run).To(BeFalse())
 				Expect(sha).To(BeEmpty())
-
-				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "node_modules")}))
+				Expect(summer.SumCall.Receives.Paths[0]).To(Equal(filepath.Join(workingDir, "node_modules")))
+				Expect(summer.SumCall.Receives.Paths[1]).To(ContainSubstring("executable_response"))
+				lastExecution := executions[len(executions)-1]
+				Expect(lastExecution.Args).To(Equal([]string{
+					"config",
+					"list",
+				}))
+				Expect(lastExecution.Dir).To(Equal(workingDir))
 			})
 		})
 
@@ -108,8 +114,14 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
-
-				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "node_modules")}))
+				Expect(summer.SumCall.Receives.Paths[0]).To(Equal(filepath.Join(workingDir, "node_modules")))
+				Expect(summer.SumCall.Receives.Paths[1]).To(ContainSubstring("executable_response"))
+				lastExecution := executions[len(executions)-1]
+				Expect(lastExecution.Args).To(Equal([]string{
+					"config",
+					"list",
+				}))
+				Expect(lastExecution.Dir).To(Equal(workingDir))
 			})
 		})
 
@@ -124,7 +136,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
 
-				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "node_modules")}))
+				Expect(summer.SumCall.Receives.Paths[0]).To(Equal(filepath.Join(workingDir, "node_modules")))
+				Expect(summer.SumCall.Receives.Paths[1]).To(ContainSubstring("executable_response"))
 			})
 		})
 
@@ -137,6 +150,21 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it("returns an error", func() {
 					_, _, err := process.ShouldRun(workingDir, nil)
 					Expect(err).To(MatchError("checksummer error"))
+				})
+			})
+
+			context("when npm config list fails to execute", func() {
+				it.Before(func() {
+					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
+						return errors.New("very bad error")
+					}
+					process = npminstall.NewRebuildBuildProcess(executable, summer, environment, scribe.NewLogger(buffer))
+				})
+
+				it("fails", func() {
+					_, _, err := process.ShouldRun(workingDir, nil)
+					Expect(err).To(MatchError(ContainSubstring("very bad error")))
+					Expect(err).To(MatchError(ContainSubstring("failed to execute npm config")))
 				})
 			})
 		})

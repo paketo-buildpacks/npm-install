@@ -29,7 +29,20 @@ func NewCIBuildProcess(executable Executable, summer Summer, environment Environ
 }
 
 func (r CIBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
-	sum, err := r.summer.Sum(filepath.Join(workingDir, "package.json"), filepath.Join(workingDir, "package-lock.json"))
+	cachedNodeVersion, err := cacheExecutableResponse(
+		r.executable,
+		[]string{"config", "list"},
+		workingDir,
+		r.logger)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to execute npm config: %w", err)
+	}
+	defer os.Remove(cachedNodeVersion)
+
+	sum, err := r.summer.Sum(
+		filepath.Join(workingDir, "package.json"),
+		filepath.Join(workingDir, "package-lock.json"),
+		cachedNodeVersion)
 	if err != nil {
 		return false, "", err
 	}

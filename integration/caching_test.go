@@ -180,6 +180,68 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
 			Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).To(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
 		})
+
+		context("and the node.js version has changed", func() {
+			it("reinstalls node_modules", func() {
+				var err error
+				source, err = occam.Source(filepath.Join("testdata", "locked_app"))
+				Expect(err).NotTo(HaveOccurred())
+
+				build := pack.Build.
+					WithPullPolicy("never").
+					WithEnv(map[string]string{"BP_NODE_VERSION": "~14"}).
+					WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
+
+				firstImage, logs, err := build.Execute(name, source)
+				Expect(err).NotTo(HaveOccurred(), logs.String)
+
+				imageIDs[firstImage.ID] = struct{}{}
+
+				Expect(firstImage.Buildpacks).To(HaveLen(3))
+				Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
+				Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+
+				container, err := docker.Container.Run.
+					WithCommand("npm start").
+					WithEnv(map[string]string{"PORT": "8080"}).
+					WithPublish("8080").
+					Execute(firstImage.ID)
+				Expect(err).NotTo(HaveOccurred())
+
+				containerIDs[container.ID] = struct{}{}
+
+				Eventually(container).Should(BeAvailable())
+
+				build = pack.Build.
+					WithPullPolicy("never").
+					WithEnv(map[string]string{"BP_NODE_VERSION": "~15"}).
+					WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
+
+				secondImage, logs, err := build.Execute(name, source)
+				Expect(err).NotTo(HaveOccurred(), logs.String)
+
+				imageIDs[secondImage.ID] = struct{}{}
+
+				Expect(secondImage.Buildpacks).To(HaveLen(3))
+				Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
+				Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+
+				container, err = docker.Container.Run.
+					WithCommand("npm start").
+					WithEnv(map[string]string{"PORT": "8080"}).
+					WithPublish("8080").
+					Execute(secondImage.ID)
+				Expect(err).NotTo(HaveOccurred())
+
+				containerIDs[container.ID] = struct{}{}
+
+				Eventually(container).Should(BeAvailable())
+
+				Expect(secondImage.ID).NotTo(Equal(firstImage.ID))
+				Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).NotTo(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
+				Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).NotTo(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
+			})
+		})
 	})
 
 	context("when the app is vendored", func() {
