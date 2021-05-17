@@ -106,27 +106,28 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 // cacheExecutableResponse writes the output of a successfully executed command
 // to a tmp file and returns the file location and possibly and error
 func cacheExecutableResponse(executable Executable, args []string, workingDir string, logger scribe.Logger) (string, error) {
-	buffer := bytes.NewBuffer(nil)
+	stdout := bytes.NewBuffer(nil)
+	stderr := bytes.NewBuffer(nil)
 	err := executable.Execute(pexec.Execution{
 		Args:   args,
 		Dir:    workingDir,
-		Stdout: buffer,
-		Stderr: buffer,
+		Stdout: stdout,
+		Stderr: stderr,
 	})
 	if err != nil {
-		logger.Subprocess("error: %s", buffer.String())
+		logger.Subprocess("error: %s", stderr.String())
 		return "", err
 	}
 
 	tmpFile, err := ioutil.TempFile(workingDir, "executable_response")
 	if err != nil {
-		logger.Subprocess("error: %s", buffer.String())
+		logger.Subprocess("error: %s", err)
 		return "", err
 	}
 
-	err = os.WriteFile(tmpFile.Name(), buffer.Bytes(), 0644)
+	err = os.WriteFile(tmpFile.Name(), stdout.Bytes(), 0644)
 	if err != nil {
-		logger.Subprocess("error: %s", buffer.String())
+		logger.Subprocess("error: %s", err)
 		return "", err
 	}
 

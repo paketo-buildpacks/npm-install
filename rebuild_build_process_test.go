@@ -95,8 +95,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(summer.SumCall.Receives.Paths[1]).To(ContainSubstring("executable_response"))
 				lastExecution := executions[len(executions)-1]
 				Expect(lastExecution.Args).To(Equal([]string{
-					"config",
-					"list",
+					"get",
+					"user-agent",
 				}))
 				Expect(lastExecution.Dir).To(Equal(workingDir))
 			})
@@ -118,8 +118,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(summer.SumCall.Receives.Paths[1]).To(ContainSubstring("executable_response"))
 				lastExecution := executions[len(executions)-1]
 				Expect(lastExecution.Args).To(Equal([]string{
-					"config",
-					"list",
+					"get",
+					"user-agent",
 				}))
 				Expect(lastExecution.Dir).To(Equal(workingDir))
 			})
@@ -153,7 +153,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 			})
 
-			context("when npm config list fails to execute", func() {
+			context("when npm get user-agent fails to execute", func() {
 				it.Before(func() {
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						return errors.New("very bad error")
@@ -164,7 +164,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it("fails", func() {
 					_, _, err := process.ShouldRun(workingDir, nil)
 					Expect(err).To(MatchError(ContainSubstring("very bad error")))
-					Expect(err).To(MatchError(ContainSubstring("failed to execute npm config")))
+					Expect(err).To(MatchError(ContainSubstring("failed to execute npm get user-agent")))
 				})
 			})
 		})
