@@ -26,6 +26,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		cacheDir      string
 		workingDir    string
 		executable    *fakes.Executable
+		executions    []pexec.Execution
 		summer        *fakes.Summer
 		environment   *fakes.EnvironmentConfig
 		buffer        *bytes.Buffer
@@ -46,6 +47,11 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 
 		executable = &fakes.Executable{}
+		executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
+			executions = append(executions, execution)
+			return nil
+		}
+
 		summer = &fakes.Summer{}
 		environment = &fakes.EnvironmentConfig{}
 
@@ -76,10 +82,18 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "package.json"), filepath.Join(workingDir, "package-lock.json")}))
+				Expect(summer.SumCall.Receives.Paths[0]).To(Equal(filepath.Join(workingDir, "package.json")))
+				Expect(summer.SumCall.Receives.Paths[1]).To(Equal(filepath.Join(workingDir, "package-lock.json")))
+				Expect(summer.SumCall.Receives.Paths[2]).To(ContainSubstring("executable_response"))
 
 				Expect(run).To(BeFalse())
 				Expect(sha).To(BeEmpty())
+				lastExecution := executions[len(executions)-1]
+				Expect(lastExecution.Args).To(Equal([]string{
+					"get",
+					"user-agent",
+				}))
+				Expect(lastExecution.Dir).To(Equal(workingDir))
 			})
 		})
 
@@ -94,9 +108,19 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "package.json"), filepath.Join(workingDir, "package-lock.json")}))
+				Expect(summer.SumCall.Receives.Paths[0]).To(Equal(filepath.Join(workingDir, "package.json")))
+				Expect(summer.SumCall.Receives.Paths[1]).To(Equal(filepath.Join(workingDir, "package-lock.json")))
+				Expect(summer.SumCall.Receives.Paths[2]).To(ContainSubstring("executable_response"))
+
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
+
+				lastExecution := executions[len(executions)-1]
+				Expect(lastExecution.Args).To(Equal([]string{
+					"get",
+					"user-agent",
+				}))
+				Expect(lastExecution.Dir).To(Equal(workingDir))
 			})
 		})
 
@@ -109,10 +133,19 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				run, sha, err := process.ShouldRun(workingDir, nil)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(summer.SumCall.Receives.Paths).To(Equal([]string{filepath.Join(workingDir, "package.json"), filepath.Join(workingDir, "package-lock.json")}))
+				Expect(summer.SumCall.Receives.Paths[0]).To(Equal(filepath.Join(workingDir, "package.json")))
+				Expect(summer.SumCall.Receives.Paths[1]).To(Equal(filepath.Join(workingDir, "package-lock.json")))
+				Expect(summer.SumCall.Receives.Paths[2]).To(ContainSubstring("executable_response"))
 
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
+
+				lastExecution := executions[len(executions)-1]
+				Expect(lastExecution.Args).To(Equal([]string{
+					"get",
+					"user-agent",
+				}))
+				Expect(lastExecution.Dir).To(Equal(workingDir))
 			})
 		})
 
@@ -125,6 +158,21 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it("returns an error", func() {
 					_, _, err := process.ShouldRun(workingDir, nil)
 					Expect(err).To(MatchError("checksummer error"))
+				})
+			})
+
+			context("when npm get user-agent fails to execute", func() {
+				it.Before(func() {
+					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
+						return errors.New("very bad error")
+					}
+					process = npminstall.NewCIBuildProcess(executable, summer, environment, scribe.NewLogger(buffer))
+				})
+
+				it("fails", func() {
+					_, _, err := process.ShouldRun(workingDir, nil)
+					Expect(err).To(MatchError(ContainSubstring("very bad error")))
+					Expect(err).To(MatchError(ContainSubstring("failed to execute npm get user-agent")))
 				})
 			})
 

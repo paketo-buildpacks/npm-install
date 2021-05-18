@@ -1,7 +1,9 @@
 package npminstall
 
 import (
+	"bytes"
 	"errors"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -99,6 +101,37 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 		r.logger.Break()
 		return NewCIBuildProcess(r.executable, r.summer, r.environment, scribe.NewLogger(os.Stdout)), nil
 	}
+}
+
+// cacheExecutableResponse writes the output of a successfully executed command
+// to a tmp file and returns the file location and possibly and error
+func cacheExecutableResponse(executable Executable, args []string, workingDir string, logger scribe.Logger) (string, error) {
+	stdout := bytes.NewBuffer(nil)
+	stderr := bytes.NewBuffer(nil)
+	err := executable.Execute(pexec.Execution{
+		Args:   args,
+		Dir:    workingDir,
+		Stdout: stdout,
+		Stderr: stderr,
+	})
+	if err != nil {
+		logger.Subprocess("error: %s", stderr.String())
+		return "", err
+	}
+
+	tmpFile, err := ioutil.TempFile(workingDir, "executable_response")
+	if err != nil {
+		logger.Subprocess("error: %s", err)
+		return "", err
+	}
+
+	err = os.WriteFile(tmpFile.Name(), stdout.Bytes(), 0644)
+	if err != nil {
+		logger.Subprocess("error: %s", err)
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
 }
 
 func fileExists(path string) (bool, error) {

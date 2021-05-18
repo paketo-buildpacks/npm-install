@@ -29,7 +29,17 @@ func NewRebuildBuildProcess(executable Executable, summer Summer, environment En
 }
 
 func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
-	sum, err := r.summer.Sum(filepath.Join(workingDir, "node_modules"))
+	cachedNodeVersion, err := cacheExecutableResponse(
+		r.executable,
+		[]string{"get", "user-agent"},
+		workingDir,
+		r.logger)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to execute npm get user-agent: %w", err)
+	}
+	defer os.Remove(cachedNodeVersion)
+
+	sum, err := r.summer.Sum(filepath.Join(workingDir, "node_modules"), cachedNodeVersion)
 	if err != nil {
 		return false, "", err
 	}
