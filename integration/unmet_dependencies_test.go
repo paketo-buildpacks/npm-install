@@ -42,7 +42,7 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "unmet_dep"))
 			Expect(err).NotTo(HaveOccurred())
 
-			_, logs, err := pack.Build.
+			_, logs, err := pack.WithNoColor().Build.
 				WithPullPolicy("never").
 				WithBuildpacks(
 					nodeURI,
@@ -51,9 +51,9 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 				).
 				Execute(name, source)
 			Expect(err).To(HaveOccurred())
-			Expect(logs).To(ContainSubstring("vendored node_modules have unmet dependencies"))
-			Expect(logs).To(ContainSubstring("npm list failed"))
-			Expect(logs).To(ContainSubstring("npm ERR! missing: express@4.17.1, required by node_web_app@0.0.0"))
+			Expect(logs.String()).To(ContainSubstring("vendored node_modules have unmet dependencies"))
+			Expect(logs.String()).To(ContainSubstring("npm list failed"))
+			Expect(logs.String()).To(ContainSubstring("UNMET DEPENDENCY express@4.17.1"))
 		})
 	})
 }
