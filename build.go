@@ -108,10 +108,7 @@ func Build(projectPathParser PathParser, buildManager BuildManager, clock chrono
 
 		logger.Break()
 
-		return packit.BuildResult{
-			Plan:   context.Plan,
-			Layers: layers,
-		}, nil
+		return packit.BuildResult{Layers: layers}, nil
 	}
 }
 

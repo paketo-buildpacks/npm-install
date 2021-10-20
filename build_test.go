@@ -107,11 +107,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(Equal(packit.BuildResult{
-			Plan: packit.BuildpackPlan{
-				Entries: []packit.BuildpackPlanEntry{
-					{Name: "node_modules"},
-				},
-			},
 			Layers: []packit.Layer{
 				{
 					Name:             npminstall.LayerNameNodeModules,
@@ -170,17 +165,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(packit.BuildResult{
-				Plan: packit.BuildpackPlan{
-					Entries: []packit.BuildpackPlanEntry{
-						{
-							Name: "node_modules",
-							Metadata: map[string]interface{}{
-								"build":  true,
-								"launch": true,
-							},
-						},
-					},
-				},
 				Layers: []packit.Layer{
 					{
 						Name:             npminstall.LayerNameNodeModules,
@@ -237,11 +221,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(packit.BuildResult{
-				Plan: packit.BuildpackPlan{
-					Entries: []packit.BuildpackPlanEntry{
-						{Name: "node_modules"},
-					},
-				},
 				Layers: []packit.Layer{
 					{
 						Name:             npminstall.LayerNameNodeModules,
@@ -286,11 +265,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(packit.BuildResult{
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{
-							{Name: "node_modules"},
-						},
-					},
 					Layers: []packit.Layer{
 						{
 							Name:             npminstall.LayerNameNodeModules,
