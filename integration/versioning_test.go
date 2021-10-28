@@ -31,7 +31,7 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when using a nvmrc file", func() {
-		const nvmrcVersion = `12.\d+\.\d+`
+		const nvmrcVersion = `14.\d+\.\d+`
 
 		var (
 			image     occam.Image
