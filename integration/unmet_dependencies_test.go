@@ -53,7 +53,7 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).To(HaveOccurred())
 			Expect(logs.String()).To(ContainSubstring("vendored node_modules have unmet dependencies"))
 			Expect(logs.String()).To(ContainSubstring("npm list failed"))
-			Expect(logs.String()).To(ContainSubstring("UNMET DEPENDENCY express@4.17.1"))
+			Expect(logs.String()).To(ContainSubstring("UNMET DEPENDENCY express@^4.17.1"))
 		})
 	})
 }

@@ -1,6 +1,6 @@
 const http = require('http');
 const port = process.env.PORT || 8080;
-const sqlite3 = require('sqlite3').verbose();
+const re2 = require('re2');
 const childProcess = require('child_process');
 
 const requestHandler = (request, response) => {

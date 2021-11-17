@@ -9,14 +9,14 @@
   "license": "",
   "dependencies": {
     "chalk-cli": "~3.0.0",
-    "sqlite3": "~4.1.1",
-    "node-pre-gyp": "0.14.x"
+    "node-pre-gyp": "0.16.x",
+    "re2": "1.x.x"
   },
   "repository": {
     "type": "git",
     "url": ""
   },
   "engines": {
-    "node": "~14"
+    "node": "~16"
   }
 }

@@ -71,6 +71,10 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("Run", func() {
+		it.Before(func() {
+			Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
+		})
+
 		it("succeeds", func() {
 			Expect(process.Run(modulesDir, cacheDir, workingDir)).To(Succeed())
 			Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
@@ -100,7 +104,12 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 			context("when the node_modules directory cannot be symlinked into the working directory", func() {
 				it.Before(func() {
-					Expect(os.Chmod(workingDir, 0000)).To(Succeed())
+					Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
+					Expect(os.Chmod(filepath.Join(workingDir, "node_modules"), 0000)).To(Succeed())
+				})
+
+				it.After(func() {
+					Expect(os.Chmod(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
 				})
 
 				it("returns an error", func() {
