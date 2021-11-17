@@ -214,7 +214,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 				build = pack.Build.
 					WithPullPolicy("never").
-					WithEnv(map[string]string{"BP_NODE_VERSION": "~15"}).
+					WithEnv(map[string]string{"BP_NODE_VERSION": "~16"}).
 					WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
 
 				secondImage, logs, err := build.Execute(name, source)
