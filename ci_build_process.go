@@ -2,6 +2,7 @@ package npminstall
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -61,16 +62,6 @@ func (r CIBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
 		return err
 	}
 
-	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(modulesDir, "node_modules"))
-	if err != nil {
-		return err
-	}
-
-	err = os.Symlink(filepath.Join(modulesDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
-	if err != nil {
-		return err
-	}
-
 	buffer := bytes.NewBuffer(nil)
 	args := []string{"ci", "--unsafe-perm", "--cache", cacheDir}
 
@@ -88,6 +79,25 @@ func (r CIBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
 	if err != nil {
 		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("npm ci failed: %w", err)
+	}
+
+	_, err = os.Stat(filepath.Join(workingDir, "node_modules"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		} else {
+			return fmt.Errorf("unable to stat node_modules in working directory: %w", err)
+		}
+	}
+
+	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(modulesDir, "node_modules"))
+	if err != nil {
+		return err
+	}
+
+	err = os.Symlink(filepath.Join(modulesDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
+	if err != nil {
+		return err
 	}
 
 	return nil

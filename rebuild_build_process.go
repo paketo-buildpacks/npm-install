@@ -2,6 +2,7 @@ package npminstall
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -65,16 +66,6 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		return fmt.Errorf("vendored node_modules have unmet dependencies: npm list failed: %w", err)
 	}
 
-	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(modulesDir, "node_modules"))
-	if err != nil {
-		return err
-	}
-
-	err = os.Symlink(filepath.Join(modulesDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
-	if err != nil {
-		return err
-	}
-
 	args := []string{"run-script", "preinstall", "--if-present"}
 	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 	err = r.executable.Execute(pexec.Execution{
@@ -118,6 +109,25 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 	if err != nil {
 		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("postinstall script failed on rebuild: %s", err)
+	}
+
+	_, err = os.Stat(filepath.Join(workingDir, "node_modules"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		} else {
+			return fmt.Errorf("unable to stat node_modules in working directory: %w", err)
+		}
+	}
+
+	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(modulesDir, "node_modules"))
+	if err != nil {
+		return err
+	}
+
+	err = os.Symlink(filepath.Join(modulesDir, "node_modules"), filepath.Join(workingDir, "node_modules"))
+	if err != nil {
+		return err
 	}
 
 	return nil
