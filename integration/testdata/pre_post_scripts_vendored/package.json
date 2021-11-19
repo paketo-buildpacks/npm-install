@@ -10,8 +10,7 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "react": "~17",
-    "re2": "1.x.x",
+    "sqlite3": "~4.1.1",
     "node-pre-gyp": "0.14.x"
   },
   "repository": {
