@@ -58,6 +58,15 @@ func Build(projectPathParser PathParser, buildManager BuildManager, clock chrono
 			return packit.BuildResult{}, err
 		}
 
+		sBom, err := sbom.Generate(context.WorkingDir)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+		nodeModulesLayer.SBOM, err = sBom.InFormats(context.BuildpackInfo.SBOMFormats...)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+
 		if run {
 			logger.Process("Executing build process")
 
@@ -98,19 +107,6 @@ func Build(projectPathParser PathParser, buildManager BuildManager, clock chrono
 				return packit.BuildResult{}, err
 			}
 		}
-
-		// run sbom.Generate path to working dir
-		// set the sbom.Generate.inFormaters(context.buildinfo.sbom syft, cdx) ["application/vnd.cyclonedx+json", "application/vnd.syft+json"]
-		// set the sbomformatter on the layer
-		sBom, err := sbom.Generate(context.WorkingDir)
-		if err != nil {
-			return packit.BuildResult{}, err
-		}
-		formatter, err := sBom.InFormats(context.BuildpackInfo.SBOMFormats...)
-		if err != nil {
-			return packit.BuildResult{}, err
-		}
-		nodeModulesLayer.SBOM = formatter
 
 		layers := []packit.Layer{nodeModulesLayer}
 
