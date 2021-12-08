@@ -1,14 +1,15 @@
 package npminstall
 
 import (
+	"github.com/paketo-buildpacks/packit/v2/sbom"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/paketo-buildpacks/packit"
-	"github.com/paketo-buildpacks/packit/chronos"
-	"github.com/paketo-buildpacks/packit/fs"
-	"github.com/paketo-buildpacks/packit/scribe"
+	"github.com/paketo-buildpacks/packit/v2"
+	"github.com/paketo-buildpacks/packit/v2/chronos"
+	"github.com/paketo-buildpacks/packit/v2/fs"
+	"github.com/paketo-buildpacks/packit/v2/scribe"
 )
 
 //go:generate faux --interface BuildManager --output fakes/build_manager.go
@@ -97,6 +98,19 @@ func Build(projectPathParser PathParser, buildManager BuildManager, clock chrono
 				return packit.BuildResult{}, err
 			}
 		}
+
+		// run sbom.Generate path to working dir
+		// set the sbom.Generate.inFormaters(context.buildinfo.sbom syft, cdx) ["application/vnd.cyclonedx+json", "application/vnd.syft+json"]
+		// set the sbomformatter on the layer
+		sBom, err := sbom.Generate(context.WorkingDir)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+		formatter, err := sBom.InFormats(context.BuildpackInfo.SBOMFormats...)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+		nodeModulesLayer.SBOM = formatter
 
 		layers := []packit.Layer{nodeModulesLayer}
 

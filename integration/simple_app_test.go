@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -43,13 +42,13 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it.After(func() {
-			Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed())
-			Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
-			Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
-			Expect(os.RemoveAll(source)).To(Succeed())
+			//Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed())
+			//Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
+			//Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
+			//Expect(os.RemoveAll(source)).To(Succeed())
 		})
 
-		it("builds a working OCI image for a simple app", func() {
+		it.Focus("builds a working OCI image for a simple app", func() {
 			var err error
 			source, err = occam.Source(filepath.Join("testdata", "simple_app"))
 			Expect(err).NotTo(HaveOccurred())
@@ -58,6 +57,7 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
 				WithPullPolicy("never").
 				Execute(name, source)
+			println("******** ", image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
 			container, err = docker.Container.Run.
