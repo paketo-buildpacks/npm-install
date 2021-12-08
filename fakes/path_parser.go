@@ -1,10 +1,12 @@
 package fakes
 
-import "sync"
+import (
+	"sync"
+)
 
 type PathParser struct {
 	GetCall struct {
-		sync.Mutex
+		mutex     sync.Mutex
 		CallCount int
 		Receives  struct {
 			Path string
@@ -18,8 +20,8 @@ type PathParser struct {
 }
 
 func (f *PathParser) Get(param1 string) (string, error) {
-	f.GetCall.Lock()
-	defer f.GetCall.Unlock()
+	f.GetCall.mutex.Lock()
+	defer f.GetCall.mutex.Unlock()
 	f.GetCall.CallCount++
 	f.GetCall.Receives.Path = param1
 	if f.GetCall.Stub != nil {

@@ -1,14 +1,15 @@
 package npminstall
 
 import (
+	"github.com/paketo-buildpacks/packit/v2/sbom"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/paketo-buildpacks/packit"
-	"github.com/paketo-buildpacks/packit/chronos"
-	"github.com/paketo-buildpacks/packit/fs"
-	"github.com/paketo-buildpacks/packit/scribe"
+	"github.com/paketo-buildpacks/packit/v2"
+	"github.com/paketo-buildpacks/packit/v2/chronos"
+	"github.com/paketo-buildpacks/packit/v2/fs"
+	"github.com/paketo-buildpacks/packit/v2/scribe"
 )
 
 //go:generate faux --interface BuildManager --output fakes/build_manager.go
@@ -22,7 +23,12 @@ type EnvironmentConfig interface {
 	GetValue(key string) string
 }
 
-func Build(projectPathParser PathParser, buildManager BuildManager, clock chronos.Clock, environment EnvironmentConfig, logger scribe.Logger) packit.BuildFunc {
+//go:generate faux --interface SBOMGenerator --output fakes/sbom_generator.go
+type SBOMGenerator interface {
+	Generate(dir string) (sbom.SBOM, error)
+}
+
+func Build(projectPathParser PathParser, buildManager BuildManager, clock chronos.Clock, environment EnvironmentConfig, logger scribe.Logger, sbomGenerator SBOMGenerator) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
@@ -82,6 +88,27 @@ func Build(projectPathParser PathParser, buildManager BuildManager, clock chrono
 			}
 
 			err = environment.Configure(nodeModulesLayer)
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
+
+			logger.Process("Configuring environment")
+			logger.Subprocess("%s", scribe.NewFormattedMapFromEnvironment(nodeModulesLayer.SharedEnv))
+			logger.Break()
+
+			logger.Process("Generating SBOM")
+
+			var sbomContent sbom.SBOM
+			duration, err = clock.Measure(func() error {
+				sbomContent, err = sbomGenerator.Generate(context.WorkingDir)
+				return err
+			})
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
+			logger.Action("Completed in %s", duration.Round(time.Millisecond))
+
+			nodeModulesLayer.SBOM, err = sbomContent.InFormats(context.BuildpackInfo.SBOMFormats...)
 			if err != nil {
 				return packit.BuildResult{}, err
 			}
