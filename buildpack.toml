@@ -1,10 +1,9 @@
-api = "0.7"
+api = "0.6"
 
 [buildpack]
   homepage = "https://github.com/paketo-buildpacks/npm-install"
   id = "paketo-buildpacks/npm-install"
   name = "Paketo NPM Install Buildpack"
-  sbom-formats = ["application/vnd.cyclonedx+json","application/spdx+json","application/vnd.syft+json"]
 
 [metadata]
   include-files = ["bin/build", "bin/detect", "bin/run", "buildpack.toml"]

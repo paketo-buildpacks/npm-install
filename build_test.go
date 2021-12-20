@@ -11,10 +11,9 @@ import (
 
 	npminstall "github.com/paketo-buildpacks/npm-install"
 	"github.com/paketo-buildpacks/npm-install/fakes"
-	"github.com/paketo-buildpacks/packit/v2"
-	"github.com/paketo-buildpacks/packit/v2/chronos"
-	"github.com/paketo-buildpacks/packit/v2/sbom"
-	"github.com/paketo-buildpacks/packit/v2/scribe"
+	"github.com/paketo-buildpacks/packit"
+	"github.com/paketo-buildpacks/packit/chronos"
+	"github.com/paketo-buildpacks/packit/scribe"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
@@ -37,7 +36,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buildProcess      *fakes.BuildProcess
 		buildManager      *fakes.BuildManager
 		environment       *fakes.EnvironmentConfig
-		sbomGenerator     *fakes.SBOMGenerator
 		clock             chronos.Clock
 		build             packit.BuildFunc
 
@@ -89,10 +87,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		sbomGenerator = &fakes.SBOMGenerator{}
-		sbomGenerator.GenerateCall.Returns.SBOM = sbom.SBOM{}
-
-		build = npminstall.Build(projectPathParser, buildManager, clock, environment, logger, sbomGenerator)
+		build = npminstall.Build(projectPathParser, buildManager, clock, environment, logger)
 	})
 
 	it.After(func() {
@@ -102,9 +97,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 	it("resolves and calls the build process", func() {
 		result, err := build(packit.BuildContext{
-			BuildpackInfo: packit.BuildpackInfo{
-				SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
-			},
 			WorkingDir: workingDir,
 			Layers:     packit.Layers{Path: layersDir},
 			Plan: packit.BuildpackPlan{
@@ -114,42 +106,33 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-		Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-		Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[0].BuildEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[0].LaunchEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[0].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-		Expect(result.Layers[0].Build).To(BeFalse())
-		Expect(result.Layers[0].Launch).To(BeFalse())
-		Expect(result.Layers[0].Cache).To(BeFalse())
-		Expect(result.Layers[0].Metadata).To(Equal(
-			map[string]interface{}{
-				"built_at":  timestamp,
-				"cache_sha": "some-sha",
-			}))
-		Expect(result.Layers[1].Name).To(Equal(npminstall.LayerNameCache))
-		Expect(result.Layers[1].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
-		Expect(result.Layers[1].SharedEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[1].BuildEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[1].LaunchEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[1].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-		Expect(result.Layers[1].Build).To(BeFalse())
-		Expect(result.Layers[1].Launch).To(BeFalse())
-		Expect(result.Layers[1].Cache).To(BeFalse())
-
-		Expect(result.Layers[0].SBOM.Formats()).To(Equal([]packit.SBOMFormat{
-			{
-				Extension: "cdx.json",
-				Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
-			},
-			{
-				Extension: "spdx.json",
-				Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
-			},
-			{
-				Extension: "syft.json",
-				Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
+		Expect(result).To(Equal(packit.BuildResult{
+			Layers: []packit.Layer{
+				{
+					Name:             npminstall.LayerNameNodeModules,
+					Path:             filepath.Join(layersDir, npminstall.LayerNameNodeModules),
+					SharedEnv:        packit.Environment{},
+					BuildEnv:         packit.Environment{},
+					LaunchEnv:        packit.Environment{},
+					ProcessLaunchEnv: map[string]packit.Environment{},
+					Build:            false,
+					Launch:           false,
+					Cache:            false,
+					Metadata: map[string]interface{}{
+						"built_at":  timestamp,
+						"cache_sha": "some-sha",
+					},
+				}, {
+					Name:             npminstall.LayerNameCache,
+					Path:             filepath.Join(layersDir, npminstall.LayerNameCache),
+					SharedEnv:        packit.Environment{},
+					BuildEnv:         packit.Environment{},
+					LaunchEnv:        packit.Environment{},
+					ProcessLaunchEnv: map[string]packit.Environment{},
+					Build:            false,
+					Launch:           false,
+					Cache:            false,
+				},
 			},
 		}))
 
@@ -166,9 +149,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 	context("when node_modules is required at build and launch", func() {
 		it("resolves and calls the build process", func() {
 			result, err := build(packit.BuildContext{
-				BuildpackInfo: packit.BuildpackInfo{
-					SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
-				},
 				WorkingDir: workingDir,
 				Layers:     packit.Layers{Path: layersDir},
 				Plan: packit.BuildpackPlan{
@@ -184,43 +164,33 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-			Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-			Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].BuildEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].LaunchEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-			Expect(result.Layers[0].Build).To(BeTrue())
-			Expect(result.Layers[0].Launch).To(BeTrue())
-			Expect(result.Layers[0].Cache).To(BeTrue())
-			Expect(result.Layers[0].Metadata).To(Equal(
-				map[string]interface{}{
-					"built_at":  timestamp,
-					"cache_sha": "some-sha",
-				}))
-			Expect(result.Layers[1].Name).To(Equal(npminstall.LayerNameCache))
-			Expect(result.Layers[1].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
-			Expect(result.Layers[1].SharedEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[1].BuildEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[1].LaunchEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[1].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-			Expect(result.Layers[1].Build).To(BeTrue())
-			Expect(result.Layers[1].Launch).To(BeTrue())
-			Expect(result.Layers[1].Cache).To(BeTrue())
-
-			Expect(result.Layers[0].SBOM.Formats()).To(Equal([]packit.SBOMFormat{
-				{
-					Extension: "cdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
-				},
-				{
-					Extension: "spdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
-				},
-				{
-					Extension: "syft.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
+			Expect(result).To(Equal(packit.BuildResult{
+				Layers: []packit.Layer{
+					{
+						Name:             npminstall.LayerNameNodeModules,
+						Path:             filepath.Join(layersDir, npminstall.LayerNameNodeModules),
+						SharedEnv:        packit.Environment{},
+						BuildEnv:         packit.Environment{},
+						LaunchEnv:        packit.Environment{},
+						ProcessLaunchEnv: map[string]packit.Environment{},
+						Build:            true,
+						Launch:           true,
+						Cache:            true,
+						Metadata: map[string]interface{}{
+							"built_at":  timestamp,
+							"cache_sha": "some-sha",
+						},
+					}, {
+						Name:             npminstall.LayerNameCache,
+						Path:             filepath.Join(layersDir, npminstall.LayerNameCache),
+						SharedEnv:        packit.Environment{},
+						BuildEnv:         packit.Environment{},
+						LaunchEnv:        packit.Environment{},
+						ProcessLaunchEnv: map[string]packit.Environment{},
+						Build:            true,
+						Launch:           true,
+						Cache:            true,
+					},
 				},
 			}))
 
@@ -285,9 +255,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			it("resolves and calls the build process", func() {
 				result, err := build(packit.BuildContext{
-					BuildpackInfo: packit.BuildpackInfo{
-						SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
-					},
 					WorkingDir: workingDir,
 					Layers:     packit.Layers{Path: layersDir},
 					Plan: packit.BuildpackPlan{
@@ -297,42 +264,33 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-				Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-				Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[0].BuildEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[0].LaunchEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[0].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-				Expect(result.Layers[0].Build).To(BeFalse())
-				Expect(result.Layers[0].Launch).To(BeFalse())
-				Expect(result.Layers[0].Cache).To(BeFalse())
-				Expect(result.Layers[0].Metadata).To(Equal(
-					map[string]interface{}{
-						"built_at":  timestamp,
-						"cache_sha": "some-sha",
-					}))
-				Expect(result.Layers[1].Name).To(Equal(npminstall.LayerNameCache))
-				Expect(result.Layers[1].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
-				Expect(result.Layers[1].SharedEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[1].BuildEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[1].LaunchEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[1].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-				Expect(result.Layers[1].Build).To(BeFalse())
-				Expect(result.Layers[1].Launch).To(BeFalse())
-				Expect(result.Layers[1].Cache).To(BeFalse())
-
-				Expect(result.Layers[0].SBOM.Formats()).To(Equal([]packit.SBOMFormat{
-					{
-						Extension: "cdx.json",
-						Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
-					},
-					{
-						Extension: "spdx.json",
-						Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
-					},
-					{
-						Extension: "syft.json",
-						Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
+				Expect(result).To(Equal(packit.BuildResult{
+					Layers: []packit.Layer{
+						{
+							Name:             npminstall.LayerNameNodeModules,
+							Path:             filepath.Join(layersDir, npminstall.LayerNameNodeModules),
+							SharedEnv:        packit.Environment{},
+							BuildEnv:         packit.Environment{},
+							LaunchEnv:        packit.Environment{},
+							ProcessLaunchEnv: map[string]packit.Environment{},
+							Build:            false,
+							Launch:           false,
+							Cache:            false,
+							Metadata: map[string]interface{}{
+								"built_at":  timestamp,
+								"cache_sha": "some-sha",
+							},
+						}, {
+							Name:             npminstall.LayerNameCache,
+							Path:             filepath.Join(layersDir, npminstall.LayerNameCache),
+							SharedEnv:        packit.Environment{},
+							BuildEnv:         packit.Environment{},
+							LaunchEnv:        packit.Environment{},
+							ProcessLaunchEnv: map[string]packit.Environment{},
+							Build:            false,
+							Launch:           false,
+							Cache:            false,
+						},
 					},
 				}))
 
@@ -384,7 +342,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				return nil
 			}
 
-			build = npminstall.Build(projectPathParser, buildManager, clock, environment, scribe.NewLogger(buffer), sbomGenerator)
+			build = npminstall.Build(projectPathParser, buildManager, clock, environment, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -398,16 +356,24 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-			Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-			Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].Build).To(BeFalse())
-			Expect(result.Layers[0].Cache).To(BeFalse())
-			Expect(result.Layers[0].Metadata).To(Equal(
-				map[string]interface{}{
-					"built_at":  timestamp,
-					"cache_sha": "some-sha",
-				}))
+			Expect(result.Layers).To(Equal([]packit.Layer{
+				{
+					Name: npminstall.LayerNameNodeModules,
+					Path: filepath.Join(layersDir, npminstall.LayerNameNodeModules),
+
+					SharedEnv:        packit.Environment{},
+					BuildEnv:         packit.Environment{},
+					LaunchEnv:        packit.Environment{},
+					ProcessLaunchEnv: map[string]packit.Environment{},
+					Build:            false,
+					Launch:           false,
+					Cache:            false,
+					Metadata: map[string]interface{}{
+						"built_at":  timestamp,
+						"cache_sha": "some-sha",
+					},
+				},
+			}))
 		})
 	})
 
@@ -415,7 +381,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		it.Before(func() {
 			buildProcess.RunCall.Stub = func(ld, cd, wd string) error { return nil }
 
-			build = npminstall.Build(projectPathParser, buildManager, clock, environment, scribe.NewLogger(buffer), sbomGenerator)
+			build = npminstall.Build(projectPathParser, buildManager, clock, environment, scribe.NewLogger(buffer))
 		})
 
 		it("filters out empty layers", func() {
@@ -429,20 +395,23 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-			Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-			Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].BuildEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].LaunchEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-			Expect(result.Layers[0].Build).To(BeFalse())
-			Expect(result.Layers[0].Launch).To(BeFalse())
-			Expect(result.Layers[0].Cache).To(BeFalse())
-			Expect(result.Layers[0].Metadata).To(Equal(
-				map[string]interface{}{
-					"built_at":  timestamp,
-					"cache_sha": "some-sha",
-				}))
+			Expect(result.Layers).To(Equal([]packit.Layer{
+				{
+					Name:             npminstall.LayerNameNodeModules,
+					Path:             filepath.Join(layersDir, npminstall.LayerNameNodeModules),
+					SharedEnv:        packit.Environment{},
+					BuildEnv:         packit.Environment{},
+					LaunchEnv:        packit.Environment{},
+					ProcessLaunchEnv: map[string]packit.Environment{},
+					Build:            false,
+					Launch:           false,
+					Cache:            false,
+					Metadata: map[string]interface{}{
+						"built_at":  timestamp,
+						"cache_sha": "some-sha",
+					},
+				},
+			}))
 		})
 	})
 
@@ -592,37 +561,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					},
 				})
 				Expect(err).To(MatchError("some-error"))
-			})
-		})
-
-		context("when the BOM cannot be generated", func() {
-			it.Before(func() {
-				sbomGenerator.GenerateCall.Returns.Error = errors.New("failed to generate SBOM")
-			})
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					BuildpackInfo: packit.BuildpackInfo{
-						SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
-					},
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{{Name: "node_modules"}},
-					},
-					Stack: "some-stack",
-				})
-				Expect(err).To(MatchError("failed to generate SBOM"))
-			})
-		})
-
-		context("when the BOM cannot be formatted", func() {
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					BuildpackInfo: packit.BuildpackInfo{
-						SBOMFormats: []string{"random-format"},
-					},
-				})
-				Expect(err).To(MatchError("\"random-format\" is not a supported SBOM format"))
 			})
 		})
 	})
