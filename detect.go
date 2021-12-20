@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/paketo-buildpacks/packit/v2"
+	"github.com/paketo-buildpacks/packit"
 )
 
 type BuildPlanMetadata struct {

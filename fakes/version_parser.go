@@ -1,12 +1,10 @@
 package fakes
 
-import (
-	"sync"
-)
+import "sync"
 
 type VersionParser struct {
 	ParseVersionCall struct {
-		mutex     sync.Mutex
+		sync.Mutex
 		CallCount int
 		Receives  struct {
 			Path string
@@ -20,8 +18,8 @@ type VersionParser struct {
 }
 
 func (f *VersionParser) ParseVersion(param1 string) (string, error) {
-	f.ParseVersionCall.mutex.Lock()
-	defer f.ParseVersionCall.mutex.Unlock()
+	f.ParseVersionCall.Lock()
+	defer f.ParseVersionCall.Unlock()
 	f.ParseVersionCall.CallCount++
 	f.ParseVersionCall.Receives.Path = param1
 	if f.ParseVersionCall.Stub != nil {

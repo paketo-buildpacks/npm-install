@@ -11,8 +11,8 @@ import (
 
 	npminstall "github.com/paketo-buildpacks/npm-install"
 	"github.com/paketo-buildpacks/npm-install/fakes"
-	"github.com/paketo-buildpacks/packit/v2/pexec"
-	"github.com/paketo-buildpacks/packit/v2/scribe"
+	"github.com/paketo-buildpacks/packit/pexec"
+	"github.com/paketo-buildpacks/packit/scribe"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
