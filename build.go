@@ -1,6 +1,7 @@
 package npminstall
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/paketo-buildpacks/packit/v2/chronos"
 	"github.com/paketo-buildpacks/packit/v2/fs"
 	"github.com/paketo-buildpacks/packit/v2/scribe"
+	"github.com/paketo-buildpacks/packit/v2/servicebindings"
 )
 
 //go:generate faux --interface BuildManager --output fakes/build_manager.go
@@ -16,13 +18,23 @@ type BuildManager interface {
 	Resolve(workingDir, cacheDir string) (BuildProcess, error)
 }
 
+//go:generate faux --interface BindingResolver --output fakes/binding_resolver.go
+type BindingResolver interface {
+	Resolve(typ, provider, platformDir string) ([]servicebindings.Binding, error)
+}
+
 //go:generate faux --interface EnvironmentConfig --output fakes/environment_config.go
 type EnvironmentConfig interface {
-	Configure(layer packit.Layer) error
+	Configure(layer packit.Layer, npmrcPath string) error
 	GetValue(key string) string
 }
 
-func Build(projectPathParser PathParser, buildManager BuildManager, clock chronos.Clock, environment EnvironmentConfig, logger scribe.Logger) packit.BuildFunc {
+func Build(projectPathParser PathParser,
+	bindingResolver BindingResolver,
+	buildManager BuildManager,
+	clock chronos.Clock,
+	environment EnvironmentConfig,
+	logger scribe.Logger) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
@@ -38,6 +50,36 @@ func Build(projectPathParser PathParser, buildManager BuildManager, clock chrono
 		}
 		nodeCacheLayer = setLayerFlags(nodeCacheLayer, context.Plan.Entries)
 
+		var globalNpmrcPath string
+		bindings, err := bindingResolver.Resolve("npmrc", "", context.Platform.Path)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+
+		if len(bindings) > 1 {
+			return packit.BuildResult{}, errors.New("binding resolver found more than one binding of type 'npmrc'")
+		}
+
+		if len(bindings) == 1 {
+			logger.Process("Loading npmrc service binding")
+
+			npmrcExists := false
+			for key := range bindings[0].Entries {
+				if key == ".npmrc" {
+					npmrcExists = true
+					break
+				}
+			}
+			if !npmrcExists {
+				return packit.BuildResult{}, errors.New("binding of type 'npmrc' does not contain required entry '.npmrc'")
+			}
+			globalNpmrcPath = filepath.Join(bindings[0].Path, ".npmrc")
+		}
+
+		if path, ok := os.LookupEnv("NPM_CONFIG_GLOBALCONFIG"); ok {
+			globalNpmrcPath = path
+		}
+
 		logger.Process("Resolving installation process")
 
 		projectPath, err := projectPathParser.Get(context.WorkingDir)
@@ -52,7 +94,7 @@ func Build(projectPathParser PathParser, buildManager BuildManager, clock chrono
 			return packit.BuildResult{}, err
 		}
 
-		run, sha, err := process.ShouldRun(projectPath, nodeModulesLayer.Metadata)
+		run, sha, err := process.ShouldRun(projectPath, nodeModulesLayer.Metadata, globalNpmrcPath)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
@@ -67,7 +109,7 @@ func Build(projectPathParser PathParser, buildManager BuildManager, clock chrono
 			nodeModulesLayer = setLayerFlags(nodeModulesLayer, context.Plan.Entries)
 
 			duration, err := clock.Measure(func() error {
-				return process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, projectPath)
+				return process.Run(nodeModulesLayer.Path, nodeCacheLayer.Path, projectPath, globalNpmrcPath)
 			})
 			if err != nil {
 				return packit.BuildResult{}, err
@@ -81,7 +123,7 @@ func Build(projectPathParser PathParser, buildManager BuildManager, clock chrono
 				"cache_sha": sha,
 			}
 
-			err = environment.Configure(nodeModulesLayer)
+			err = environment.Configure(nodeModulesLayer, globalNpmrcPath)
 			if err != nil {
 				return packit.BuildResult{}, err
 			}

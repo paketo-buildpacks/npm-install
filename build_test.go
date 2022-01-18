@@ -14,6 +14,8 @@ import (
 	"github.com/paketo-buildpacks/packit/v2"
 	"github.com/paketo-buildpacks/packit/v2/chronos"
 	"github.com/paketo-buildpacks/packit/v2/scribe"
+	"github.com/paketo-buildpacks/packit/v2/servicebindings"
+
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
@@ -29,12 +31,14 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		processLayerDir   string
 		processWorkingDir string
 		processCacheDir   string
+		processNpmrcPath  string
 
 		timestamp string
 
 		projectPathParser *fakes.PathParser
 		buildProcess      *fakes.BuildProcess
 		buildManager      *fakes.BuildManager
+		bindingResolver   *fakes.BindingResolver
 		environment       *fakes.EnvironmentConfig
 		clock             chronos.Clock
 		build             packit.BuildFunc
@@ -53,10 +57,12 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		projectPathParser = &fakes.PathParser{}
 		projectPathParser.GetCall.Returns.ProjectPath = ""
 
+		bindingResolver = &fakes.BindingResolver{}
+
 		buildProcess = &fakes.BuildProcess{}
 		buildProcess.ShouldRunCall.Returns.Run = true
 		buildProcess.ShouldRunCall.Returns.Sha = "some-sha"
-		buildProcess.RunCall.Stub = func(ld, cd, wd string) error {
+		buildProcess.RunCall.Stub = func(ld, cd, wd, rc string) error {
 			err := os.MkdirAll(filepath.Join(ld, "layer-content"), os.ModePerm)
 			if err != nil {
 				return err
@@ -69,6 +75,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			processLayerDir = ld
 			processCacheDir = cd
 			processWorkingDir = wd
+			processNpmrcPath = rc
 
 			return nil
 		}
@@ -87,7 +94,14 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		build = npminstall.Build(projectPathParser, buildManager, clock, environment, logger)
+		build = npminstall.Build(
+			projectPathParser,
+			bindingResolver,
+			buildManager,
+			clock,
+			environment,
+			logger,
+		)
 	})
 
 	it.After(func() {
@@ -97,6 +111,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 	it("resolves and calls the build process", func() {
 		result, err := build(packit.BuildContext{
+			Platform: packit.Platform{
+				Path: "some-platform-path",
+			},
 			WorkingDir: workingDir,
 			Layers:     packit.Layers{Path: layersDir},
 			Plan: packit.BuildpackPlan{
@@ -137,6 +154,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		}))
 
 		Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
+		Expect(bindingResolver.ResolveCall.Receives.Typ).To(Equal("npmrc"))
+		Expect(bindingResolver.ResolveCall.Receives.Provider).To(Equal(""))
+		Expect(bindingResolver.ResolveCall.Receives.PlatformDir).To(Equal("some-platform-path"))
 		Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 		Expect(environment.ConfigureCall.CallCount).To(Equal(1))
 		Expect(environment.ConfigureCall.Receives.Layer.Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
@@ -144,6 +164,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
 		Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 		Expect(processWorkingDir).To(Equal(workingDir))
+		Expect(processNpmrcPath).To(Equal(""))
 	})
 
 	context("when node_modules is required at build and launch", func() {
@@ -200,6 +221,154 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
 			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 			Expect(processWorkingDir).To(Equal(workingDir))
+		})
+	})
+
+	context("when npmrc service bindings are detected", func() {
+		context("when one npmrc binding is detected", func() {
+			it.Before(func() {
+				buffer = bytes.NewBuffer(nil)
+				logger := scribe.NewLogger(buffer)
+
+				bindingResolver.ResolveCall.Returns.BindingSlice = []servicebindings.Binding{
+					servicebindings.Binding{
+						Name: "some-binding",
+						Type: "npmrc",
+						Path: "some-binding-path",
+						Entries: map[string]*servicebindings.Entry{
+							".npmrc": servicebindings.NewEntry("some-entry-path"),
+						},
+					},
+				}
+				build = npminstall.Build(
+					projectPathParser,
+					bindingResolver,
+					buildManager,
+					clock,
+					environment,
+					logger,
+				)
+			})
+
+			it("passes the path to the .npmrc to the build process and env configuration", func() {
+				_, err := build(packit.BuildContext{
+					WorkingDir: workingDir,
+					Layers:     packit.Layers{Path: layersDir},
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buildProcess.ShouldRunCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
+				Expect(buildProcess.RunCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
+				Expect(environment.ConfigureCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
+			})
+
+			context("and NPM_CONFIG_GLOBALCONFIG is already set in the build environment", func() {
+				it.Before(func() {
+					os.Setenv("NPM_CONFIG_GLOBALCONFIG", "some/path/.npmrc")
+				})
+				it.After(func() {
+					os.Unsetenv("NPM_CONFIG_GLOBALCONFIG")
+				})
+
+				it("does not change the previously set value of the env var", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(buildProcess.ShouldRunCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
+					Expect(buildProcess.RunCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
+					Expect(environment.ConfigureCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
+				})
+			})
+
+			context("when the binding does not contain an .npmrc entry", func() {
+				it.Before(func() {
+					buffer = bytes.NewBuffer(nil)
+					logger := scribe.NewLogger(buffer)
+
+					bindingResolver.ResolveCall.Returns.BindingSlice = []servicebindings.Binding{
+						servicebindings.Binding{
+							Name: "some-binding",
+							Type: "npmrc",
+							Path: "some-binding-path",
+							Entries: map[string]*servicebindings.Entry{
+								"some-unrelated-entry": servicebindings.NewEntry("some-entry-path"),
+							},
+						},
+					}
+					build = npminstall.Build(
+						projectPathParser,
+						bindingResolver,
+						buildManager,
+						clock,
+						environment,
+						logger,
+					)
+				})
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError(ContainSubstring("binding of type 'npmrc' does not contain required entry '.npmrc'")))
+				})
+			})
+		})
+
+		context("when more than one npmrc binding is found", func() {
+			it.Before(func() {
+				buffer = bytes.NewBuffer(nil)
+				logger := scribe.NewLogger(buffer)
+
+				bindingResolver.ResolveCall.Returns.BindingSlice = []servicebindings.Binding{
+					servicebindings.Binding{
+						Name: "some-binding",
+						Type: "npmrc",
+					},
+					servicebindings.Binding{
+						Name: "some-other-binding",
+						Type: "npmrc",
+					},
+				}
+				build = npminstall.Build(
+					projectPathParser,
+					bindingResolver,
+					buildManager,
+					clock,
+					environment,
+					logger,
+				)
+			})
+
+			it("returns an error", func() {
+				_, err := build(packit.BuildContext{
+					WorkingDir: workingDir,
+					Layers:     packit.Layers{Path: layersDir},
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+				})
+				Expect(err).To(MatchError(ContainSubstring("binding resolver found more than one binding of type 'npmrc'")))
+			})
 		})
 	})
 
@@ -333,7 +502,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 	context("when the cache layer directory is empty", func() {
 		it.Before(func() {
-			buildProcess.RunCall.Stub = func(ld, cd, wd string) error {
+			buildProcess.RunCall.Stub = func(ld, cd, wd, rc string) error {
 				err := os.MkdirAll(cd, os.ModePerm)
 				if err != nil {
 					return err
@@ -342,7 +511,14 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				return nil
 			}
 
-			build = npminstall.Build(projectPathParser, buildManager, clock, environment, scribe.NewLogger(buffer))
+			build = npminstall.Build(
+				projectPathParser,
+				bindingResolver,
+				buildManager,
+				clock,
+				environment,
+				scribe.NewLogger(buffer),
+			)
 		})
 
 		it("filters out empty layers", func() {
@@ -379,9 +555,16 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 	context("when the cache layer directory does not exist", func() {
 		it.Before(func() {
-			buildProcess.RunCall.Stub = func(ld, cd, wd string) error { return nil }
+			buildProcess.RunCall.Stub = func(ld, cd, wd, rc string) error { return nil }
 
-			build = npminstall.Build(projectPathParser, buildManager, clock, environment, scribe.NewLogger(buffer))
+			build = npminstall.Build(
+				projectPathParser,
+				bindingResolver,
+				buildManager,
+				clock,
+				environment,
+				scribe.NewLogger(buffer),
+			)
 		})
 
 		it("filters out empty layers", func() {
@@ -526,7 +709,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		context("when the build process provided fails", func() {
 			it.Before(func() {
-				buildProcess.RunCall.Stub = func(string, string, string) error {
+				buildProcess.RunCall.Stub = func(string, string, string, string) error {
 					return errors.New("given build process failed")
 				}
 			})
@@ -561,6 +744,24 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					},
 				})
 				Expect(err).To(MatchError("some-error"))
+			})
+		})
+		context("when service binding resolution fails", func() {
+			it.Before(func() {
+				bindingResolver.ResolveCall.Returns.Error = errors.New("some-bindings-error")
+			})
+
+			it("returns an error", func() {
+				_, err := build(packit.BuildContext{
+					WorkingDir: workingDir,
+					Layers:     packit.Layers{Path: layersDir},
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+				})
+				Expect(err).To(MatchError("some-bindings-error"))
 			})
 		})
 	})

@@ -22,7 +22,7 @@ func NewEnvironment(logger scribe.Logger) Environment {
 	}
 }
 
-func (e Environment) Configure(layer packit.Layer) error {
+func (e Environment) Configure(layer packit.Layer, npmrcPath string) error {
 	for envvar, val := range e.defaultValues {
 		layer.LaunchEnv.Default(envvar, val)
 	}
@@ -36,6 +36,14 @@ func (e Environment) Configure(layer packit.Layer) error {
 	e.logger.Process("Configuring environment shared by build and launch")
 	e.logger.Subprocess("%s", scribe.NewFormattedMapFromEnvironment(layer.SharedEnv))
 	e.logger.Break()
+
+	if npmrcPath != "" {
+		layer.BuildEnv.Default("NPM_CONFIG_GLOBALCONFIG", npmrcPath)
+
+		e.logger.Process("Configuring build environment")
+		e.logger.Subprocess("%s", scribe.NewFormattedMapFromEnvironment(layer.BuildEnv))
+		e.logger.Break()
+	}
 
 	return nil
 }

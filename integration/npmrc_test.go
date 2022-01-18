@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/paketo-buildpacks/occam"
@@ -26,7 +27,7 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 		docker = occam.NewDocker()
 	})
 
-	context("when a .npmrc file is in the application root directory", func() {
+	context("when an .npmrc is used to configure installation", func() {
 		var (
 			image     occam.Image
 			container occam.Container
@@ -48,32 +49,82 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 			Expect(os.RemoveAll(source)).To(Succeed())
 		})
 
-		it("is respected during npm install", func() {
-			var err error
-			source, err = occam.Source(filepath.Join("testdata", "npmrc"))
-			Expect(err).NotTo(HaveOccurred())
+		context("when a .npmrc file is in the application root directory", func() {
 
-			var logs fmt.Stringer
-			image, logs, err = pack.Build.
-				WithBuildpacks(
-					nodeOfflineURI,
-					buildpackOfflineURI,
-					buildPlanURI,
-				).
-				WithPullPolicy("never").
-				Execute(name, source)
-			Expect(err).NotTo(HaveOccurred(), logs.String)
+			it("is respected during npm install", func() {
+				var err error
+				source, err = occam.Source(filepath.Join("testdata", "npmrc"))
+				Expect(err).NotTo(HaveOccurred())
 
-			container, err = docker.Container.Run.
-				WithEntrypoint("stat").
-				WithCommand("/workspace/postinstall.log").
-				Execute(image.ID)
-			Expect(err).NotTo(HaveOccurred())
+				var logs fmt.Stringer
+				image, logs, err = pack.Build.
+					WithBuildpacks(
+						nodeOfflineURI,
+						buildpackOfflineURI,
+						buildPlanURI,
+					).
+					WithPullPolicy("never").
+					Execute(name, source)
+				Expect(err).NotTo(HaveOccurred(), logs.String)
 
-			Eventually(func() string {
-				logs, _ := docker.Container.Logs.Execute(container.ID)
-				return logs.String()
-			}).Should(ContainSubstring("No such file"))
+				container, err = docker.Container.Run.
+					WithEntrypoint("stat").
+					WithCommand("/workspace/postinstall.log").
+					Execute(image.ID)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(func() string {
+					logs, _ := docker.Container.Logs.Execute(container.ID)
+					return logs.String()
+				}).Should(ContainSubstring("No such file"))
+			})
+		})
+		context("when an npmrc service binding is provided", func() {
+			var (
+				binding string
+				err     error
+			)
+			it.Before(func() {
+				binding, err = os.MkdirTemp("", "bindingdir")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.Chmod(binding, os.ModePerm)).To(Succeed())
+
+				Expect(os.WriteFile(filepath.Join(binding, "type"), []byte("npmrc"), os.ModePerm)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(binding, ".npmrc"), []byte(`include=dev`), os.ModePerm)).To(Succeed())
+			})
+
+			it.After(func() {
+				os.RemoveAll(binding)
+			})
+
+			it("builds a working OCI image that includes the dev dependency", func() {
+				var err error
+				source, err = occam.Source(filepath.Join("testdata", "simple_app"))
+				Expect(err).NotTo(HaveOccurred())
+
+				image, _, err = pack.Build.
+					WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
+					WithPullPolicy("never").
+					WithEnv(map[string]string{
+						"SERVICE_BINDING_ROOT": "/bindings",
+					}).
+					WithVolumes(fmt.Sprintf("%s:/bindings/npmrc", binding)).
+					Execute(name, source)
+				Expect(err).NotTo(HaveOccurred())
+
+				container, err = docker.Container.Run.
+					WithCommand(fmt.Sprintf("ls -alR /layers/%s/modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+					Execute(image.ID)
+				Expect(err).NotTo(HaveOccurred())
+
+				cLogs := func() string {
+					cLogs, err := docker.Container.Logs.Execute(container.ID)
+					Expect(err).NotTo(HaveOccurred())
+					return cLogs.String()
+				}
+				Eventually(cLogs).Should(ContainSubstring("leftpad"))
+				Eventually(cLogs).Should(ContainSubstring("spellchecker-cli"))
+			})
 		})
 	})
 }
