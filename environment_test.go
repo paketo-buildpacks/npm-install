@@ -47,7 +47,7 @@ func testEnvironment(t *testing.T, context spec.G, it spec.S) {
 
 	context("Configure", func() {
 		it("configures the environment variables", func() {
-			err := environment.Configure(layer)
+			err := environment.Configure(layer, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(layer.LaunchEnv).To(Equal(packit.Environment{
@@ -58,6 +58,8 @@ func testEnvironment(t *testing.T, context spec.G, it spec.S) {
 				"PATH.append": filepath.Join(layer.Path, "node_modules", ".bin"),
 				"PATH.delim":  string(os.PathListSeparator),
 			}))
+
+			Expect(layer.BuildEnv).To(Equal(packit.Environment{}))
 
 			Expect(buffer.String()).To(ContainSubstring("  Configuring launch environment"))
 			Expect(buffer.String()).To(ContainSubstring("    NPM_CONFIG_LOGLEVEL -> \"error\""))
@@ -76,7 +78,7 @@ func testEnvironment(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("does not influence the launch time env value", func() {
-				err := environment.Configure(layer)
+				err := environment.Configure(layer, "")
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(layer.LaunchEnv).To(Equal(packit.Environment{
@@ -84,6 +86,19 @@ func testEnvironment(t *testing.T, context spec.G, it spec.S) {
 				}))
 			})
 		})
+		context("when a npmrc global config path is provided", func() {
 
+			it("adds the path to the build environment as a default", func() {
+				err := environment.Configure(layer, "some/path/.npmrc")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(layer.BuildEnv).To(Equal(packit.Environment{
+					"NPM_CONFIG_GLOBALCONFIG.default": "some/path/.npmrc",
+				}))
+
+				Expect(buffer.String()).To(ContainSubstring("  Configuring build environment"))
+				Expect(buffer.String()).To(ContainSubstring("    NPM_CONFIG_GLOBALCONFIG -> \"some/path/.npmrc\""))
+			})
+		})
 	})
 }
