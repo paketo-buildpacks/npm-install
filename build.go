@@ -63,14 +63,7 @@ func Build(projectPathParser PathParser,
 		if len(bindings) == 1 {
 			logger.Process("Loading npmrc service binding")
 
-			npmrcExists := false
-			for key := range bindings[0].Entries {
-				if key == ".npmrc" {
-					npmrcExists = true
-					break
-				}
-			}
-			if !npmrcExists {
+			if _, ok := bindings[0].Entries[".npmrc"]; !ok {
 				return packit.BuildResult{}, errors.New("binding of type 'npmrc' does not contain required entry '.npmrc'")
 			}
 			globalNpmrcPath = filepath.Join(bindings[0].Path, ".npmrc")
