@@ -29,11 +29,12 @@ func NewRebuildBuildProcess(executable Executable, summer Summer, environment En
 	}
 }
 
-func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
+func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}, npmrcPath string) (bool, string, error) {
 	cachedNodeVersion, err := cacheExecutableResponse(
 		r.executable,
 		[]string{"get", "user-agent"},
 		workingDir,
+		npmrcPath,
 		r.logger)
 	if err != nil {
 		return false, "", fmt.Errorf("failed to execute npm get user-agent: %w", err)
@@ -53,11 +54,17 @@ func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]in
 	return false, "", nil
 }
 
-func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
+func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath string) error {
 	buffer := bytes.NewBuffer(nil)
+	environment := os.Environ()
+	if npmrcPath != "" {
+		environment = append(environment, fmt.Sprintf("NPM_CONFIG_GLOBALCONFIG=%s", npmrcPath))
+	}
+
 	err := r.executable.Execute(pexec.Execution{
 		Args:   []string{"list"},
 		Dir:    workingDir,
+		Env:    environment,
 		Stdout: buffer,
 		Stderr: buffer,
 	})
@@ -71,6 +78,7 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 	err = r.executable.Execute(pexec.Execution{
 		Args:   args,
 		Dir:    workingDir,
+		Env:    environment,
 		Stdout: buffer,
 		Stderr: buffer,
 	})
@@ -88,7 +96,7 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		Stdout: buffer,
 		Stderr: buffer,
 		Env: append(
-			os.Environ(),
+			environment,
 			fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")),
 		),
 	})
@@ -102,6 +110,7 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 	err = r.executable.Execute(pexec.Execution{
 		Args:   args,
 		Dir:    workingDir,
+		Env:    environment,
 		Stdout: buffer,
 		Stderr: buffer,
 	})
@@ -115,9 +124,8 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
-		} else {
-			return fmt.Errorf("unable to stat node_modules in working directory: %w", err)
 		}
+		return fmt.Errorf("unable to stat node_modules in working directory: %w", err)
 	}
 
 	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(modulesDir, "node_modules"))

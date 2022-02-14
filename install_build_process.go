@@ -27,11 +27,11 @@ type InstallBuildProcess struct {
 	logger      scribe.Logger
 }
 
-func (r InstallBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}) (bool, string, error) {
+func (r InstallBuildProcess) ShouldRun(workingDir string, metadata map[string]interface{}, npmrcPath string) (bool, string, error) {
 	return true, "", nil
 }
 
-func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error {
+func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath string) error {
 	err := os.Mkdir(filepath.Join(modulesDir, "node_modules"), os.ModePerm)
 	if err != nil {
 		return err
@@ -39,6 +39,10 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 
 	buffer := bytes.NewBuffer(nil)
 	args := []string{"install", "--unsafe-perm", "--cache", cacheDir}
+	environment := append(os.Environ(), fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")))
+	if npmrcPath != "" {
+		environment = append(environment, fmt.Sprintf("NPM_CONFIG_GLOBALCONFIG=%s", npmrcPath))
+	}
 
 	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 	err = r.executable.Execute(pexec.Execution{
@@ -46,10 +50,7 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 		Dir:    workingDir,
 		Stdout: buffer,
 		Stderr: buffer,
-		Env: append(
-			os.Environ(),
-			fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")),
-		),
+		Env:    environment,
 	})
 	if err != nil {
 		r.logger.Subprocess("%s", buffer.String())
@@ -60,9 +61,8 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir string) error 
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
-		} else {
-			return fmt.Errorf("unable to stat node_modules in working directory: %w", err)
 		}
+		return fmt.Errorf("unable to stat node_modules in working directory: %w", err)
 	}
 
 	err = fs.Move(filepath.Join(workingDir, "node_modules"), filepath.Join(modulesDir, "node_modules"))

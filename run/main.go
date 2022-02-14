@@ -1,15 +1,17 @@
 package main
 
 import (
-	"github.com/paketo-buildpacks/packit/v2/sbom"
 	"os"
 
 	npminstall "github.com/paketo-buildpacks/npm-install"
+
 	"github.com/paketo-buildpacks/packit/v2"
 	"github.com/paketo-buildpacks/packit/v2/chronos"
 	"github.com/paketo-buildpacks/packit/v2/fs"
 	"github.com/paketo-buildpacks/packit/v2/pexec"
+	"github.com/paketo-buildpacks/packit/v2/sbom"
 	"github.com/paketo-buildpacks/packit/v2/scribe"
+	"github.com/paketo-buildpacks/packit/v2/servicebindings"
 )
 
 type SBOMGenerator struct{}
@@ -27,11 +29,13 @@ func main() {
 	environment := npminstall.NewEnvironment(logger)
 	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, environment, logger)
 	sbomGenerator := SBOMGenerator{}
+	bindingResolver := servicebindings.NewResolver()
 
 	packit.Run(
 		npminstall.Detect(projectPathParser, packageJSONParser),
 		npminstall.Build(
 			projectPathParser,
+			bindingResolver,
 			resolver,
 			chronos.DefaultClock,
 			environment,

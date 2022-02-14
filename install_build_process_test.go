@@ -63,7 +63,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 	context("ShouldRun", func() {
 		it("returns true", func() {
-			run, sha, err := process.ShouldRun(workingDir, nil)
+			run, sha, err := process.ShouldRun(workingDir, nil, "some-npmrc-path")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(run).To(BeTrue())
 			Expect(sha).To(BeEmpty())
@@ -76,13 +76,13 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it("succeeds", func() {
-			Expect(process.Run(modulesDir, cacheDir, workingDir)).To(Succeed())
+			Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path")).To(Succeed())
 			Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
 				Args:   []string{"install", "--unsafe-perm", "--cache", cacheDir},
 				Dir:    workingDir,
 				Stdout: commandOutput,
 				Stderr: commandOutput,
-				Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val"),
+				Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
 			}))
 
 			path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
@@ -97,7 +97,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				it("fails", func() {
-					err := process.Run(modulesDir, cacheDir, workingDir)
+					err := process.Run(modulesDir, cacheDir, workingDir, "")
 					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
 			})
@@ -113,7 +113,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				it("returns an error", func() {
-					err := process.Run(modulesDir, cacheDir, workingDir)
+					err := process.Run(modulesDir, cacheDir, workingDir, "")
 					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
 			})
@@ -128,7 +128,7 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				it("returns an error", func() {
-					err := process.Run(modulesDir, cacheDir, workingDir)
+					err := process.Run(modulesDir, cacheDir, workingDir, "")
 					Expect(buffer.String()).To(ContainSubstring("    install error on stdout\n    install error on stderr\n"))
 					Expect(err).To(MatchError("npm install failed: failed to execute"))
 				})

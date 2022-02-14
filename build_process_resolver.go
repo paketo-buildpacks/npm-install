@@ -3,6 +3,7 @@ package npminstall
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -19,8 +20,8 @@ type Executable interface {
 
 //go:generate faux --interface BuildProcess --output fakes/build_process.go
 type BuildProcess interface {
-	ShouldRun(workingDir string, metadata map[string]interface{}) (run bool, sha string, err error)
-	Run(modulesDir, cacheDir, workingDir string) error
+	ShouldRun(workingDir string, metadata map[string]interface{}, npmrcPath string) (run bool, sha string, err error)
+	Run(modulesDir, cacheDir, workingDir string, npmrcPath string) error
 }
 
 //go:generate faux --interface Summer --output fakes/summer.go
@@ -105,12 +106,17 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 
 // cacheExecutableResponse writes the output of a successfully executed command
 // to a tmp file and returns the file location and possibly and error
-func cacheExecutableResponse(executable Executable, args []string, workingDir string, logger scribe.Logger) (string, error) {
+func cacheExecutableResponse(executable Executable, args []string, workingDir string, npmrcPath string, logger scribe.Logger) (string, error) {
 	stdout := bytes.NewBuffer(nil)
 	stderr := bytes.NewBuffer(nil)
+	var environment []string
+	if npmrcPath != "" {
+		environment = append(os.Environ(), fmt.Sprintf("NPM_CONFIG_GLOBALCONFIG=%s", npmrcPath))
+	}
 	err := executable.Execute(pexec.Execution{
 		Args:   args,
 		Dir:    workingDir,
+		Env:    environment,
 		Stdout: stdout,
 		Stderr: stderr,
 	})
