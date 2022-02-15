@@ -1,12 +1,10 @@
 package fakes
 
-import (
-	"sync"
-)
+import "sync"
 
 type Summer struct {
 	SumCall struct {
-		mutex     sync.Mutex
+		sync.Mutex
 		CallCount int
 		Receives  struct {
 			Paths []string
@@ -20,8 +18,8 @@ type Summer struct {
 }
 
 func (f *Summer) Sum(param1 ...string) (string, error) {
-	f.SumCall.mutex.Lock()
-	defer f.SumCall.mutex.Unlock()
+	f.SumCall.Lock()
+	defer f.SumCall.Unlock()
 	f.SumCall.CallCount++
 	f.SumCall.Receives.Paths = param1
 	if f.SumCall.Stub != nil {

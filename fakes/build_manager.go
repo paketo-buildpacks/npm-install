@@ -8,7 +8,7 @@ import (
 
 type BuildManager struct {
 	ResolveCall struct {
-		mutex     sync.Mutex
+		sync.Mutex
 		CallCount int
 		Receives  struct {
 			WorkingDir string
@@ -23,8 +23,8 @@ type BuildManager struct {
 }
 
 func (f *BuildManager) Resolve(param1 string, param2 string) (npminstall.BuildProcess, error) {
-	f.ResolveCall.mutex.Lock()
-	defer f.ResolveCall.mutex.Unlock()
+	f.ResolveCall.Lock()
+	defer f.ResolveCall.Unlock()
 	f.ResolveCall.CallCount++
 	f.ResolveCall.Receives.WorkingDir = param1
 	f.ResolveCall.Receives.CacheDir = param2

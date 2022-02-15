@@ -79,7 +79,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 			it("returns false", func() {
 				run, sha, err := process.ShouldRun(workingDir, map[string]interface{}{
 					"cache_sha": "some-cache-sha",
-				})
+				}, "some-npmrc-path")
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(summer.SumCall.Receives.Paths[0]).To(Equal(filepath.Join(workingDir, "package.json")))
@@ -88,6 +88,9 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(run).To(BeFalse())
 				Expect(sha).To(BeEmpty())
+				for _, ex := range executions {
+					Expect(ex.Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				}
 				lastExecution := executions[len(executions)-1]
 				Expect(lastExecution.Args).To(Equal([]string{
 					"get",
@@ -105,7 +108,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 			it("returns false", func() {
 				run, sha, err := process.ShouldRun(workingDir, map[string]interface{}{
 					"cache_sha": "some-cache-sha",
-				})
+				}, "some-npmrc-path")
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(summer.SumCall.Receives.Paths[0]).To(Equal(filepath.Join(workingDir, "package.json")))
@@ -114,6 +117,9 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
+				for _, ex := range executions {
+					Expect(ex.Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				}
 
 				lastExecution := executions[len(executions)-1]
 				Expect(lastExecution.Args).To(Equal([]string{
@@ -130,7 +136,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("returns false", func() {
-				run, sha, err := process.ShouldRun(workingDir, nil)
+				run, sha, err := process.ShouldRun(workingDir, nil, "some-npmrc-path")
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(summer.SumCall.Receives.Paths[0]).To(Equal(filepath.Join(workingDir, "package.json")))
@@ -139,6 +145,9 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(run).To(BeTrue())
 				Expect(sha).To(Equal("other-cache-sha"))
+				for _, ex := range executions {
+					Expect(ex.Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				}
 
 				lastExecution := executions[len(executions)-1]
 				Expect(lastExecution.Args).To(Equal([]string{
@@ -156,7 +165,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				it("returns an error", func() {
-					_, _, err := process.ShouldRun(workingDir, nil)
+					_, _, err := process.ShouldRun(workingDir, nil, "")
 					Expect(err).To(MatchError("checksummer error"))
 				})
 			})
@@ -170,7 +179,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				it("fails", func() {
-					_, _, err := process.ShouldRun(workingDir, nil)
+					_, _, err := process.ShouldRun(workingDir, nil, "")
 					Expect(err).To(MatchError(ContainSubstring("very bad error")))
 					Expect(err).To(MatchError(ContainSubstring("failed to execute npm get user-agent")))
 				})
@@ -181,14 +190,14 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 	context("Run", func() {
 		it("succeeds", func() {
-			Expect(process.Run(modulesDir, cacheDir, workingDir)).To(Succeed())
+			Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path")).To(Succeed())
 
 			Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
 				Args:   []string{"ci", "--unsafe-perm", "--cache", cacheDir},
 				Dir:    workingDir,
 				Stdout: commandOutput,
 				Stderr: commandOutput,
-				Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val"),
+				Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
 			}))
 
 			path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
@@ -207,7 +216,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				it("returns an error", func() {
-					err := process.Run(modulesDir, cacheDir, workingDir)
+					err := process.Run(modulesDir, cacheDir, workingDir, "")
 					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
 			})
@@ -222,7 +231,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				it("returns an error", func() {
-					err := process.Run(modulesDir, cacheDir, workingDir)
+					err := process.Run(modulesDir, cacheDir, workingDir, "")
 					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
 			})
@@ -237,7 +246,7 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				it("returns an error", func() {
-					err := process.Run(modulesDir, cacheDir, workingDir)
+					err := process.Run(modulesDir, cacheDir, workingDir, "")
 					Expect(buffer.String()).To(ContainSubstring("    ci failure on stdout\n    ci failure on stderr"))
 					Expect(err).To(MatchError("npm ci failed: failed to execute"))
 				})

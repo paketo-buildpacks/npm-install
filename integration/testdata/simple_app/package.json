@@ -10,6 +10,9 @@
   "dependencies": {
     "leftpad": "~0.0.1"
   },
+  "devDependencies": {
+    "spellchecker-cli": "^4.8.1"
+  },
   "repository": {
     "type": "git",
     "url": ""
