@@ -94,7 +94,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		environment = &fakes.EnvironmentConfig{}
 
 		buffer = bytes.NewBuffer(nil)
-		logger := scribe.NewLogger(buffer)
+		logger := scribe.NewEmitter(buffer)
 
 		sbomGenerator = &fakes.SBOMGenerator{}
 		sbomGenerator.GenerateCall.Returns.SBOM = sbom.SBOM{}
@@ -259,7 +259,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		context("when one npmrc binding is detected", func() {
 			it.Before(func() {
 				buffer = bytes.NewBuffer(nil)
-				logger := scribe.NewLogger(buffer)
+				logger := scribe.NewEmitter(buffer)
 
 				bindingResolver.ResolveCall.Returns.BindingSlice = []servicebindings.Binding{
 					servicebindings.Binding{
@@ -328,7 +328,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			context("when the binding does not contain an .npmrc entry", func() {
 				it.Before(func() {
 					buffer = bytes.NewBuffer(nil)
-					logger := scribe.NewLogger(buffer)
+					logger := scribe.NewEmitter(buffer)
 
 					bindingResolver.ResolveCall.Returns.BindingSlice = []servicebindings.Binding{
 						servicebindings.Binding{
@@ -368,7 +368,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		context("when more than one npmrc binding is found", func() {
 			it.Before(func() {
 				buffer = bytes.NewBuffer(nil)
-				logger := scribe.NewLogger(buffer)
+				logger := scribe.NewEmitter(buffer)
 
 				bindingResolver.ResolveCall.Returns.BindingSlice = []servicebindings.Binding{
 					servicebindings.Binding{
@@ -563,7 +563,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				buildManager,
 				clock,
 				environment,
-				scribe.NewLogger(buffer),
+				scribe.NewEmitter(buffer),
 				sbomGenerator,
 			)
 		})
@@ -602,7 +602,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				buildManager,
 				clock,
 				environment,
-				scribe.NewLogger(buffer),
+				scribe.NewEmitter(buffer),
 				sbomGenerator,
 			)
 		})

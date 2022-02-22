@@ -41,7 +41,7 @@ func Build(projectPathParser PathParser,
 	buildManager BuildManager,
 	clock chronos.Clock,
 	environment EnvironmentConfig,
-	logger scribe.Logger,
+	logger scribe.Emitter,
 	sbomGenerator SBOMGenerator) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
@@ -129,11 +129,9 @@ func Build(projectPathParser PathParser,
 				return packit.BuildResult{}, err
 			}
 
-			logger.Process("Configuring environment")
-			logger.Subprocess("%s", scribe.NewFormattedMapFromEnvironment(nodeModulesLayer.SharedEnv))
-			logger.Break()
+			logger.EnvironmentVariables(nodeModulesLayer)
 
-			logger.Process("Generating SBOM")
+			logger.GeneratingSBOM(nodeModulesLayer.Path)
 
 			var sbomContent sbom.SBOM
 			duration, err = clock.Measure(func() error {
@@ -144,6 +142,9 @@ func Build(projectPathParser PathParser,
 				return packit.BuildResult{}, err
 			}
 			logger.Action("Completed in %s", duration.Round(time.Millisecond))
+			logger.Break()
+
+			logger.FormattingSBOM(context.BuildpackInfo.SBOMFormats...)
 
 			nodeModulesLayer.SBOM, err = sbomContent.InFormats(context.BuildpackInfo.SBOMFormats...)
 			if err != nil {

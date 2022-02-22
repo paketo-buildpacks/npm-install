@@ -24,10 +24,10 @@ func main() {
 	projectPathParser := npminstall.NewProjectPathParser()
 	packageJSONParser := npminstall.NewPackageJSONParser()
 	executable := pexec.NewExecutable("npm")
-	logger := scribe.NewLogger(os.Stdout)
+	logger := scribe.NewEmitter(os.Stdout)
 	checksumCalculator := fs.NewChecksumCalculator()
-	environment := npminstall.NewEnvironment(logger)
-	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, environment, logger)
+	environment := npminstall.NewEnvironment(scribe.NewLogger(os.Stdout))
+	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, environment, scribe.NewLogger(os.Stdout))
 	sbomGenerator := SBOMGenerator{}
 	bindingResolver := servicebindings.NewResolver()
 
