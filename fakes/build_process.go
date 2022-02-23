@@ -4,7 +4,7 @@ import "sync"
 
 type BuildProcess struct {
 	RunCall struct {
-		mutex     sync.Mutex
+		sync.Mutex
 		CallCount int
 		Receives  struct {
 			ModulesDir string
@@ -18,7 +18,7 @@ type BuildProcess struct {
 		Stub func(string, string, string, string) error
 	}
 	ShouldRunCall struct {
-		mutex     sync.Mutex
+		sync.Mutex
 		CallCount int
 		Receives  struct {
 			WorkingDir string
@@ -37,8 +37,8 @@ type BuildProcess struct {
 }
 
 func (f *BuildProcess) Run(param1 string, param2 string, param3 string, param4 string) error {
-	f.RunCall.mutex.Lock()
-	defer f.RunCall.mutex.Unlock()
+	f.RunCall.Lock()
+	defer f.RunCall.Unlock()
 	f.RunCall.CallCount++
 	f.RunCall.Receives.ModulesDir = param1
 	f.RunCall.Receives.CacheDir = param2
@@ -51,8 +51,8 @@ func (f *BuildProcess) Run(param1 string, param2 string, param3 string, param4 s
 }
 func (f *BuildProcess) ShouldRun(param1 string, param2 map[string]interface {
 }, param3 string) (bool, string, error) {
-	f.ShouldRunCall.mutex.Lock()
-	defer f.ShouldRunCall.mutex.Unlock()
+	f.ShouldRunCall.Lock()
+	defer f.ShouldRunCall.Unlock()
 	f.ShouldRunCall.CallCount++
 	f.ShouldRunCall.Receives.WorkingDir = param1
 	f.ShouldRunCall.Receives.Metadata = param2

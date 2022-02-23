@@ -32,14 +32,19 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			image     occam.Image
 			container occam.Container
 
-			name   string
-			source string
+			name    string
+			source  string
+			sbomDir string
 		)
 
 		it.Before(func() {
 			var err error
 			name, err = occam.RandomName()
 			Expect(err).NotTo(HaveOccurred())
+
+			sbomDir, err = os.MkdirTemp("", "sbom")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Chmod(sbomDir, os.ModePerm)).To(Succeed())
 		})
 
 		it.After(func() {
@@ -47,6 +52,7 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
 			Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
 			Expect(os.RemoveAll(source)).To(Succeed())
+			Expect(os.RemoveAll(sbomDir)).To(Succeed())
 		})
 
 		it("builds a working OCI image for a simple app", func() {
@@ -57,6 +63,7 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			image, _, err = pack.Build.
 				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
 				WithPullPolicy("never").
+				WithSBOMOutputDir(sbomDir).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -72,6 +79,17 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			}
 			Eventually(cLogs).Should(ContainSubstring("leftpad"))
 			Eventually(cLogs).Should(ContainSubstring("NPM_CONFIG_LOGLEVEL=error"))
+
+			// check that all expected SBOM files are present
+			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "modules", "sbom.cdx.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "modules", "sbom.spdx.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "modules", "sbom.syft.json")).To(BeARegularFile())
+
+			// check an SBOM file to make sure it has an entry for an app node module
+			contents, err := os.ReadFile(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "modules", "sbom.cdx.json"))
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(contents)).To(ContainSubstring(`"name": "leftpad"`))
 		})
 	})
 }

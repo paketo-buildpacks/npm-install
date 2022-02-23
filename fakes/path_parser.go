@@ -4,7 +4,7 @@ import "sync"
 
 type PathParser struct {
 	GetCall struct {
-		mutex     sync.Mutex
+		sync.Mutex
 		CallCount int
 		Receives  struct {
 			Path string
@@ -18,8 +18,8 @@ type PathParser struct {
 }
 
 func (f *PathParser) Get(param1 string) (string, error) {
-	f.GetCall.mutex.Lock()
-	defer f.GetCall.mutex.Unlock()
+	f.GetCall.Lock()
+	defer f.GetCall.Unlock()
 	f.GetCall.CallCount++
 	f.GetCall.Receives.Path = param1
 	if f.GetCall.Stub != nil {

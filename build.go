@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/paketo-buildpacks/packit/v2/sbom"
+
 	"github.com/paketo-buildpacks/packit/v2"
 	"github.com/paketo-buildpacks/packit/v2/chronos"
 	"github.com/paketo-buildpacks/packit/v2/fs"
@@ -29,12 +31,18 @@ type EnvironmentConfig interface {
 	GetValue(key string) string
 }
 
+//go:generate faux --interface SBOMGenerator --output fakes/sbom_generator.go
+type SBOMGenerator interface {
+	Generate(dir string) (sbom.SBOM, error)
+}
+
 func Build(projectPathParser PathParser,
 	bindingResolver BindingResolver,
 	buildManager BuildManager,
 	clock chronos.Clock,
 	environment EnvironmentConfig,
-	logger scribe.Logger) packit.BuildFunc {
+	logger scribe.Emitter,
+	sbomGenerator SBOMGenerator) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
@@ -117,6 +125,28 @@ func Build(projectPathParser PathParser,
 			}
 
 			err = environment.Configure(nodeModulesLayer, globalNpmrcPath)
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
+
+			logger.EnvironmentVariables(nodeModulesLayer)
+
+			logger.GeneratingSBOM(nodeModulesLayer.Path)
+
+			var sbomContent sbom.SBOM
+			duration, err = clock.Measure(func() error {
+				sbomContent, err = sbomGenerator.Generate(context.WorkingDir)
+				return err
+			})
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
+			logger.Action("Completed in %s", duration.Round(time.Millisecond))
+			logger.Break()
+
+			logger.FormattingSBOM(context.BuildpackInfo.SBOMFormats...)
+
+			nodeModulesLayer.SBOM, err = sbomContent.InFormats(context.BuildpackInfo.SBOMFormats...)
 			if err != nil {
 				return packit.BuildResult{}, err
 			}
