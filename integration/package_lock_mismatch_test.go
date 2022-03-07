@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,10 +60,10 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			// manipulate package.json
-			contents, err := ioutil.ReadFile(filepath.Join(source, "package.json"))
+			contents, err := os.ReadFile(filepath.Join(source, "package.json"))
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(filepath.Join(source, "package.json"),
+			err = os.WriteFile(filepath.Join(source, "package.json"),
 				[]byte(strings.ReplaceAll(string(contents),
 					`"dependencies": {`,
 					`"dependencies": { "logfmt": "~1.1.2",`,
@@ -106,10 +105,10 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 			Eventually(container).Should(BeAvailable())
 
 			// manipulate package.json
-			contents, err := ioutil.ReadFile(filepath.Join(source, "package.json"))
+			contents, err := os.ReadFile(filepath.Join(source, "package.json"))
 			Expect(err).NotTo(HaveOccurred())
 
-			err = ioutil.WriteFile(filepath.Join(source, "package.json"),
+			err = os.WriteFile(filepath.Join(source, "package.json"),
 				[]byte(strings.ReplaceAll(string(contents),
 					`"dependencies": {`,
 					`"dependencies": { "logfmt": "~1.1.2",`,
@@ -129,7 +128,7 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 				"",
 				"    Selected NPM build process: 'npm ci'",
 				"",
-				"  Executing build process",
+				"  Executing launch environment install process",
 				fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 			))
 

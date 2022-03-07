@@ -13,10 +13,11 @@ func TestUnitNPMInstall(t *testing.T) {
 	suite("BuildProcessResolver", testBuildProcessResolver)
 	suite("CIBuildProcess", testCIBuildProcess)
 	suite("Detect", testDetect)
-	suite("Environment", testEnvironment)
 	suite("InstallBuildProcess", testInstallBuildProcess)
 	suite("PackageJSONParser", testPackageJSONParser)
+	suite("PackageManangerConfigurationManager", testPackageManagerConfigurationManager)
 	suite("ProjectPathParser", testProjectPathParser)
+	suite("PruneBuildProcess", testPruneBuildProcess)
 	suite("RebuildBuildProcess", testRebuildBuildProcess)
 	suite.Run(t)
 }

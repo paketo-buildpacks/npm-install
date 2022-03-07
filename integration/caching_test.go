@@ -68,7 +68,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(firstImage.Buildpacks).To(HaveLen(3))
 			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
-			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("launch-modules"))
 
 			container, err := docker.Container.Run.
 				WithCommand("npm start").
@@ -88,7 +88,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(secondImage.Buildpacks).To(HaveLen(3))
 			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
-			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("launch-modules"))
 
 			container, err = docker.Container.Run.
 				WithCommand("npm start").
@@ -102,7 +102,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Eventually(container).Should(BeAvailable())
 
 			Expect(secondImage.ID).NotTo(Equal(firstImage.ID))
-			Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).NotTo(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
+			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]).NotTo(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]))
 		})
 	})
 
@@ -121,7 +121,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(firstImage.Buildpacks).To(HaveLen(3))
 			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
-			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("launch-modules"))
 
 			Expect(logs).To(ContainLines(
 				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
@@ -133,15 +133,13 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				"",
 				"    Selected NPM build process: 'npm ci'",
 				"",
-				"  Executing build process",
+				"  Executing launch environment install process",
 				fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
 				"",
 				"  Configuring launch environment",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
-				"",
-				"  Configuring environment shared by build and launch",
-				fmt.Sprintf("    PATH -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				"",
 			))
 
@@ -163,7 +161,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(secondImage.Buildpacks).To(HaveLen(3))
 			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
-			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("launch-modules"))
 
 			container, err = docker.Container.Run.
 				WithCommand("npm start").
@@ -177,8 +175,8 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Eventually(container).Should(BeAvailable())
 
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
-			Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
-			Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).To(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
+			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].SHA))
+			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]))
 		})
 
 		context("and the node.js version has changed", func() {
@@ -199,7 +197,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(firstImage.Buildpacks).To(HaveLen(3))
 				Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
-				Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+				Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("launch-modules"))
 
 				container, err := docker.Container.Run.
 					WithCommand("npm start").
@@ -224,7 +222,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(secondImage.Buildpacks).To(HaveLen(3))
 				Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
-				Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+				Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("launch-modules"))
 
 				container, err = docker.Container.Run.
 					WithCommand("npm start").
@@ -238,8 +236,8 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				Eventually(container).Should(BeAvailable())
 
 				Expect(secondImage.ID).NotTo(Equal(firstImage.ID))
-				Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).NotTo(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
-				Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).NotTo(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
+				Expect(secondImage.Buildpacks[1].Layers["launch-modules"].SHA).NotTo(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].SHA))
+				Expect(secondImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]).NotTo(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]))
 			})
 		})
 	})
@@ -259,7 +257,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(firstImage.Buildpacks).To(HaveLen(3))
 			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
-			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("launch-modules"))
 
 			container, err := docker.Container.Run.
 				WithCommand("npm start").
@@ -279,7 +277,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(secondImage.Buildpacks).To(HaveLen(3))
 			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
-			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("modules"))
+			Expect(secondImage.Buildpacks[1].Layers).To(HaveKey("launch-modules"))
 
 			container, err = docker.Container.Run.
 				WithCommand("npm start").
@@ -293,8 +291,8 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Eventually(container).Should(BeAvailable())
 
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
-			Expect(secondImage.Buildpacks[1].Layers["modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["modules"].SHA))
-			Expect(secondImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]).To(Equal(firstImage.Buildpacks[1].Layers["modules"].Metadata["built_at"]))
+			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].SHA))
+			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]))
 
 			Expect(logs).To(ContainLines(
 				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
@@ -306,7 +304,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				"",
 				MatchRegexp(`    Selected NPM build process:`),
 				"",
-				fmt.Sprintf("  Reusing cached layer /layers/%s/modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("  Reusing cached layer /layers/%s/launch-modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 			))
 		})
 	})

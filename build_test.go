@@ -3,7 +3,6 @@ package npminstall_test
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,7 +14,6 @@ import (
 	"github.com/paketo-buildpacks/packit/v2/chronos"
 	"github.com/paketo-buildpacks/packit/v2/sbom"
 	"github.com/paketo-buildpacks/packit/v2/scribe"
-	"github.com/paketo-buildpacks/packit/v2/servicebindings"
 
 	"github.com/sclevine/spec"
 
@@ -28,6 +26,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		layersDir  string
 		workingDir string
+		cnbDir     string
 
 		processLayerDir   string
 		processWorkingDir string
@@ -36,36 +35,41 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		timestamp string
 
-		projectPathParser *fakes.PathParser
-		buildProcess      *fakes.BuildProcess
-		buildManager      *fakes.BuildManager
-		bindingResolver   *fakes.BindingResolver
-		environment       *fakes.EnvironmentConfig
-		sbomGenerator     *fakes.SBOMGenerator
-		clock             chronos.Clock
-		build             packit.BuildFunc
+		projectPathParser    *fakes.PathParser
+		buildProcess         *fakes.BuildProcess
+		buildManager         *fakes.BuildManager
+		configurationManager *fakes.ConfigurationManager
+		entryResolver        *fakes.EntryResolver
+		pruneProcess         *fakes.PruneProcess
+		sbomGenerator        *fakes.SBOMGenerator
+		clock                chronos.Clock
+		build                packit.BuildFunc
 
 		buffer *bytes.Buffer
 	)
 
 	it.Before(func() {
 		var err error
-		layersDir, err = ioutil.TempDir("", "layers")
+		layersDir, err = os.MkdirTemp("", "layers")
 		Expect(err).NotTo(HaveOccurred())
 
-		workingDir, err = ioutil.TempDir("", "working-dir")
+		workingDir, err = os.MkdirTemp("", "working-dir")
 		Expect(err).NotTo(HaveOccurred())
+
+		cnbDir, err = os.MkdirTemp("", "cnb")
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(os.MkdirAll(filepath.Join(cnbDir, "bin"), os.ModePerm)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(cnbDir, "bin", "setup-symlinks"), nil, os.ModePerm)).To(Succeed())
 
 		projectPathParser = &fakes.PathParser{}
 		projectPathParser.GetCall.Returns.ProjectPath = ""
 
-		bindingResolver = &fakes.BindingResolver{}
-
 		buildProcess = &fakes.BuildProcess{}
 		buildProcess.ShouldRunCall.Returns.Run = true
 		buildProcess.ShouldRunCall.Returns.Sha = "some-sha"
-		buildProcess.RunCall.Stub = func(ld, cd, wd, rc string) error {
-			err := os.MkdirAll(filepath.Join(ld, "layer-content"), os.ModePerm)
+		buildProcess.RunCall.Stub = func(ld, cd, wd, rc string, l bool) error {
+			err := os.MkdirAll(filepath.Join(ld, "node_modules"), os.ModePerm)
 			if err != nil {
 				return err
 			}
@@ -91,20 +95,25 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		buildManager = &fakes.BuildManager{}
 		buildManager.ResolveCall.Returns.BuildProcess = buildProcess
 
-		environment = &fakes.EnvironmentConfig{}
+		configurationManager = &fakes.ConfigurationManager{}
+
+		entryResolver = &fakes.EntryResolver{}
 
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewEmitter(buffer)
+
+		pruneProcess = &fakes.PruneProcess{}
 
 		sbomGenerator = &fakes.SBOMGenerator{}
 		sbomGenerator.GenerateCall.Returns.SBOM = sbom.SBOM{}
 
 		build = npminstall.Build(
 			projectPathParser,
-			bindingResolver,
+			entryResolver,
+			configurationManager,
 			buildManager,
+			pruneProcess,
 			clock,
-			environment,
 			logger,
 			sbomGenerator,
 		)
@@ -115,123 +124,51 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
 	})
 
-	it("resolves and calls the build process", func() {
-		result, err := build(packit.BuildContext{
-			BuildpackInfo: packit.BuildpackInfo{
-				SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
-			},
-			Platform: packit.Platform{
-				Path: "some-platform-path",
-			},
-			WorkingDir: workingDir,
-			Layers:     packit.Layers{Path: layersDir},
-			Plan: packit.BuildpackPlan{
-				Entries: []packit.BuildpackPlanEntry{
-					{Name: "node_modules"},
-				},
-			},
+	context("when required during build", func() {
+		it.Before(func() {
+			entryResolver.MergeLayerTypesCall.Returns.Build = true
 		})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-		Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-		Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[0].BuildEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[0].LaunchEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[0].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-		Expect(result.Layers[0].Build).To(BeFalse())
-		Expect(result.Layers[0].Launch).To(BeFalse())
-		Expect(result.Layers[0].Cache).To(BeFalse())
-		Expect(result.Layers[0].Metadata).To(Equal(
-			map[string]interface{}{
-				"built_at":  timestamp,
-				"cache_sha": "some-sha",
-			}))
-		Expect(result.Layers[1].Name).To(Equal(npminstall.LayerNameCache))
-		Expect(result.Layers[1].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
-		Expect(result.Layers[1].SharedEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[1].BuildEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[1].LaunchEnv).To(Equal(packit.Environment{}))
-		Expect(result.Layers[1].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-		Expect(result.Layers[1].Build).To(BeFalse())
-		Expect(result.Layers[1].Launch).To(BeFalse())
-		Expect(result.Layers[1].Cache).To(BeFalse())
-
-		Expect(result.Layers[0].SBOM.Formats()).To(Equal([]packit.SBOMFormat{
-			{
-				Extension: "cdx.json",
-				Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
-			},
-			{
-				Extension: "spdx.json",
-				Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
-			},
-			{
-				Extension: "syft.json",
-				Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
-			},
-		}))
-
-		Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
-		Expect(bindingResolver.ResolveCall.Receives.Typ).To(Equal("npmrc"))
-		Expect(bindingResolver.ResolveCall.Receives.Provider).To(Equal(""))
-		Expect(bindingResolver.ResolveCall.Receives.PlatformDir).To(Equal("some-platform-path"))
-		Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
-		Expect(environment.ConfigureCall.CallCount).To(Equal(1))
-		Expect(environment.ConfigureCall.Receives.Layer.Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-
-		Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-		Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
-		Expect(processWorkingDir).To(Equal(workingDir))
-		Expect(processNpmrcPath).To(Equal(""))
-	})
-
-	context("when node_modules is required at build and launch", func() {
-		it("resolves and calls the build process", func() {
+		it("returns a result that installs build modules", func() {
 			result, err := build(packit.BuildContext{
 				BuildpackInfo: packit.BuildpackInfo{
 					SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
 				},
+				Platform: packit.Platform{
+					Path: "some-platform-path",
+				},
 				WorkingDir: workingDir,
+				CNBPath:    cnbDir,
 				Layers:     packit.Layers{Path: layersDir},
 				Plan: packit.BuildpackPlan{
 					Entries: []packit.BuildpackPlanEntry{
-						{
-							Name: "node_modules",
-							Metadata: map[string]interface{}{
-								"build":  true,
-								"launch": true,
-							},
-						},
+						{Name: "node_modules"},
 					},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-			Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-			Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].BuildEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].LaunchEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-			Expect(result.Layers[0].Build).To(BeTrue())
-			Expect(result.Layers[0].Launch).To(BeTrue())
-			Expect(result.Layers[0].Cache).To(BeTrue())
-			Expect(result.Layers[0].Metadata).To(Equal(
+
+			Expect(len(result.Layers)).To(Equal(2))
+
+			buildLayer := result.Layers[0]
+			Expect(buildLayer.Name).To(Equal("build-modules"))
+			Expect(buildLayer.Path).To(Equal(filepath.Join(layersDir, "build-modules")))
+			Expect(buildLayer.SharedEnv).To(Equal(packit.Environment{}))
+			Expect(buildLayer.BuildEnv).To(Equal(packit.Environment{
+				"PATH.append":       filepath.Join(layersDir, "build-modules", "node_modules", ".bin"),
+				"PATH.delim":        ":",
+				"NODE_ENV.override": "development",
+			}))
+			Expect(buildLayer.LaunchEnv).To(Equal(packit.Environment{}))
+			Expect(buildLayer.ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
+			Expect(buildLayer.Build).To(BeTrue())
+			Expect(buildLayer.Launch).To(BeFalse())
+			Expect(buildLayer.Cache).To(BeTrue())
+			Expect(buildLayer.Metadata).To(Equal(
 				map[string]interface{}{
 					"built_at":  timestamp,
 					"cache_sha": "some-sha",
 				}))
-			Expect(result.Layers[1].Name).To(Equal(npminstall.LayerNameCache))
-			Expect(result.Layers[1].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
-			Expect(result.Layers[1].SharedEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[1].BuildEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[1].LaunchEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[1].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-			Expect(result.Layers[1].Build).To(BeTrue())
-			Expect(result.Layers[1].Launch).To(BeTrue())
-			Expect(result.Layers[1].Cache).To(BeTrue())
-
-			Expect(result.Layers[0].SBOM.Formats()).To(Equal([]packit.SBOMFormat{
+			Expect(buildLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
 				{
 					Extension: "cdx.json",
 					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
@@ -246,46 +183,272 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 			}))
 
+			cacheLayer := result.Layers[1]
+			Expect(cacheLayer.Name).To(Equal(npminstall.LayerNameCache))
+			Expect(cacheLayer.Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
+			Expect(cacheLayer.SharedEnv).To(Equal(packit.Environment{}))
+			Expect(cacheLayer.BuildEnv).To(Equal(packit.Environment{}))
+			Expect(cacheLayer.LaunchEnv).To(Equal(packit.Environment{}))
+			Expect(cacheLayer.ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
+			Expect(cacheLayer.Build).To(BeFalse())
+			Expect(cacheLayer.Launch).To(BeFalse())
+			Expect(cacheLayer.Cache).To(BeTrue())
+
 			Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
+
+			Expect(configurationManager.DeterminePathCall.Receives.Typ).To(Equal("npmrc"))
+			Expect(configurationManager.DeterminePathCall.Receives.PlatformDir).To(Equal("some-platform-path"))
+			Expect(configurationManager.DeterminePathCall.Receives.Entry).To(Equal(".npmrc"))
+
 			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 
-			Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
+			Expect(processLayerDir).To(Equal(filepath.Join(layersDir, "build-modules")))
 			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 			Expect(processWorkingDir).To(Equal(workingDir))
+			Expect(processNpmrcPath).To(Equal(""))
 		})
 	})
 
-	context("when npmrc service bindings are detected", func() {
-		context("when one npmrc binding is detected", func() {
-			it.Before(func() {
-				buffer = bytes.NewBuffer(nil)
-				logger := scribe.NewEmitter(buffer)
+	context("when required during launch", func() {
+		it.Before(func() {
+			entryResolver.MergeLayerTypesCall.Returns.Launch = true
+		})
+		it("returns a result that installs build modules", func() {
+			result, err := build(packit.BuildContext{
+				BuildpackInfo: packit.BuildpackInfo{
+					SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
+				},
+				Platform: packit.Platform{
+					Path: "some-platform-path",
+				},
+				WorkingDir: workingDir,
+				Layers:     packit.Layers{Path: layersDir},
+				CNBPath:    cnbDir,
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{Name: "node_modules"},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
 
-				bindingResolver.ResolveCall.Returns.BindingSlice = []servicebindings.Binding{
-					servicebindings.Binding{
-						Name: "some-binding",
-						Type: "npmrc",
-						Path: "some-binding-path",
-						Entries: map[string]*servicebindings.Entry{
-							".npmrc": servicebindings.NewEntry("some-entry-path"),
+			Expect(len(result.Layers)).To(Equal(2))
+
+			launchLayer := result.Layers[0]
+			Expect(launchLayer.Name).To(Equal("launch-modules"))
+			Expect(launchLayer.Path).To(Equal(filepath.Join(layersDir, "launch-modules")))
+			Expect(launchLayer.SharedEnv).To(Equal(packit.Environment{}))
+			Expect(launchLayer.BuildEnv).To(Equal(packit.Environment{}))
+			Expect(launchLayer.LaunchEnv).To(Equal(packit.Environment{
+				"NPM_CONFIG_LOGLEVEL.default": "error",
+				"PATH.append":                 filepath.Join(layersDir, "launch-modules", "node_modules", ".bin"),
+				"PATH.delim":                  ":",
+			}))
+			Expect(launchLayer.ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
+			Expect(launchLayer.Build).To(BeFalse())
+			Expect(launchLayer.Launch).To(BeTrue())
+			Expect(launchLayer.Cache).To(BeFalse())
+			Expect(launchLayer.Metadata).To(Equal(
+				map[string]interface{}{
+					"built_at":  timestamp,
+					"cache_sha": "some-sha",
+				}))
+
+			Expect(launchLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
+				{
+					Extension: "cdx.json",
+					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
+				},
+				{
+					Extension: "spdx.json",
+					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
+				},
+				{
+					Extension: "syft.json",
+					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
+				},
+			}))
+
+			cacheLayer := result.Layers[1]
+			Expect(cacheLayer.Name).To(Equal(npminstall.LayerNameCache))
+			Expect(cacheLayer.Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
+			Expect(cacheLayer.SharedEnv).To(Equal(packit.Environment{}))
+			Expect(cacheLayer.BuildEnv).To(Equal(packit.Environment{}))
+			Expect(cacheLayer.LaunchEnv).To(Equal(packit.Environment{}))
+			Expect(cacheLayer.ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
+			Expect(cacheLayer.Build).To(BeFalse())
+			Expect(cacheLayer.Launch).To(BeFalse())
+			Expect(cacheLayer.Cache).To(BeTrue())
+
+			Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
+
+			Expect(configurationManager.DeterminePathCall.Receives.Typ).To(Equal("npmrc"))
+			Expect(configurationManager.DeterminePathCall.Receives.PlatformDir).To(Equal("some-platform-path"))
+			Expect(configurationManager.DeterminePathCall.Receives.Entry).To(Equal(".npmrc"))
+
+			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
+
+			Expect(pruneProcess.RunCall.CallCount).To(Equal(0))
+
+			Expect(processLayerDir).To(Equal(filepath.Join(layersDir, "launch-modules")))
+			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
+			Expect(processWorkingDir).To(Equal(workingDir))
+			Expect(processNpmrcPath).To(Equal(""))
+		})
+	})
+
+	context("when node_modules is required at build and launch", func() {
+		it.Before(func() {
+			entryResolver.MergeLayerTypesCall.Returns.Launch = true
+			entryResolver.MergeLayerTypesCall.Returns.Build = true
+		})
+		it("resolves and calls the build process", func() {
+			result, err := build(packit.BuildContext{
+				BuildpackInfo: packit.BuildpackInfo{
+					SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
+				},
+				WorkingDir: workingDir,
+				Layers:     packit.Layers{Path: layersDir},
+				CNBPath:    cnbDir,
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{
+							Name: "node_modules",
+							Metadata: map[string]interface{}{
+								"build":  true,
+								"launch": true,
+							},
 						},
 					},
-				}
-				build = npminstall.Build(
-					projectPathParser,
-					bindingResolver,
-					buildManager,
-					clock,
-					environment,
-					logger,
-					sbomGenerator,
-				)
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(len(result.Layers)).To(Equal(3))
+
+			buildLayer := result.Layers[0]
+			Expect(buildLayer.Name).To(Equal("build-modules"))
+			Expect(buildLayer.Path).To(Equal(filepath.Join(layersDir, "build-modules")))
+			Expect(buildLayer.SharedEnv).To(Equal(packit.Environment{}))
+			Expect(buildLayer.BuildEnv).To(Equal(packit.Environment{
+				"PATH.append":       filepath.Join(layersDir, "build-modules", "node_modules", ".bin"),
+				"PATH.delim":        ":",
+				"NODE_ENV.override": "development",
+			}))
+			Expect(buildLayer.LaunchEnv).To(Equal(packit.Environment{}))
+			Expect(buildLayer.ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
+			Expect(buildLayer.Build).To(BeTrue())
+			Expect(buildLayer.Launch).To(BeFalse())
+			Expect(buildLayer.Cache).To(BeTrue())
+			Expect(buildLayer.Metadata).To(Equal(
+				map[string]interface{}{
+					"built_at":  timestamp,
+					"cache_sha": "some-sha",
+				}))
+			Expect(buildLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
+				{
+					Extension: "cdx.json",
+					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
+				},
+				{
+					Extension: "spdx.json",
+					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
+				},
+				{
+					Extension: "syft.json",
+					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
+				},
+			}))
+
+			launchLayer := result.Layers[1]
+			Expect(launchLayer.Name).To(Equal("launch-modules"))
+			Expect(launchLayer.Path).To(Equal(filepath.Join(layersDir, "launch-modules")))
+			Expect(launchLayer.SharedEnv).To(Equal(packit.Environment{}))
+			Expect(launchLayer.BuildEnv).To(Equal(packit.Environment{}))
+			Expect(launchLayer.LaunchEnv).To(Equal(packit.Environment{
+				"NPM_CONFIG_LOGLEVEL.default": "error",
+				"PATH.append":                 filepath.Join(layersDir, "launch-modules", "node_modules", ".bin"),
+				"PATH.delim":                  ":",
+			}))
+			Expect(launchLayer.ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
+			Expect(launchLayer.Build).To(BeFalse())
+			Expect(launchLayer.Launch).To(BeTrue())
+			Expect(launchLayer.Cache).To(BeFalse())
+			Expect(launchLayer.Metadata).To(Equal(
+				map[string]interface{}{
+					"built_at":  timestamp,
+					"cache_sha": "some-sha",
+				}))
+
+			Expect(launchLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
+				{
+					Extension: "cdx.json",
+					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
+				},
+				{
+					Extension: "spdx.json",
+					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
+				},
+				{
+					Extension: "syft.json",
+					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
+				},
+			}))
+
+			cacheLayer := result.Layers[2]
+			Expect(cacheLayer.Name).To(Equal(npminstall.LayerNameCache))
+			Expect(cacheLayer.Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
+			Expect(cacheLayer.SharedEnv).To(Equal(packit.Environment{}))
+			Expect(cacheLayer.BuildEnv).To(Equal(packit.Environment{}))
+			Expect(cacheLayer.LaunchEnv).To(Equal(packit.Environment{}))
+			Expect(cacheLayer.ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
+			Expect(cacheLayer.Build).To(BeFalse())
+			Expect(cacheLayer.Launch).To(BeFalse())
+			Expect(cacheLayer.Cache).To(BeTrue())
+
+			Expect(pruneProcess.RunCall.Receives.ModulesDir).To(Equal(launchLayer.Path))
+			Expect(pruneProcess.RunCall.Receives.CacheDir).To(Equal(cacheLayer.Path))
+			Expect(pruneProcess.RunCall.Receives.WorkingDir).To(Equal(workingDir))
+			Expect(pruneProcess.RunCall.Receives.NpmrcPath).To(Equal(""))
+		})
+	})
+
+	context("when one npmrc binding is detected", func() {
+		it.Before(func() {
+			configurationManager.DeterminePathCall.Returns.Path = "some-binding-path/.npmrc"
+			entryResolver.MergeLayerTypesCall.Returns.Launch = true
+		})
+
+		it("passes the path to the .npmrc to the build process and env configuration", func() {
+			_, err := build(packit.BuildContext{
+				WorkingDir: workingDir,
+				Layers:     packit.Layers{Path: layersDir},
+				CNBPath:    cnbDir,
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{Name: "node_modules"},
+					},
+				},
 			})
 
-			it("passes the path to the .npmrc to the build process and env configuration", func() {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buildProcess.ShouldRunCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
+			Expect(buildProcess.RunCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
+		})
+
+		context("and NPM_CONFIG_GLOBALCONFIG is already set in the build environment", func() {
+			it.Before(func() {
+				os.Setenv("NPM_CONFIG_GLOBALCONFIG", "some/path/.npmrc")
+			})
+			it.After(func() {
+				os.Unsetenv("NPM_CONFIG_GLOBALCONFIG")
+			})
+
+			it("does not change the previously set value of the env var", func() {
 				_, err := build(packit.BuildContext{
 					WorkingDir: workingDir,
 					Layers:     packit.Layers{Path: layersDir},
+					CNBPath:    cnbDir,
 					Plan: packit.BuildpackPlan{
 						Entries: []packit.BuildpackPlanEntry{
 							{Name: "node_modules"},
@@ -294,114 +457,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(buildProcess.ShouldRunCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
-				Expect(buildProcess.RunCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
-				Expect(environment.ConfigureCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
-			})
-
-			context("and NPM_CONFIG_GLOBALCONFIG is already set in the build environment", func() {
-				it.Before(func() {
-					os.Setenv("NPM_CONFIG_GLOBALCONFIG", "some/path/.npmrc")
-				})
-				it.After(func() {
-					os.Unsetenv("NPM_CONFIG_GLOBALCONFIG")
-				})
-
-				it("does not change the previously set value of the env var", func() {
-					_, err := build(packit.BuildContext{
-						WorkingDir: workingDir,
-						Layers:     packit.Layers{Path: layersDir},
-						Plan: packit.BuildpackPlan{
-							Entries: []packit.BuildpackPlanEntry{
-								{Name: "node_modules"},
-							},
-						},
-					})
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(buildProcess.ShouldRunCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
-					Expect(buildProcess.RunCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
-					Expect(environment.ConfigureCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
-				})
-			})
-
-			context("when the binding does not contain an .npmrc entry", func() {
-				it.Before(func() {
-					buffer = bytes.NewBuffer(nil)
-					logger := scribe.NewEmitter(buffer)
-
-					bindingResolver.ResolveCall.Returns.BindingSlice = []servicebindings.Binding{
-						servicebindings.Binding{
-							Name: "some-binding",
-							Type: "npmrc",
-							Path: "some-binding-path",
-							Entries: map[string]*servicebindings.Entry{
-								"some-unrelated-entry": servicebindings.NewEntry("some-entry-path"),
-							},
-						},
-					}
-					build = npminstall.Build(
-						projectPathParser,
-						bindingResolver,
-						buildManager,
-						clock,
-						environment,
-						logger,
-						sbomGenerator,
-					)
-				})
-				it("returns an error", func() {
-					_, err := build(packit.BuildContext{
-						WorkingDir: workingDir,
-						Layers:     packit.Layers{Path: layersDir},
-						Plan: packit.BuildpackPlan{
-							Entries: []packit.BuildpackPlanEntry{
-								{Name: "node_modules"},
-							},
-						},
-					})
-					Expect(err).To(MatchError(ContainSubstring("binding of type 'npmrc' does not contain required entry '.npmrc'")))
-				})
-			})
-		})
-
-		context("when more than one npmrc binding is found", func() {
-			it.Before(func() {
-				buffer = bytes.NewBuffer(nil)
-				logger := scribe.NewEmitter(buffer)
-
-				bindingResolver.ResolveCall.Returns.BindingSlice = []servicebindings.Binding{
-					servicebindings.Binding{
-						Name: "some-binding",
-						Type: "npmrc",
-					},
-					servicebindings.Binding{
-						Name: "some-other-binding",
-						Type: "npmrc",
-					},
-				}
-				build = npminstall.Build(
-					projectPathParser,
-					bindingResolver,
-					buildManager,
-					clock,
-					environment,
-					logger,
-					sbomGenerator,
-				)
-			})
-
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{
-							{Name: "node_modules"},
-						},
-					},
-				})
-				Expect(err).To(MatchError(ContainSubstring("binding resolver found more than one binding of type 'npmrc'")))
+				Expect(buildProcess.ShouldRunCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
+				Expect(buildProcess.RunCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
 			})
 		})
 	})
@@ -409,13 +466,15 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 	context("when the build process should not run", func() {
 		it.Before(func() {
 			buildProcess.ShouldRunCall.Returns.Run = false
+			entryResolver.MergeLayerTypesCall.Returns.Launch = true
 			Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm))
 		})
 
 		it("resolves and skips build process", func() {
-			result, err := build(packit.BuildContext{
+			_, err := build(packit.BuildContext{
 				WorkingDir: workingDir,
 				Layers:     packit.Layers{Path: layersDir},
+				CNBPath:    cnbDir,
 				Plan: packit.BuildpackPlan{
 					Entries: []packit.BuildpackPlanEntry{
 						{Name: "node_modules"},
@@ -423,22 +482,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(packit.BuildResult{
-				Layers: []packit.Layer{
-					{
-						Name:             npminstall.LayerNameNodeModules,
-						Path:             filepath.Join(layersDir, npminstall.LayerNameNodeModules),
-						SharedEnv:        packit.Environment{},
-						BuildEnv:         packit.Environment{},
-						LaunchEnv:        packit.Environment{},
-						ProcessLaunchEnv: map[string]packit.Environment{},
-						Build:            false,
-						Launch:           false,
-						Cache:            false,
-						Metadata:         nil,
-					},
-				},
-			}))
 
 			Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
 			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
@@ -446,7 +489,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			link, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(link).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules, "node_modules")))
+			Expect(link).To(Equal(filepath.Join(layersDir, "launch-modules", "node_modules")))
 		})
 
 		context("when BP_NODE_PROJECT_PATH is set", func() {
@@ -457,12 +500,13 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("resolves and calls the build process", func() {
-				result, err := build(packit.BuildContext{
+				_, err := build(packit.BuildContext{
 					BuildpackInfo: packit.BuildpackInfo{
 						SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
 					},
 					WorkingDir: workingDir,
 					Layers:     packit.Layers{Path: layersDir},
+					CNBPath:    cnbDir,
 					Plan: packit.BuildpackPlan{
 						Entries: []packit.BuildpackPlanEntry{
 							{Name: "node_modules"},
@@ -470,85 +514,23 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-				Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-				Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[0].BuildEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[0].LaunchEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[0].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-				Expect(result.Layers[0].Build).To(BeFalse())
-				Expect(result.Layers[0].Launch).To(BeFalse())
-				Expect(result.Layers[0].Cache).To(BeFalse())
-				Expect(result.Layers[0].Metadata).To(Equal(
-					map[string]interface{}{
-						"built_at":  timestamp,
-						"cache_sha": "some-sha",
-					}))
-				Expect(result.Layers[1].Name).To(Equal(npminstall.LayerNameCache))
-				Expect(result.Layers[1].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
-				Expect(result.Layers[1].SharedEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[1].BuildEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[1].LaunchEnv).To(Equal(packit.Environment{}))
-				Expect(result.Layers[1].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-				Expect(result.Layers[1].Build).To(BeFalse())
-				Expect(result.Layers[1].Launch).To(BeFalse())
-				Expect(result.Layers[1].Cache).To(BeFalse())
-
-				Expect(result.Layers[0].SBOM.Formats()).To(Equal([]packit.SBOMFormat{
-					{
-						Extension: "cdx.json",
-						Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
-					},
-					{
-						Extension: "spdx.json",
-						Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
-					},
-					{
-						Extension: "syft.json",
-						Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
-					},
-				}))
 
 				Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
-				Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(filepath.Join(workingDir, "some-dir")))
-				Expect(environment.ConfigureCall.CallCount).To(Equal(1))
-				Expect(environment.ConfigureCall.Receives.Layer.Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
 
-				Expect(processLayerDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
+				Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(filepath.Join(workingDir, "some-dir")))
+
+				Expect(processLayerDir).To(Equal(filepath.Join(layersDir, "launch-modules")))
 				Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 				Expect(processWorkingDir).To(Equal(filepath.Join(workingDir, "some-dir")))
 			})
 		})
 
-		context("failure cases", func() {
-			context("when the node_modules directory cannot be removed", func() {
-				it.Before(func() {
-					Expect(os.Chmod(workingDir, 0000))
-				})
-
-				it.After(func() {
-					Expect(os.Chmod(workingDir, os.ModePerm))
-				})
-
-				it("returns an error", func() {
-					_, err := build(packit.BuildContext{
-						WorkingDir: workingDir,
-						Layers:     packit.Layers{Path: layersDir},
-						Plan: packit.BuildpackPlan{
-							Entries: []packit.BuildpackPlanEntry{
-								{Name: "node_modules"},
-							},
-						},
-					})
-					Expect(err).To(MatchError(ContainSubstring("permission denied")))
-				})
-			})
-		})
 	})
 
 	context("when the cache layer directory is empty", func() {
 		it.Before(func() {
-			buildProcess.RunCall.Stub = func(ld, cd, wd, rc string) error {
+			entryResolver.MergeLayerTypesCall.Returns.Launch = true
+			buildProcess.RunCall.Stub = func(ld, cd, wd, rc string, l bool) error {
 				err := os.MkdirAll(cd, os.ModePerm)
 				if err != nil {
 					return err
@@ -556,22 +538,13 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 				return nil
 			}
-
-			build = npminstall.Build(
-				projectPathParser,
-				bindingResolver,
-				buildManager,
-				clock,
-				environment,
-				scribe.NewEmitter(buffer),
-				sbomGenerator,
-			)
 		})
 
 		it("filters out empty layers", func() {
 			result, err := build(packit.BuildContext{
 				WorkingDir: workingDir,
 				Layers:     packit.Layers{Path: layersDir},
+				CNBPath:    cnbDir,
 				Plan: packit.BuildpackPlan{
 					Entries: []packit.BuildpackPlanEntry{
 						{Name: "node_modules"},
@@ -579,38 +552,18 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-			Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-			Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].Build).To(BeFalse())
-			Expect(result.Layers[0].Cache).To(BeFalse())
-			Expect(result.Layers[0].Metadata).To(Equal(
-				map[string]interface{}{
-					"built_at":  timestamp,
-					"cache_sha": "some-sha",
-				}))
+
+			Expect(len(result.Layers)).To(Equal(1))
+			Expect(result.Layers[0].Name).To(Equal("launch-modules"))
 		})
 	})
 
 	context("when the cache layer directory does not exist", func() {
-		it.Before(func() {
-			buildProcess.RunCall.Stub = func(ld, cd, wd, rc string) error { return nil }
-
-			build = npminstall.Build(
-				projectPathParser,
-				bindingResolver,
-				buildManager,
-				clock,
-				environment,
-				scribe.NewEmitter(buffer),
-				sbomGenerator,
-			)
-		})
-
 		it("filters out empty layers", func() {
 			result, err := build(packit.BuildContext{
 				WorkingDir: workingDir,
 				Layers:     packit.Layers{Path: layersDir},
+				CNBPath:    cnbDir,
 				Plan: packit.BuildpackPlan{
 					Entries: []packit.BuildpackPlanEntry{
 						{Name: "node_modules"},
@@ -618,45 +571,12 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Layers[0].Name).To(Equal(npminstall.LayerNameNodeModules))
-			Expect(result.Layers[0].Path).To(Equal(filepath.Join(layersDir, npminstall.LayerNameNodeModules)))
-			Expect(result.Layers[0].SharedEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].BuildEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].LaunchEnv).To(Equal(packit.Environment{}))
-			Expect(result.Layers[0].ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
-			Expect(result.Layers[0].Build).To(BeFalse())
-			Expect(result.Layers[0].Launch).To(BeFalse())
-			Expect(result.Layers[0].Cache).To(BeFalse())
-			Expect(result.Layers[0].Metadata).To(Equal(
-				map[string]interface{}{
-					"built_at":  timestamp,
-					"cache_sha": "some-sha",
-				}))
+
+			Expect(len(result.Layers)).To(Equal(0))
 		})
 	})
 
 	context("failure cases", func() {
-		context("when the node_modules layer cannot be fetched", func() {
-			it.Before(func() {
-				_, err := os.Create(filepath.Join(layersDir, "modules.toml"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(os.Chmod(filepath.Join(layersDir, "modules.toml"), 0000)).To(Succeed())
-			})
-
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{
-							{Name: "node_modules"},
-						},
-					},
-				})
-				Expect(err).To(MatchError(ContainSubstring("permission denied")))
-			})
-		})
-
 		context("when the npm-cache layer cannot be fetched", func() {
 			it.Before(func() {
 				_, err := os.Create(filepath.Join(layersDir, "npm-cache.toml"))
@@ -668,6 +588,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				_, err := build(packit.BuildContext{
 					WorkingDir: workingDir,
 					Layers:     packit.Layers{Path: layersDir},
+					CNBPath:    cnbDir,
 					Plan: packit.BuildpackPlan{
 						Entries: []packit.BuildpackPlanEntry{
 							{Name: "node_modules"},
@@ -675,6 +596,46 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					},
 				})
 				Expect(err).To(MatchError(ContainSubstring("permission denied")))
+			})
+		})
+
+		context("when the configuration manager fails while determining the path", func() {
+			it.Before(func() {
+				configurationManager.DeterminePathCall.Returns.Err = errors.New("failed to determine path")
+			})
+
+			it("returns an error", func() {
+				_, err := build(packit.BuildContext{
+					WorkingDir: workingDir,
+					Layers:     packit.Layers{Path: layersDir},
+					CNBPath:    cnbDir,
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+				})
+				Expect(err).To(MatchError("failed to determine path"))
+			})
+		})
+
+		context("when the project path parser provided fails", func() {
+			it.Before(func() {
+				projectPathParser.GetCall.Returns.Err = errors.New("failed to parse project path")
+			})
+
+			it("returns an error", func() {
+				_, err := build(packit.BuildContext{
+					WorkingDir: workingDir,
+					Layers:     packit.Layers{Path: layersDir},
+					CNBPath:    cnbDir,
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+				})
+				Expect(err).To(MatchError("failed to parse project path"))
 			})
 		})
 
@@ -687,6 +648,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				_, err := build(packit.BuildContext{
 					WorkingDir: workingDir,
 					Layers:     packit.Layers{Path: layersDir},
+					CNBPath:    cnbDir,
 					Plan: packit.BuildpackPlan{
 						Entries: []packit.BuildpackPlanEntry{
 							{Name: "node_modules"},
@@ -697,140 +659,370 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			})
 		})
 
-		context("when the build process cache check fails", func() {
+		context("during the build installation process", func() {
 			it.Before(func() {
-				buildProcess.ShouldRunCall.Returns.Err = errors.New("failed to check cache")
+				entryResolver.MergeLayerTypesCall.Returns.Build = true
 			})
 
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{
-							{Name: "node_modules"},
+			context("when the node_modules layer cannot be fetched", func() {
+				it.Before(func() {
+					Expect(os.WriteFile(filepath.Join(layersDir, "build-modules.toml"), nil, 0000)).To(Succeed())
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
 						},
-					},
+					})
+					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
-				Expect(err).To(MatchError("failed to check cache"))
-			})
-		})
-
-		context("when the node_modules layer cannot be reset", func() {
-			it.Before(func() {
-				Expect(os.Mkdir(filepath.Join(layersDir, npminstall.LayerNameNodeModules), os.ModePerm)).To(Succeed())
-
-				_, err := os.OpenFile(filepath.Join(layersDir, npminstall.LayerNameNodeModules, "some-file"), os.O_CREATE, 0000)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(os.Chmod(filepath.Join(layersDir, npminstall.LayerNameNodeModules), 0000)).To(Succeed())
 			})
 
-			it.After(func() {
-				Expect(os.Chmod(filepath.Join(layersDir, npminstall.LayerNameNodeModules), os.ModePerm)).To(Succeed())
-			})
+			context("when the build process cache check fails", func() {
+				it.Before(func() {
+					buildProcess.ShouldRunCall.Returns.Err = errors.New("failed to check cache")
+				})
 
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{
-							{Name: "node_modules"},
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
 						},
-					},
+					})
+					Expect(err).To(MatchError("failed to check cache"))
 				})
-				Expect(err).To(MatchError(ContainSubstring("permission denied")))
-			})
-		})
-
-		context("when the build process provided fails", func() {
-			it.Before(func() {
-				buildProcess.RunCall.Stub = func(string, string, string, string) error {
-					return errors.New("given build process failed")
-				}
 			})
 
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{
-							{Name: "node_modules"},
+			context("when the node_modules layer cannot be reset", func() {
+				it.Before(func() {
+					Expect(os.Chmod(layersDir, 4444)).To(Succeed())
+				})
+
+				it.After(func() {
+					Expect(os.Chmod(layersDir, os.ModePerm)).To(Succeed())
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
 						},
-					},
+					})
+					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
-				Expect(err).To(MatchError("given build process failed"))
-			})
-		})
-
-		context("when the project path parser provided fails", func() {
-			it.Before(func() {
-				projectPathParser.GetCall.Returns.Err = errors.New("some-error")
 			})
 
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{
-							{Name: "node_modules"},
+			context("when the build process provided fails", func() {
+				it.Before(func() {
+					buildProcess.RunCall.Stub = func(string, string, string, string, bool) error {
+						return errors.New("given build process failed")
+					}
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
 						},
-					},
+					})
+					Expect(err).To(MatchError("given build process failed"))
 				})
-				Expect(err).To(MatchError("some-error"))
 			})
-		})
 
-		context("when the BOM cannot be generated", func() {
-			it.Before(func() {
-				sbomGenerator.GenerateCall.Returns.Error = errors.New("failed to generate SBOM")
-			})
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					BuildpackInfo: packit.BuildpackInfo{
-						SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
-					},
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{{Name: "node_modules"}},
-					},
-					Stack: "some-stack",
+			context("when the BOM cannot be generated", func() {
+				it.Before(func() {
+					sbomGenerator.GenerateCall.Returns.Error = errors.New("failed to generate SBOM")
 				})
-				Expect(err).To(MatchError("failed to generate SBOM"))
-			})
-		})
-
-		context("when the BOM cannot be formatted", func() {
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					BuildpackInfo: packit.BuildpackInfo{
-						SBOMFormats: []string{"random-format"},
-					},
-				})
-				Expect(err).To(MatchError("\"random-format\" is not a supported SBOM format"))
-			})
-		})
-
-		context("when service binding resolution fails", func() {
-			it.Before(func() {
-				bindingResolver.ResolveCall.Returns.Error = errors.New("some-bindings-error")
-			})
-
-			it("returns an error", func() {
-				_, err := build(packit.BuildContext{
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{
-							{Name: "node_modules"},
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						BuildpackInfo: packit.BuildpackInfo{
+							SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
 						},
-					},
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{{Name: "node_modules"}},
+						},
+						Stack: "some-stack",
+					})
+					Expect(err).To(MatchError("failed to generate SBOM"))
 				})
-				Expect(err).To(MatchError("some-bindings-error"))
+			})
+
+			context("when the BOM cannot be formatted", func() {
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						Layers:  packit.Layers{Path: layersDir},
+						CNBPath: cnbDir,
+						BuildpackInfo: packit.BuildpackInfo{
+							SBOMFormats: []string{"random-format"},
+						},
+					})
+					Expect(err).To(MatchError("\"random-format\" is not a supported SBOM format"))
+				})
+			})
+
+			context("when the node_modules directory cannot be removed", func() {
+				it.Before(func() {
+					buildProcess.ShouldRunCall.Returns.Run = false
+					Expect(os.Chmod(workingDir, 0000))
+				})
+
+				it.After(func() {
+					Expect(os.Chmod(workingDir, os.ModePerm))
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError(ContainSubstring("permission denied")))
+				})
+			})
+		})
+
+		context("during the launch installation process", func() {
+			it.Before(func() {
+				entryResolver.MergeLayerTypesCall.Returns.Launch = true
+			})
+
+			context("when the node_modules layer cannot be fetched", func() {
+				it.Before(func() {
+					Expect(os.WriteFile(filepath.Join(layersDir, "launch-modules.toml"), nil, 0000)).To(Succeed())
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError(ContainSubstring("permission denied")))
+				})
+			})
+
+			context("when the build process cache check fails", func() {
+				it.Before(func() {
+					buildProcess.ShouldRunCall.Returns.Err = errors.New("failed to check cache")
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError("failed to check cache"))
+				})
+			})
+
+			context("when the node_modules layer cannot be reset", func() {
+				it.Before(func() {
+					Expect(os.Chmod(layersDir, 4444)).To(Succeed())
+				})
+
+				it.After(func() {
+					Expect(os.Chmod(layersDir, os.ModePerm)).To(Succeed())
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError(ContainSubstring("permission denied")))
+				})
+			})
+
+			context("when build is also set and the node_modules copy fails", func() {
+				it.Before(func() {
+					entryResolver.MergeLayerTypesCall.Returns.Build = true
+					buildProcess.RunCall.Stub = func(string, string, string, string, bool) error {
+						return nil
+					}
+				})
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
+				})
+			})
+
+			context("when the build process provided fails", func() {
+				it.Before(func() {
+					buildProcess.RunCall.Stub = func(string, string, string, string, bool) error {
+						return errors.New("given build process failed")
+					}
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError("given build process failed"))
+				})
+			})
+
+			context("when the build process provided fails", func() {
+				context("when build is also set", func() {
+					it.Before(func() {
+						entryResolver.MergeLayerTypesCall.Returns.Build = true
+						pruneProcess.RunCall.Returns.Error = errors.New("prune process failed")
+					})
+
+					it("returns an error", func() {
+						_, err := build(packit.BuildContext{
+							WorkingDir: workingDir,
+							Layers:     packit.Layers{Path: layersDir},
+							CNBPath:    cnbDir,
+							Plan: packit.BuildpackPlan{
+								Entries: []packit.BuildpackPlanEntry{
+									{Name: "node_modules"},
+								},
+							},
+						})
+						Expect(err).To(MatchError("prune process failed"))
+					})
+				})
+			})
+
+			context("when the BOM cannot be generated", func() {
+				it.Before(func() {
+					sbomGenerator.GenerateCall.Returns.Error = errors.New("failed to generate SBOM")
+				})
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						BuildpackInfo: packit.BuildpackInfo{
+							SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
+						},
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{{Name: "node_modules"}},
+						},
+						Stack: "some-stack",
+					})
+					Expect(err).To(MatchError("failed to generate SBOM"))
+				})
+			})
+
+			context("when the BOM cannot be formatted", func() {
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						Layers:  packit.Layers{Path: layersDir},
+						CNBPath: cnbDir,
+						BuildpackInfo: packit.BuildpackInfo{
+							SBOMFormats: []string{"random-format"},
+						},
+					})
+					Expect(err).To(MatchError("\"random-format\" is not a supported SBOM format"))
+				})
+			})
+
+			context("when exec.d setup fails", func() {
+				it.Before(func() {
+					Expect(os.RemoveAll(filepath.Join(cnbDir, "bin"))).To(Succeed())
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						CNBPath:    cnbDir,
+						Layers:     packit.Layers{Path: layersDir},
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
+				})
+			})
+
+			context("when the node_modules directory cannot be removed", func() {
+				it.Before(func() {
+					buildProcess.ShouldRunCall.Returns.Run = false
+					Expect(os.Chmod(workingDir, 0000))
+				})
+
+				it.After(func() {
+					Expect(os.Chmod(workingDir, os.ModePerm))
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError(ContainSubstring("permission denied")))
+				})
 			})
 		})
 	})

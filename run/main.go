@@ -7,6 +7,7 @@ import (
 
 	"github.com/paketo-buildpacks/packit/v2"
 	"github.com/paketo-buildpacks/packit/v2/chronos"
+	"github.com/paketo-buildpacks/packit/v2/draft"
 	"github.com/paketo-buildpacks/packit/v2/fs"
 	"github.com/paketo-buildpacks/packit/v2/pexec"
 	"github.com/paketo-buildpacks/packit/v2/sbom"
@@ -23,22 +24,26 @@ func (s SBOMGenerator) Generate(path string) (sbom.SBOM, error) {
 func main() {
 	projectPathParser := npminstall.NewProjectPathParser()
 	packageJSONParser := npminstall.NewPackageJSONParser()
-	executable := pexec.NewExecutable("npm")
 	logger := scribe.NewEmitter(os.Stdout)
-	checksumCalculator := fs.NewChecksumCalculator()
-	environment := npminstall.NewEnvironment(scribe.NewLogger(os.Stdout))
-	resolver := npminstall.NewBuildProcessResolver(executable, checksumCalculator, environment, scribe.NewLogger(os.Stdout))
+	executable := pexec.NewExecutable("npm")
+	buildProcessResolver := npminstall.NewBuildProcessResolver(executable, fs.NewChecksumCalculator(), npminstall.NewEnvironment(), scribe.NewLogger(os.Stdout))
+	pruneBuildProcess := npminstall.NewPruneBuildProcess(executable, npminstall.NewEnvironment(), scribe.NewLogger(os.Stdout))
+	entryResolver := draft.NewPlanner()
 	sbomGenerator := SBOMGenerator{}
-	bindingResolver := servicebindings.NewResolver()
+	packageManagerConfigurationManager := npminstall.NewPackageManagerConfigurationManager(servicebindings.NewResolver(), logger)
 
 	packit.Run(
-		npminstall.Detect(projectPathParser, packageJSONParser),
+		npminstall.Detect(
+			projectPathParser,
+			packageJSONParser,
+		),
 		npminstall.Build(
 			projectPathParser,
-			bindingResolver,
-			resolver,
+			entryResolver,
+			packageManagerConfigurationManager,
+			buildProcessResolver,
+			pruneBuildProcess,
 			chronos.DefaultClock,
-			environment,
 			logger,
 			sbomGenerator),
 	)

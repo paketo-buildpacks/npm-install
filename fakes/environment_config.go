@@ -1,26 +1,10 @@
 package fakes
 
-import (
-	"sync"
-
-	"github.com/paketo-buildpacks/packit/v2"
-)
+import "sync"
 
 type EnvironmentConfig struct {
-	ConfigureCall struct {
-		sync.Mutex
-		CallCount int
-		Receives  struct {
-			Layer     packit.Layer
-			NpmrcPath string
-		}
-		Returns struct {
-			Error error
-		}
-		Stub func(packit.Layer, string) error
-	}
 	GetValueCall struct {
-		sync.Mutex
+		mutex     sync.Mutex
 		CallCount int
 		Receives  struct {
 			Key string
@@ -32,20 +16,9 @@ type EnvironmentConfig struct {
 	}
 }
 
-func (f *EnvironmentConfig) Configure(param1 packit.Layer, param2 string) error {
-	f.ConfigureCall.Lock()
-	defer f.ConfigureCall.Unlock()
-	f.ConfigureCall.CallCount++
-	f.ConfigureCall.Receives.Layer = param1
-	f.ConfigureCall.Receives.NpmrcPath = param2
-	if f.ConfigureCall.Stub != nil {
-		return f.ConfigureCall.Stub(param1, param2)
-	}
-	return f.ConfigureCall.Returns.Error
-}
 func (f *EnvironmentConfig) GetValue(param1 string) string {
-	f.GetValueCall.Lock()
-	defer f.GetValueCall.Unlock()
+	f.GetValueCall.mutex.Lock()
+	defer f.GetValueCall.mutex.Unlock()
 	f.GetValueCall.CallCount++
 	f.GetValueCall.Receives.Key = param1
 	if f.GetValueCall.Stub != nil {

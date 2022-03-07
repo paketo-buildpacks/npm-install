@@ -2,7 +2,7 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -84,7 +84,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response.StatusCode).To(Equal(http.StatusOK))
 
-			content, err := ioutil.ReadAll(response.Body)
+			content, err := io.ReadAll(response.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(ContainSubstring("Hello, World!"))
 
@@ -98,7 +98,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				"",
 				"    Selected NPM build process: 'npm rebuild'",
 				"",
-				"  Executing build process",
+				"  Executing launch environment install process",
 				"    Running 'npm run-script preinstall --if-present'",
 				MatchRegexp(`    Running 'npm rebuild --nodedir=/layers/.+/node'`),
 				"    Running 'npm run-script postinstall --if-present'",
@@ -109,9 +109,8 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			Expect(logs).To(ContainLines(
 				"  Configuring launch environment",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
+				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				"",
-				"  Configuring environment shared by build and launch",
-				fmt.Sprintf("    PATH -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 			))
 		})
 
