@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
+func testDevDependenciesDuringBuild(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect     = NewWithT(t).Expect
 		Eventually = NewWithT(t).Eventually
@@ -27,7 +27,7 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 		docker = occam.NewDocker()
 	})
 
-	context("when the node_modules are not vendored", func() {
+	context("when the node_modules are needed during build", func() {
 		var (
 			image     occam.Image
 			container occam.Container
@@ -55,41 +55,59 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 			Expect(os.RemoveAll(sbomDir)).To(Succeed())
 		})
 
-		it("builds a working OCI image for a simple app", func() {
+		it("should build a working OCI image for a app that requires devDependencies during build", func() {
 			var err error
-			source, err = occam.Source(filepath.Join("testdata", "simple_app"))
+			var logs fmt.Stringer
+			source, err = occam.Source(filepath.Join("testdata", "dev_dependencies_during_build"))
 			Expect(err).NotTo(HaveOccurred())
 
-			image, _, err = pack.Build.
-				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
+			image, logs, err = pack.Build.
+				WithBuildpacks(
+					nodeURI,
+					buildpackURI,
+					buildPlanURI,
+					npmList,
+				).
 				WithPullPolicy("never").
 				WithSBOMOutputDir(sbomDir).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
+			Expect(logs.String()).To(ContainSubstring("chalk"))
+
+			// check the contents of the node modules
 			container, err = docker.Container.Run.
-				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules && env", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules",
+					strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
 				Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
-			cLogs := func() string {
+			Eventually(func() string {
 				cLogs, err := docker.Container.Logs.Execute(container.ID)
 				Expect(err).NotTo(HaveOccurred())
 				return cLogs.String()
-			}
-			Eventually(cLogs).Should(ContainSubstring("leftpad"))
-			Eventually(cLogs).Should(ContainSubstring("NPM_CONFIG_LOGLEVEL=error"))
+			}).Should(ContainSubstring("leftpad"))
 
 			// check that all expected SBOM files are present
 			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "launch-modules", "sbom.cdx.json")).To(BeARegularFile())
 			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "launch-modules", "sbom.spdx.json")).To(BeARegularFile())
 			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "launch-modules", "sbom.syft.json")).To(BeARegularFile())
 
+			Expect(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "build-modules", "sbom.cdx.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "build-modules", "sbom.spdx.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "build-modules", "sbom.syft.json")).To(BeARegularFile())
+
 			// check an SBOM file to make sure it has an entry for an app node module
 			contents, err := os.ReadFile(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "launch-modules", "sbom.cdx.json"))
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(contents)).To(ContainSubstring(`"name": "leftpad"`))
+
+			// check the build SBOM file to make sure it has an entry for an app node module
+			contents, err = os.ReadFile(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "build-modules", "sbom.cdx.json"))
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(contents)).To(ContainSubstring(`"name": "chalk"`))
 		})
 	})
 }

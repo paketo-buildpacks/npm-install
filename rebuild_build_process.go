@@ -54,7 +54,7 @@ func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]in
 	return false, "", nil
 }
 
-func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath string) error {
+func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath string, launch bool) error {
 	buffer := bytes.NewBuffer(nil)
 	environment := os.Environ()
 	if npmrcPath != "" {
@@ -88,6 +88,11 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 		return fmt.Errorf("preinstall script failed on rebuild: %s", err)
 	}
 
+	env := append(environment, fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")))
+	if !launch {
+		env = append(env, "NODE_ENV=development")
+	}
+
 	args = []string{"rebuild", fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))}
 	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 	err = r.executable.Execute(pexec.Execution{
@@ -95,10 +100,7 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 		Dir:    workingDir,
 		Stdout: buffer,
 		Stderr: buffer,
-		Env: append(
-			environment,
-			fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")),
-		),
+		Env:    env,
 	})
 	if err != nil {
 		r.logger.Subprocess("%s", buffer.String())

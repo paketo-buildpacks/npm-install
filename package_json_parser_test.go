@@ -1,7 +1,6 @@
 package npminstall_test
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -21,7 +20,7 @@ func testPackageJSONParser(t *testing.T, context spec.G, it spec.S) {
 		)
 
 		it.Before(func() {
-			file, err := ioutil.TempFile("", "package.json")
+			file, err := os.CreateTemp("", "package.json")
 			Expect(err).NotTo(HaveOccurred())
 			defer file.Close()
 
@@ -57,7 +56,7 @@ func testPackageJSONParser(t *testing.T, context spec.G, it spec.S) {
 
 			context("when the package.json contents are malformed", func() {
 				it.Before(func() {
-					err := ioutil.WriteFile(path, []byte("%%%"), 0644)
+					err := os.WriteFile(path, []byte("%%%"), 0644)
 					Expect(err).NotTo(HaveOccurred())
 				})
 

@@ -2,7 +2,7 @@ package fakes
 
 import "sync"
 
-type BuildProcess struct {
+type PruneProcess struct {
 	RunCall struct {
 		mutex     sync.Mutex
 		CallCount int
@@ -37,7 +37,7 @@ type BuildProcess struct {
 	}
 }
 
-func (f *BuildProcess) Run(param1 string, param2 string, param3 string, param4 string, param5 bool) error {
+func (f *PruneProcess) Run(param1 string, param2 string, param3 string, param4 string, param5 bool) error {
 	f.RunCall.mutex.Lock()
 	defer f.RunCall.mutex.Unlock()
 	f.RunCall.CallCount++
@@ -51,7 +51,7 @@ func (f *BuildProcess) Run(param1 string, param2 string, param3 string, param4 s
 	}
 	return f.RunCall.Returns.Error
 }
-func (f *BuildProcess) ShouldRun(param1 string, param2 map[string]interface {
+func (f *PruneProcess) ShouldRun(param1 string, param2 map[string]interface {
 }, param3 string) (bool, string, error) {
 	f.ShouldRunCall.mutex.Lock()
 	defer f.ShouldRunCall.mutex.Unlock()

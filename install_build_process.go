@@ -31,7 +31,7 @@ func (r InstallBuildProcess) ShouldRun(workingDir string, metadata map[string]in
 	return true, "", nil
 }
 
-func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath string) error {
+func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath string, launch bool) error {
 	err := os.Mkdir(filepath.Join(modulesDir, "node_modules"), os.ModePerm)
 	if err != nil {
 		return err
@@ -42,6 +42,9 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 	environment := append(os.Environ(), fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")))
 	if npmrcPath != "" {
 		environment = append(environment, fmt.Sprintf("NPM_CONFIG_GLOBALCONFIG=%s", npmrcPath))
+	}
+	if !launch {
+		environment = append(environment, "NODE_ENV=development")
 	}
 
 	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))

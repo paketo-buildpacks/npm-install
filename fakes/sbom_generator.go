@@ -8,7 +8,7 @@ import (
 
 type SBOMGenerator struct {
 	GenerateCall struct {
-		sync.Mutex
+		mutex     sync.Mutex
 		CallCount int
 		Receives  struct {
 			Dir string
@@ -22,8 +22,8 @@ type SBOMGenerator struct {
 }
 
 func (f *SBOMGenerator) Generate(param1 string) (sbom.SBOM, error) {
-	f.GenerateCall.Lock()
-	defer f.GenerateCall.Unlock()
+	f.GenerateCall.mutex.Lock()
+	defer f.GenerateCall.mutex.Unlock()
 	f.GenerateCall.CallCount++
 	f.GenerateCall.Receives.Dir = param1
 	if f.GenerateCall.Stub != nil {

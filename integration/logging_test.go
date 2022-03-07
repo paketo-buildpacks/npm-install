@@ -73,17 +73,69 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"",
 				"    Selected NPM build process: 'npm install'",
 				"",
-				"  Executing build process",
+				"  Executing launch environment install process",
 				fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
 				"",
 				"  Configuring launch environment",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
-				"",
-				"  Configuring environment shared by build and launch",
-				fmt.Sprintf("    PATH -> \"$PATH:/layers/%s/modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				"",
 			))
+		})
+
+		context("when there are build and launch modules required", func() {
+			it("logs useful information for the user", func() {
+				var err error
+				source, err = occam.Source(filepath.Join("testdata", "dev_dependencies_during_build"))
+				Expect(err).ToNot(HaveOccurred())
+
+				var logs fmt.Stringer
+				image, logs, err = pack.WithNoColor().Build.
+					WithPullPolicy("never").
+					WithBuildpacks(
+						nodeURI,
+						buildpackURI,
+						buildPlanURI,
+					).
+					Execute(name, source)
+				Expect(err).NotTo(HaveOccurred(), logs.String)
+
+				Expect(logs).To(ContainLines(
+					fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+					"  Resolving installation process",
+					"    Process inputs:",
+					"      node_modules      -> \"Not found\"",
+					"      npm-cache         -> \"Not found\"",
+					"      package-lock.json -> \"Not found\"",
+					"",
+					"    Selected NPM build process: 'npm install'",
+					"",
+					"  Executing build environment install process",
+					fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
+					"",
+					"  Configuring build environment",
+					"    NODE_ENV -> \"development\"",
+					fmt.Sprintf("    PATH     -> \"$PATH:/layers/%s/build-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					"",
+					fmt.Sprintf(`  Generating SBOM for directory /layers/%s/build-modules`, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					MatchRegexp(`      Completed in (\d+)(\.\d+)?(ms|s)`),
+					"",
+					"  Executing launch environment install process",
+					"    Running 'npm prune'",
+					MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
+					"",
+					"  Configuring launch environment",
+					"    NPM_CONFIG_LOGLEVEL -> \"error\"",
+					fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					"",
+					fmt.Sprintf(`  Generating SBOM for directory /layers/%s/launch-modules`, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					MatchRegexp(`      Completed in (\d+)(\.\d+)?(ms|s)`),
+					"",
+				))
+			})
+
 		})
 	})
 }

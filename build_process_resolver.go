@@ -2,9 +2,7 @@ package npminstall
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -21,12 +19,17 @@ type Executable interface {
 //go:generate faux --interface BuildProcess --output fakes/build_process.go
 type BuildProcess interface {
 	ShouldRun(workingDir string, metadata map[string]interface{}, npmrcPath string) (run bool, sha string, err error)
-	Run(modulesDir, cacheDir, workingDir string, npmrcPath string) error
+	Run(modulesDir, cacheDir, workingDir, npmrcPath string, launch bool) error
 }
 
 //go:generate faux --interface Summer --output fakes/summer.go
 type Summer interface {
 	Sum(paths ...string) (string, error)
+}
+
+//go:generate faux --interface EnvironmentConfig --output fakes/environment_config.go
+type EnvironmentConfig interface {
+	GetValue(key string) string
 }
 
 type BuildProcessResolver struct {
@@ -47,19 +50,19 @@ func NewBuildProcessResolver(executable Executable, summer Summer, environment E
 
 func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess, error) {
 	nodeModulesPath := filepath.Join(workingDir, "node_modules")
-	vendored, err := fileExists(nodeModulesPath)
+	vendored, err := fs.Exists(nodeModulesPath)
 	if err != nil {
 		return nil, err
 	}
 
 	packageLockPath := filepath.Join(workingDir, "package-lock.json")
-	locked, err := fileExists(packageLockPath)
+	locked, err := fs.Exists(packageLockPath)
 	if err != nil {
 		return nil, err
 	}
 
 	npmCachePath := filepath.Join(workingDir, "npm-cache")
-	cached, err := fileExists(npmCachePath)
+	cached, err := fs.Exists(npmCachePath)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +128,7 @@ func cacheExecutableResponse(executable Executable, args []string, workingDir st
 		return "", err
 	}
 
-	tmpFile, err := ioutil.TempFile(workingDir, "executable_response")
+	tmpFile, err := os.CreateTemp(workingDir, "executable_response")
 	if err != nil {
 		logger.Subprocess("error: %s", err)
 		return "", err
@@ -138,16 +141,4 @@ func cacheExecutableResponse(executable Executable, args []string, workingDir st
 	}
 
 	return tmpFile.Name(), nil
-}
-
-func fileExists(path string) (bool, error) {
-	exists := true
-	_, err := os.Stat(path)
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return false, err
-		}
-		exists = false
-	}
-	return exists, nil
 }

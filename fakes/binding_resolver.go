@@ -8,7 +8,7 @@ import (
 
 type BindingResolver struct {
 	ResolveCall struct {
-		sync.Mutex
+		mutex     sync.Mutex
 		CallCount int
 		Receives  struct {
 			Typ         string
@@ -24,8 +24,8 @@ type BindingResolver struct {
 }
 
 func (f *BindingResolver) Resolve(param1 string, param2 string, param3 string) ([]servicebindings.Binding, error) {
-	f.ResolveCall.Lock()
-	defer f.ResolveCall.Unlock()
+	f.ResolveCall.mutex.Lock()
+	defer f.ResolveCall.mutex.Unlock()
 	f.ResolveCall.CallCount++
 	f.ResolveCall.Receives.Typ = param1
 	f.ResolveCall.Receives.Provider = param2
