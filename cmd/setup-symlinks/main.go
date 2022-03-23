@@ -8,7 +8,12 @@ import (
 )
 
 func main() {
-	err := internal.Run(os.Args[0], os.Getenv("CNB_APP_DIR"))
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = internal.Run(os.Args[0], wd)
 	if err != nil {
 		log.Fatal(err)
 	}
