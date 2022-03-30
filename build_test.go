@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	npminstall "github.com/paketo-buildpacks/npm-install"
 	"github.com/paketo-buildpacks/npm-install/fakes"
@@ -33,8 +32,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		processCacheDir   string
 		processNpmrcPath  string
 
-		timestamp string
-
 		projectPathParser    *fakes.PathParser
 		buildProcess         *fakes.BuildProcess
 		buildManager         *fakes.BuildManager
@@ -42,7 +39,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		entryResolver        *fakes.EntryResolver
 		pruneProcess         *fakes.PruneProcess
 		sbomGenerator        *fakes.SBOMGenerator
-		clock                chronos.Clock
 		build                packit.BuildFunc
 
 		buffer *bytes.Buffer
@@ -86,12 +82,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			return nil
 		}
 
-		now := time.Now()
-		clock = chronos.NewClock(func() time.Time {
-			return now
-		})
-		timestamp = now.Format(time.RFC3339Nano)
-
 		buildManager = &fakes.BuildManager{}
 		buildManager.ResolveCall.Returns.BuildProcess = buildProcess
 
@@ -113,7 +103,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			configurationManager,
 			buildManager,
 			pruneProcess,
-			clock,
+			chronos.DefaultClock,
 			logger,
 			sbomGenerator,
 		)
@@ -165,7 +155,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(buildLayer.Cache).To(BeTrue())
 			Expect(buildLayer.Metadata).To(Equal(
 				map[string]interface{}{
-					"built_at":  timestamp,
 					"cache_sha": "some-sha",
 				}))
 			Expect(buildLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
@@ -250,7 +239,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(launchLayer.Cache).To(BeFalse())
 			Expect(launchLayer.Metadata).To(Equal(
 				map[string]interface{}{
-					"built_at":  timestamp,
 					"cache_sha": "some-sha",
 				}))
 
@@ -342,7 +330,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(buildLayer.Cache).To(BeTrue())
 			Expect(buildLayer.Metadata).To(Equal(
 				map[string]interface{}{
-					"built_at":  timestamp,
 					"cache_sha": "some-sha",
 				}))
 			Expect(buildLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
@@ -376,7 +363,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(launchLayer.Cache).To(BeFalse())
 			Expect(launchLayer.Metadata).To(Equal(
 				map[string]interface{}{
-					"built_at":  timestamp,
 					"cache_sha": "some-sha",
 				}))
 
