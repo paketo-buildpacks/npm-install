@@ -102,7 +102,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Eventually(container).Should(BeAvailable())
 
 			Expect(secondImage.ID).NotTo(Equal(firstImage.ID))
-			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]).NotTo(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]))
+			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].SHA))
+
+			Expect(logs).To(ContainLines(
+				"  Executing launch environment install process",
+			))
 		})
 	})
 
@@ -176,7 +180,6 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
 			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].SHA))
-			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]))
 		})
 
 		context("and the node.js version has changed", func() {
@@ -237,7 +240,6 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 				Expect(secondImage.ID).NotTo(Equal(firstImage.ID))
 				Expect(secondImage.Buildpacks[1].Layers["launch-modules"].SHA).NotTo(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].SHA))
-				Expect(secondImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]).NotTo(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]))
 			})
 		})
 	})
@@ -292,7 +294,6 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
 			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].SHA))
-			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].Metadata["built_at"]))
 
 			Expect(logs).To(ContainLines(
 				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
