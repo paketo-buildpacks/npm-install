@@ -14,7 +14,20 @@ func Run(executablePath, appDir string) error {
 		layerPath = fmt.Sprintf("/%s", layerPath)
 	}
 
-	err := os.RemoveAll(filepath.Join(appDir, "node_modules"))
+	fileInfo, err := os.Lstat(filepath.Join(appDir, "node_modules"))
+	if err != nil {
+		return err
+	}
+
+	var removeFunc func(string) error
+
+	if fileInfo.Mode()&os.ModeSymlink != os.ModeSymlink {
+		removeFunc = os.RemoveAll
+	} else {
+		removeFunc = os.Remove
+	}
+
+	err = removeFunc(filepath.Join(appDir, "node_modules"))
 	if err != nil {
 		return err
 	}
