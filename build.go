@@ -247,16 +247,7 @@ func Build(projectPathParser PathParser,
 					return packit.BuildResult{}, err
 				}
 
-				execdDir := filepath.Join(layer.Path, "exec.d")
-				err = os.MkdirAll(execdDir, os.ModePerm)
-				if err != nil {
-					return packit.BuildResult{}, err
-				}
-
-				err = fs.Copy(filepath.Join(context.CNBPath, "bin", "setup-symlinks"), filepath.Join(execdDir, "0-setup-symlinks"))
-				if err != nil {
-					return packit.BuildResult{}, err
-				}
+				layer.ExecD = []string{filepath.Join(context.CNBPath, "bin", "setup-symlinks")}
 			} else {
 				logger.Process("Reusing cached layer %s", layer.Path)
 				if !build {
