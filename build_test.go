@@ -55,9 +55,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		cnbDir, err = os.MkdirTemp("", "cnb")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(os.MkdirAll(filepath.Join(cnbDir, "bin"), os.ModePerm)).To(Succeed())
-		Expect(os.WriteFile(filepath.Join(cnbDir, "bin", "setup-symlinks"), nil, os.ModePerm)).To(Succeed())
-
 		projectPathParser = &fakes.PathParser{}
 		projectPathParser.GetCall.Returns.ProjectPath = ""
 
@@ -241,6 +238,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				map[string]interface{}{
 					"cache_sha": "some-sha",
 				}))
+			Expect(launchLayer.ExecD).To(Equal([]string{
+				filepath.Join(cnbDir, "bin", "setup-symlinks"),
+			}))
 
 			Expect(launchLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
 				{
@@ -963,26 +963,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						},
 					})
 					Expect(err).To(MatchError("unsupported SBOM format: 'random-format'"))
-				})
-			})
-
-			context("when exec.d setup fails", func() {
-				it.Before(func() {
-					Expect(os.RemoveAll(filepath.Join(cnbDir, "bin"))).To(Succeed())
-				})
-
-				it("returns an error", func() {
-					_, err := build(packit.BuildContext{
-						WorkingDir: workingDir,
-						CNBPath:    cnbDir,
-						Layers:     packit.Layers{Path: layersDir},
-						Plan: packit.BuildpackPlan{
-							Entries: []packit.BuildpackPlanEntry{
-								{Name: "node_modules"},
-							},
-						},
-					})
-					Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
 				})
 			})
 
