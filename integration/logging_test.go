@@ -119,7 +119,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 					"    NODE_ENV -> \"development\"",
 					fmt.Sprintf("    PATH     -> \"$PATH:/layers/%s/build-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 					"",
-					fmt.Sprintf(`  Generating SBOM for directory /layers/%s/build-modules`, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					fmt.Sprintf(`  Generating SBOM for /layers/%s/build-modules`, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 					MatchRegexp(`      Completed in (\d+)(\.\d+)?(ms|s)`),
 					"",
 					"  Executing launch environment install process",
@@ -130,7 +130,7 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 					"    NPM_CONFIG_LOGLEVEL -> \"error\"",
 					fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 					"",
-					fmt.Sprintf(`  Generating SBOM for directory /layers/%s/launch-modules`, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					fmt.Sprintf(`  Generating SBOM for /layers/%s/launch-modules`, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 					MatchRegexp(`      Completed in (\d+)(\.\d+)?(ms|s)`),
 					"",
 				))
