@@ -770,6 +770,27 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				})
 			})
 
+			context("when BP_DISABLE_SBOM is set incorrectly", func() {
+				it.Before((func() {
+					os.Setenv("BP_DISABLE_SBOM", "not-a-bool")
+				}))
+
+				it.After((func() {
+					os.Unsetenv("BP_DISABLE_SBOM")
+				}))
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						Layers:  packit.Layers{Path: layersDir},
+						CNBPath: cnbDir,
+						BuildpackInfo: packit.BuildpackInfo{
+							SBOMFormats: []string{"application/vnd.cyclonedx+json"},
+						},
+					})
+					Expect(err).To(MatchError(ContainSubstring("failed to parse BP_DISABLE_SBOM")))
+				})
+			})
+
 			context("when the node_modules directory cannot be removed", func() {
 				it.Before(func() {
 					buildProcess.ShouldRunCall.Returns.Run = false
@@ -963,6 +984,27 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						},
 					})
 					Expect(err).To(MatchError("unsupported SBOM format: 'random-format'"))
+				})
+			})
+
+			context("when BP_DISABLE_SBOM is set incorrectly", func() {
+				it.Before((func() {
+					os.Setenv("BP_DISABLE_SBOM", "not-a-bool")
+				}))
+
+				it.After((func() {
+					os.Unsetenv("BP_DISABLE_SBOM")
+				}))
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						Layers:  packit.Layers{Path: layersDir},
+						CNBPath: cnbDir,
+						BuildpackInfo: packit.BuildpackInfo{
+							SBOMFormats: []string{"application/vnd.cyclonedx+json"},
+						},
+					})
+					Expect(err).To(MatchError(ContainSubstring("failed to parse BP_DISABLE_SBOM")))
 				})
 			})
 
