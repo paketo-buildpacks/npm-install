@@ -192,6 +192,11 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 			Expect(processWorkingDir).To(Equal(workingDir))
 			Expect(processNpmrcPath).To(Equal(""))
+
+			workingDirInfo, err := os.Stat(workingDir)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(workingDirInfo.Mode()).To(Equal(os.FileMode(os.ModeDir | 0775)))
+
 		})
 	})
 
@@ -508,6 +513,10 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				Expect(processLayerDir).To(Equal(filepath.Join(layersDir, "launch-modules")))
 				Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 				Expect(processWorkingDir).To(Equal(filepath.Join(workingDir, "some-dir")))
+
+				procWorkingDirInfo, err := os.Stat(processWorkingDir)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(procWorkingDirInfo.Mode()).To(Equal(os.FileMode(os.ModeDir | 0775)))
 			})
 		})
 
