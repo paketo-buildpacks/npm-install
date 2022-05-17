@@ -295,6 +295,14 @@ func Build(projectPathParser PathParser,
 			return packit.BuildResult{}, err
 		}
 
+		// Makes the projectPath group-writable to facilitate executing exec.d
+		// script at runtime under a different uid.
+		// https://github.com/paketo-buildpacks/rfcs/blob/main/text/0045-user-ids.md
+		err = os.Chmod(projectPath, 0775)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+
 		logger.Break()
 
 		return packit.BuildResult{Layers: layers}, nil
