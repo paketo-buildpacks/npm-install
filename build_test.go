@@ -198,6 +198,32 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(workingDirInfo.Mode()).To(Equal(os.FileMode(os.ModeDir | 0775)))
 
 		})
+		it("doesn't fail when chmod fails ", func() {
+			if _, err := os.Stat("/dev/null"); errors.Is(err, os.ErrNotExist) {
+				t.Skip("No /dev/null thus not a unix system. Skipping chmod test.")
+			}
+
+			Expect(os.RemoveAll(workingDir)).To(Succeed())
+			Expect(os.Symlink("/dev/null", workingDir)).To(Succeed())
+
+			_, err := build(packit.BuildContext{
+				BuildpackInfo: packit.BuildpackInfo{
+					SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
+				},
+				Platform: packit.Platform{
+					Path: "some-platform-path",
+				},
+				WorkingDir: workingDir,
+				CNBPath:    cnbDir,
+				Layers:     packit.Layers{Path: layersDir},
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{Name: "node_modules"},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	context("when required during launch", func() {
@@ -517,6 +543,29 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				procWorkingDirInfo, err := os.Stat(processWorkingDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(procWorkingDirInfo.Mode()).To(Equal(os.FileMode(os.ModeDir | 0775)))
+			})
+			it("doesn't fail when chmod fails ", func() {
+				if _, err := os.Stat("/dev/null"); errors.Is(err, os.ErrNotExist) {
+					t.Skip("No /dev/null thus not a unix system. Skipping chmod test.")
+				}
+
+				Expect(os.RemoveAll(workingDir)).To(Succeed())
+				Expect(os.Symlink("/dev/null", workingDir)).To(Succeed())
+
+				_, err := build(packit.BuildContext{
+					BuildpackInfo: packit.BuildpackInfo{
+						SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
+					},
+					WorkingDir: workingDir,
+					Layers:     packit.Layers{Path: layersDir},
+					CNBPath:    cnbDir,
+					Plan: packit.BuildpackPlan{
+						Entries: []packit.BuildpackPlanEntry{
+							{Name: "node_modules"},
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 

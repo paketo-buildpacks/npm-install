@@ -300,7 +300,7 @@ func Build(projectPathParser PathParser,
 		// https://github.com/paketo-buildpacks/rfcs/blob/main/text/0045-user-ids.md
 		err = os.Chmod(projectPath, 0775)
 		if err != nil {
-			return packit.BuildResult{}, err
+			logger.Process("WARNING: unable to chmod %s:\n%s", projectPath, err)
 		}
 
 		logger.Break()
