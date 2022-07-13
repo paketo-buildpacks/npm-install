@@ -48,7 +48,9 @@ func Build(projectPathParser PathParser,
 	pruneProcess PruneProcess,
 	clock chronos.Clock,
 	logger scribe.Emitter,
-	sbomGenerator SBOMGenerator) packit.BuildFunc {
+	sbomGenerator SBOMGenerator,
+	tmpDir string,
+) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
@@ -219,11 +221,17 @@ func Build(projectPathParser PathParser,
 						return packit.BuildResult{}, err
 					}
 
-					err = os.Symlink(filepath.Join(buildLayerPath, "node_modules"), filepath.Join(projectPath, "node_modules"))
+					err = os.Symlink(filepath.Join(buildLayerPath, "node_modules"), filepath.Join(tmpDir, "node_modules"))
 					if err != nil {
 						return packit.BuildResult{}, err
 					}
 
+					err = os.Symlink(filepath.Join(tmpDir, "node_modules"), filepath.Join(projectPath, "node_modules"))
+					if err != nil {
+						return packit.BuildResult{}, err
+					}
+
+					layer.ExecD = []string{filepath.Join(context.CNBPath, "bin", "setup-symlinks")}
 				}
 
 				logger.Action("Completed in %s", duration.Round(time.Millisecond))
@@ -264,7 +272,6 @@ func Build(projectPathParser PathParser,
 					}
 				}
 
-				layer.ExecD = []string{filepath.Join(context.CNBPath, "bin", "setup-symlinks")}
 			} else {
 				logger.Process("Reusing cached layer %s", layer.Path)
 				if !build {
@@ -291,14 +298,6 @@ func Build(projectPathParser PathParser,
 				layers = append(layers, npmCacheLayer)
 			}
 		}
-		if err != nil {
-			return packit.BuildResult{}, err
-		}
-
-		// Makes the projectPath group-writable to facilitate executing exec.d
-		// script at runtime under a different uid.
-		// https://github.com/paketo-buildpacks/rfcs/blob/main/text/0045-user-ids.md
-		err = os.Chmod(projectPath, 0775)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}

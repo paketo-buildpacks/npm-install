@@ -24,6 +24,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		Expect = NewWithT(t).Expect
 
 		layersDir  string
+		tmpDir     string
 		workingDir string
 		cnbDir     string
 
@@ -47,6 +48,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 	it.Before(func() {
 		var err error
 		layersDir, err = os.MkdirTemp("", "layers")
+		Expect(err).NotTo(HaveOccurred())
+
+		tmpDir, err = os.MkdirTemp("", "tmp")
 		Expect(err).NotTo(HaveOccurred())
 
 		workingDir, err = os.MkdirTemp("", "working-dir")
@@ -103,11 +107,13 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			chronos.DefaultClock,
 			logger,
 			sbomGenerator,
+			tmpDir,
 		)
 	})
 
 	it.After(func() {
 		Expect(os.RemoveAll(layersDir)).To(Succeed())
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
 	})
 
@@ -193,10 +199,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(processWorkingDir).To(Equal(workingDir))
 			Expect(processNpmrcPath).To(Equal(""))
 
-			workingDirInfo, err := os.Stat(workingDir)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(workingDirInfo.Mode()).To(Equal(os.FileMode(os.ModeDir | 0775)))
-
 		})
 	})
 
@@ -243,9 +245,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				map[string]interface{}{
 					"cache_sha": "some-sha",
 				}))
-			Expect(launchLayer.ExecD).To(Equal([]string{
-				filepath.Join(cnbDir, "bin", "setup-symlinks"),
-			}))
 
 			Expect(launchLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
 				{
@@ -370,6 +369,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				map[string]interface{}{
 					"cache_sha": "some-sha",
 				}))
+			Expect(launchLayer.ExecD).To(Equal([]string{
+				filepath.Join(cnbDir, "bin", "setup-symlinks"),
+			}))
 
 			Expect(launchLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
 				{
@@ -401,6 +403,15 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(pruneProcess.RunCall.Receives.CacheDir).To(Equal(cacheLayer.Path))
 			Expect(pruneProcess.RunCall.Receives.WorkingDir).To(Equal(workingDir))
 			Expect(pruneProcess.RunCall.Receives.NpmrcPath).To(Equal(""))
+
+			link, err := os.Readlink(filepath.Join(tmpDir, "node_modules"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(buildLayer.Path, "node_modules")))
+
+			link, err = os.Readlink(filepath.Join(workingDir, "node_modules"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(tmpDir, "node_modules")))
+
 		})
 	})
 
@@ -514,9 +525,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 				Expect(processWorkingDir).To(Equal(filepath.Join(workingDir, "some-dir")))
 
-				procWorkingDirInfo, err := os.Stat(processWorkingDir)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(procWorkingDirInfo.Mode()).To(Equal(os.FileMode(os.ModeDir | 0775)))
 			})
 		})
 
