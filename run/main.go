@@ -31,6 +31,7 @@ func main() {
 	entryResolver := draft.NewPlanner()
 	sbomGenerator := SBOMGenerator{}
 	packageManagerConfigurationManager := npminstall.NewPackageManagerConfigurationManager(servicebindings.NewResolver(), logger)
+	tmpDir := "/tmp"
 
 	packit.Run(
 		npminstall.Detect(
@@ -45,6 +46,8 @@ func main() {
 			pruneBuildProcess,
 			chronos.DefaultClock,
 			logger,
-			sbomGenerator),
+			sbomGenerator,
+			tmpDir,
+		),
 	)
 }
