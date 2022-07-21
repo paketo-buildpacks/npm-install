@@ -13,7 +13,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = internal.Run(os.Args[0], wd, "/tmp")
+	err = internal.Run(os.Args[0], wd, os.TempDir())
 	if err != nil {
 		log.Fatal(err)
 	}
