@@ -31,7 +31,7 @@ func main() {
 	entryResolver := draft.NewPlanner()
 	sbomGenerator := SBOMGenerator{}
 	packageManagerConfigurationManager := npminstall.NewPackageManagerConfigurationManager(servicebindings.NewResolver(), logger)
-	tmpDir := "/tmp"
+	tmpDir := os.TempDir()
 
 	packit.Run(
 		npminstall.Detect(
