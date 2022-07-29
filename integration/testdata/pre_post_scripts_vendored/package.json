@@ -10,8 +10,8 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "sqlite3": "~4.1.1",
-    "node-pre-gyp": "0.14.x"
+    "@mapbox/node-pre-gyp": "^1.0.9",
+    "sqlite3": "~5.0.1"
   },
   "repository": {
     "type": "git",

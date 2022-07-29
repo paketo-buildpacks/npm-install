@@ -1,5 +1,5 @@
 {
-  "builder": "index.docker.io/paketobuildpacks/builder:buildpackless-full",
+  "builders": ["paketobuildpacks/builder-jammy-buildpackless-full"],
   "build-plan": "github.com/ForestEckhardt/build-plan",
   "node-engine": "github.com/paketo-buildpacks/node-engine"
 }
