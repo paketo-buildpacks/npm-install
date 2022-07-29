@@ -15,7 +15,4 @@ api = "0.7"
   pre-package = "./scripts/build.sh"
 
 [[stacks]]
-  id = "io.buildpacks.stacks.bionic"
-
-[[stacks]]
   id = "*"
