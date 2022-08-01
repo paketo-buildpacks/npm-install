@@ -52,6 +52,7 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 	it.After(func() {
 		Expect(os.RemoveAll(layerDir)).To(Succeed())
 		Expect(os.RemoveAll(appDir)).To(Succeed())
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
 	it("creates a symlink to the node_modules dir in the layer", func() {
@@ -63,14 +64,31 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 		Expect(link).To(Equal(filepath.Join(layerDir, "node_modules")))
 	})
 
+	context("when the symlink already exists", func() {
+		it.Before(func() {
+			Expect(os.Symlink("some-location", filepath.Join(tmpDir, "node_modules"))).To(Succeed())
+		})
+
+		it("replaces it", func() {
+			err := internal.Run(executablePath, appDir, tmpDir)
+			Expect(err).NotTo(HaveOccurred())
+
+			link, err := os.Readlink(filepath.Join(tmpDir, "node_modules"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(layerDir, "node_modules")))
+		})
+	})
+
 	context("failure cases", func() {
 		context("when the tmp dir node_modules cannot be removed", func() {
 			it.Before(func() {
 				Expect(os.Chmod(tmpDir, 0444)).To(Succeed())
 			})
+
 			it.After(func() {
 				Expect(os.Chmod(tmpDir, os.ModePerm)).To(Succeed())
 			})
+
 			it("returns an error", func() {
 				err := internal.Run(executablePath, appDir, tmpDir)
 				Expect(err).To(MatchError(ContainSubstring("permission denied")))

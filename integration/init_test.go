@@ -13,6 +13,7 @@ import (
 	"github.com/sclevine/spec/report"
 
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 )
 
 var (
@@ -31,6 +32,9 @@ var (
 )
 
 func TestIntegration(t *testing.T) {
+	format.MaxLength = 0
+	SetDefaultEventuallyTimeout(30 * time.Second)
+
 	var (
 		Expect = NewWithT(t).Expect
 		err    error
@@ -84,8 +88,6 @@ func TestIntegration(t *testing.T) {
 
 	npmList = filepath.Join(root, "integration", "testdata", "npm-list-buildpack")
 
-	SetDefaultEventuallyTimeout(10 * time.Second)
-
 	suite := spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
 	suite("Caching", testCaching)
 	suite("DevDependenciesDuringBuild", testDevDependenciesDuringBuild)
@@ -93,13 +95,14 @@ func TestIntegration(t *testing.T) {
 	suite("Logging", testLogging)
 	suite("NoNodeModules", testNoNodeModules)
 	suite("Npmrc", testNpmrc)
+	suite("PackageLockMismatch", testPackageLockMismatch)
 	suite("PrePostScriptsRebuild", testPrePostScriptRebuild)
+	suite("ProjectPath", testProjectPath)
+	suite("Restart", testRestart)
 	suite("SimpleApp", testSimpleApp)
 	suite("UnmetDependencies", testUnmetDependencies)
 	suite("Vendored", testVendored)
 	suite("VendoredWithBinaries", testVendoredWithBinaries)
 	suite("Versioning", testVersioning)
-	suite("PackageLockMismatch", testPackageLockMismatch)
-	suite("ProjectPath", testProjectPath)
 	suite.Run(t)
 }
