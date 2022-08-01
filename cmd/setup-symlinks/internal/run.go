@@ -14,7 +14,12 @@ func Run(executablePath, appDir, tmpDir string) error {
 		layerPath = fmt.Sprintf("/%s", layerPath)
 	}
 
-	err := os.Symlink(filepath.Join(layerPath, "node_modules"), filepath.Join(tmpDir, "node_modules"))
+	err := os.RemoveAll(filepath.Join(tmpDir, "node_modules"))
+	if err != nil {
+		return err
+	}
+
+	err = os.Symlink(filepath.Join(layerPath, "node_modules"), filepath.Join(tmpDir, "node_modules"))
 	if err != nil {
 		return err
 	}

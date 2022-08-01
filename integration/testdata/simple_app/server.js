@@ -1,12 +1,18 @@
 const http = require('http');
 const leftpad = require('leftpad');
 
-const port = process.env.PORT || 8080;
-
 const server = http.createServer((request, response) => {
-  response.end(JSON.stringify(process.env))
+  switch (request.url) {
+    case '/process':
+      response.end(JSON.stringify(process.env))
+      break;
+
+    default:
+      response.end('Hello World!');
+  }
 });
 
+const port = process.env.PORT || 8080;
 server.listen(port, (err) => {
   if (err) {
     return console.log('something bad happened', err);
