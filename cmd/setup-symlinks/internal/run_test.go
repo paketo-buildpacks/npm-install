@@ -39,6 +39,8 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 		tmpDir, err = os.MkdirTemp("", "tmp")
 		Expect(err).NotTo(HaveOccurred())
 
+		Expect(os.Symlink(filepath.Join(tmpDir, "node_modules"), filepath.Join(appDir, "node_modules"))).To(Succeed())
+
 		Expect(os.MkdirAll(filepath.Join(layerDir, "node_modules"), os.ModePerm)).To(Succeed())
 
 		executablePath = filepath.Join(layerDir, "execd", "0-setup-symlinks")
@@ -56,7 +58,7 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	it("creates a symlink to the node_modules dir in the layer", func() {
-		err := internal.Run(executablePath, appDir, tmpDir)
+		err := internal.Run(executablePath, appDir)
 		Expect(err).NotTo(HaveOccurred())
 
 		link, err := os.Readlink(filepath.Join(tmpDir, "node_modules"))
@@ -70,10 +72,26 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it("replaces it", func() {
-			err := internal.Run(executablePath, appDir, tmpDir)
+			err := internal.Run(executablePath, appDir)
 			Expect(err).NotTo(HaveOccurred())
 
 			link, err := os.Readlink(filepath.Join(tmpDir, "node_modules"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(layerDir, "node_modules")))
+		})
+	})
+
+	context("when the symlink points to non-existent directory", func() {
+		it.Before(func() {
+			Expect(os.RemoveAll(filepath.Join(appDir, "node_modules"))).To(Succeed())
+			Expect(os.Symlink(filepath.Join(tmpDir, "non-existing-tempdir", "node_modules"), filepath.Join(appDir, "node_modules"))).To(Succeed())
+		})
+
+		it("ensures the parent directory exists", func() {
+			err := internal.Run(executablePath, appDir)
+			Expect(err).NotTo(HaveOccurred())
+
+			link, err := os.Readlink(filepath.Join(tmpDir, "non-existing-tempdir", "node_modules"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(link).To(Equal(filepath.Join(layerDir, "node_modules")))
 		})
@@ -90,7 +108,7 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("returns an error", func() {
-				err := internal.Run(executablePath, appDir, tmpDir)
+				err := internal.Run(executablePath, appDir)
 				Expect(err).To(MatchError(ContainSubstring("permission denied")))
 			})
 		})
