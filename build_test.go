@@ -198,7 +198,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 			Expect(processWorkingDir).To(Equal(workingDir))
 			Expect(processNpmrcPath).To(Equal(""))
-
 		})
 	})
 
@@ -234,6 +233,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(launchLayer.BuildEnv).To(Equal(packit.Environment{}))
 			Expect(launchLayer.LaunchEnv).To(Equal(packit.Environment{
 				"NPM_CONFIG_LOGLEVEL.default": "error",
+				"NODE_PROJECT_PATH.default":   workingDir,
 				"PATH.append":                 filepath.Join(layersDir, "launch-modules", "node_modules", ".bin"),
 				"PATH.delim":                  ":",
 			}))
@@ -358,6 +358,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(launchLayer.BuildEnv).To(Equal(packit.Environment{}))
 			Expect(launchLayer.LaunchEnv).To(Equal(packit.Environment{
 				"NPM_CONFIG_LOGLEVEL.default": "error",
+				"NODE_PROJECT_PATH.default":   workingDir,
 				"PATH.append":                 filepath.Join(layersDir, "launch-modules", "node_modules", ".bin"),
 				"PATH.delim":                  ":",
 			}))
@@ -489,9 +490,13 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 			Expect(buildProcess.RunCall.CallCount).To(Equal(0))
 
-			link, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
+			workspaceLink, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(link).To(Equal(filepath.Join(layersDir, "launch-modules", "node_modules")))
+			Expect(workspaceLink).To(Equal(filepath.Join(tmpDir, "node_modules")))
+
+			tmpLink, err := os.Readlink(filepath.Join(tmpDir, "node_modules"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tmpLink).To(Equal(filepath.Join(layersDir, "launch-modules", "node_modules")))
 		})
 
 		context("when BP_NODE_PROJECT_PATH is set", func() {
