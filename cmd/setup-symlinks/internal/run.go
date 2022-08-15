@@ -1,7 +1,9 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,6 +24,15 @@ func Run(executablePath, appDir string) error {
 	linkPath, err = filepath.Abs(linkPath)
 	if err != nil {
 		return err
+	}
+
+	fileInfo, err := os.Stat(linkPath)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+
+	if fileInfo != nil && fileInfo.IsDir() {
+		return nil
 	}
 
 	return createSymlink(filepath.Join(layerPath, "node_modules"), linkPath)

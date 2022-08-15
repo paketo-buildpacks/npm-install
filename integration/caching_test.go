@@ -142,6 +142,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
 				"",
 				"  Configuring launch environment",
+				"    NODE_PROJECT_PATH   -> \"/workspace\"",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
 				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
 				"",

@@ -123,6 +123,11 @@ func Build(projectPathParser PathParser,
 					return packit.BuildResult{}, err
 				}
 
+				err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
+				if err != nil {
+					return packit.BuildResult{}, err
+				}
+
 				logger.Action("Completed in %s", duration.Round(time.Millisecond))
 				logger.Break()
 
@@ -165,12 +170,8 @@ func Build(projectPathParser PathParser,
 				}
 			} else {
 				logger.Process("Reusing cached layer %s", layer.Path)
-				err := os.RemoveAll(filepath.Join(projectPath, "node_modules"))
-				if err != nil {
-					return packit.BuildResult{}, err
-				}
 
-				err = os.Symlink(filepath.Join(layer.Path, "node_modules"), filepath.Join(projectPath, "node_modules"))
+				err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
 				if err != nil {
 					return packit.BuildResult{}, err
 				}
@@ -214,6 +215,7 @@ func Build(projectPathParser PathParser,
 				if err != nil {
 					return packit.BuildResult{}, err
 				}
+				targetLayerPath := layer.Path
 
 				if build {
 					err = fs.Move(filepath.Join(projectPath, "node_modules"), filepath.Join(layer.Path, "node_modules"))
@@ -221,17 +223,13 @@ func Build(projectPathParser PathParser,
 						return packit.BuildResult{}, err
 					}
 
-					err = os.Symlink(filepath.Join(buildLayerPath, "node_modules"), filepath.Join(tmpDir, "node_modules"))
-					if err != nil {
-						return packit.BuildResult{}, err
-					}
+					targetLayerPath = buildLayerPath
+				}
 
-					err = os.Symlink(filepath.Join(tmpDir, "node_modules"), filepath.Join(projectPath, "node_modules"))
-					if err != nil {
-						return packit.BuildResult{}, err
-					}
-
-					layer.ExecD = []string{filepath.Join(context.CNBPath, "bin", "setup-symlinks")}
+				layer.ExecD = []string{filepath.Join(context.CNBPath, "bin", "setup-symlinks")}
+				err = ensureNodeModulesSymlink(projectPath, targetLayerPath, tmpDir)
+				if err != nil {
+					return packit.BuildResult{}, err
 				}
 
 				logger.Action("Completed in %s", duration.Round(time.Millisecond))
@@ -242,6 +240,7 @@ func Build(projectPathParser PathParser,
 				}
 
 				layer.LaunchEnv.Default("NPM_CONFIG_LOGLEVEL", "error")
+				layer.LaunchEnv.Default("NODE_PROJECT_PATH", projectPath)
 				path := filepath.Join(layer.Path, "node_modules", ".bin")
 				layer.LaunchEnv.Append("PATH", path, string(os.PathListSeparator))
 
@@ -271,16 +270,10 @@ func Build(projectPathParser PathParser,
 						return packit.BuildResult{}, err
 					}
 				}
-
 			} else {
 				logger.Process("Reusing cached layer %s", layer.Path)
 				if !build {
-					err := os.RemoveAll(filepath.Join(projectPath, "node_modules"))
-					if err != nil {
-						return packit.BuildResult{}, err
-					}
-
-					err = os.Symlink(filepath.Join(layer.Path, "node_modules"), filepath.Join(projectPath, "node_modules"))
+					err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
 					if err != nil {
 						return packit.BuildResult{}, err
 					}
@@ -317,4 +310,29 @@ func checkSbomDisabled() (bool, error) {
 		return disable, nil
 	}
 	return false, nil
+}
+
+func ensureNodeModulesSymlink(projectDir, targetLayer, tmpDir string) error {
+	projectDirNodeModules := filepath.Join(projectDir, "node_modules")
+	layerNodeModules := filepath.Join(targetLayer, "node_modules")
+	tmpNodeModules := filepath.Join(tmpDir, "node_modules")
+
+	for _, d := range []string{projectDirNodeModules, tmpNodeModules} {
+		err := os.RemoveAll(d)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := os.Symlink(tmpNodeModules, projectDirNodeModules)
+	if err != nil {
+		return err
+	}
+
+	err = os.Symlink(layerNodeModules, tmpNodeModules)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
