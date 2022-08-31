@@ -1,4 +1,4 @@
-# Paketo NPM Install Cloud Native Buildpack
+# Paketo Buildpack for NPM Install Cloud Native
 
 The NPM Install CNB makes use of the [`npm`](https://www.npmjs.com/) tooling
 installed within the [Node Engine CNB](https://github.com/paketo-buildpacks/node-engine)
