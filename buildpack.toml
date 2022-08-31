@@ -3,7 +3,7 @@ api = "0.7"
 [buildpack]
   homepage = "https://github.com/paketo-buildpacks/npm-install"
   id = "paketo-buildpacks/npm-install"
-  name = "Paketo NPM Install Buildpack"
+  name = "Paketo Buildpack for NPM Install"
   sbom-formats = ["application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"]
 
   [[buildpack.licenses]]
