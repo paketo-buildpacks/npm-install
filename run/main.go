@@ -24,7 +24,7 @@ func (s SBOMGenerator) Generate(path string) (sbom.SBOM, error) {
 func main() {
 	projectPathParser := npminstall.NewProjectPathParser()
 	packageJSONParser := npminstall.NewPackageJSONParser()
-	logger := scribe.NewEmitter(os.Stdout)
+	logger := scribe.NewEmitter(os.Stdout).WithLevel(os.Getenv("BP_LOG_LEVEL"))
 	executable := pexec.NewExecutable("npm")
 	buildProcessResolver := npminstall.NewBuildProcessResolver(executable, fs.NewChecksumCalculator(), npminstall.NewEnvironment(), scribe.NewLogger(os.Stdout))
 	pruneBuildProcess := npminstall.NewPruneBuildProcess(executable, npminstall.NewEnvironment(), scribe.NewLogger(os.Stdout))
