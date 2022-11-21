@@ -1,0 +1,22 @@
+{
+  "name": "vendored",
+  "version": "0.0.1",
+  "description": "some app",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "chalk-cli": "~3.0.0",
+    "node-pre-gyp": "0.16.x",
+    "re2": "1.x.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "engines": {
+    "node": "~16"
+  }
+}

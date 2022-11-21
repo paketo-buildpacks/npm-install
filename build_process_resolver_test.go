@@ -18,7 +18,6 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		cacheDir   string
 		workingDir string
 
 		executable  *fakes.Executable
@@ -33,7 +32,6 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 	it.Before(func() {
 		var err error
 
-		cacheDir, err = os.MkdirTemp("", "cache")
 		Expect(err).NotTo(HaveOccurred())
 
 		workingDir, err = os.MkdirTemp("", "working-dir")
@@ -50,14 +48,14 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 	})
 	it.After(func() {
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
-		Expect(os.RemoveAll(cacheDir)).To(Succeed())
 	})
 
 	context("the build process is install", func() {
 		context("there is no node_modules, package-lock.json, or cache", func() {
 			it("returns an InstallBuildProcess", func() {
-				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(cacheUsed).To(BeFalse())
 
 				Expect(buildProcess).To(Equal(npminstall.NewInstallBuildProcess(executable, environment, scribe.NewLogger(os.Stdout))))
 
@@ -68,19 +66,13 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 		context("there is no node_modules, package-lock.json but there is a cache", func() {
 			it.Before(func() {
 				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
-
-				err := os.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
-				Expect(err).NotTo(HaveOccurred())
 			})
 			it("returns an InstallBuildProcess", func() {
-				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(cacheUsed).To(BeTrue())
 
 				Expect(buildProcess).To(Equal(npminstall.NewInstallBuildProcess(executable, environment, scribe.NewLogger(os.Stdout))))
-
-				contents, err := os.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("some-content"))
 			})
 		})
 	})
@@ -92,8 +84,9 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("returns a RebuildBuildProcess", func() {
-				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(cacheUsed).To(BeFalse())
 
 				Expect(buildProcess).To(Equal(npminstall.NewRebuildBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
 
@@ -106,20 +99,14 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
 
 				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
-
-				err := os.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
-				Expect(err).NotTo(HaveOccurred())
 			})
 
 			it("returns a RebuildBuildProcess", func() {
-				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(cacheUsed).To(BeTrue())
 
 				Expect(buildProcess).To(Equal(npminstall.NewRebuildBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
-
-				contents, err := os.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("some-content"))
 			})
 		})
 
@@ -132,8 +119,9 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("returns a RebuildBuildProcess", func() {
-				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(cacheUsed).To(BeFalse())
 
 				Expect(buildProcess).To(Equal(npminstall.NewRebuildBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
 			})
@@ -148,8 +136,9 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("returns a CIBuildProcess", func() {
-				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(cacheUsed).To(BeFalse())
 
 				Expect(buildProcess).To(Equal(npminstall.NewCIBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
 
@@ -163,20 +152,14 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
-
-				err = os.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
-				Expect(err).NotTo(HaveOccurred())
 			})
 
 			it("returns a CIBuildProcess", func() {
-				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(cacheUsed).To(BeTrue())
 
 				Expect(buildProcess).To(Equal(npminstall.NewCIBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
-
-				contents, err := os.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("some-content"))
 			})
 		})
 
@@ -188,20 +171,14 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
-
-				err = os.WriteFile(filepath.Join(workingDir, "npm-cache", "some-cache-file"), []byte("some-content"), 0644)
-				Expect(err).NotTo(HaveOccurred())
 			})
 
 			it("returns a CIBuildProcess", func() {
-				buildProcess, err := resolver.Resolve(workingDir, cacheDir)
+				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 
+				Expect(cacheUsed).To(BeTrue())
 				Expect(buildProcess).To(Equal(npminstall.NewCIBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
-
-				contents, err := os.ReadFile(filepath.Join(cacheDir, "npm-cache", "some-cache-file"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("some-content"))
 			})
 		})
 	})
@@ -214,7 +191,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("outputs that package-lock.json was found", func() {
-				_, err := resolver.Resolve(workingDir, cacheDir)
+				_, _, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(buffer.String()).To(MatchRegexp(`package-lock.json\s+-> "Found"`))
@@ -227,7 +204,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("outputs that package-lock.json was found", func() {
-				_, err := resolver.Resolve(workingDir, cacheDir)
+				_, _, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(buffer.String()).To(MatchRegexp(`node_modules\s+-> "Found"`))
@@ -240,7 +217,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("outputs that package-lock.json was found", func() {
-				_, err := resolver.Resolve(workingDir, cacheDir)
+				_, _, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(buffer.String()).To(MatchRegexp(`npm-cache\s+-> "Found"`))
@@ -253,8 +230,6 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 		it.Before(func() {
 			var err error
-			cacheDir, err = os.MkdirTemp("", "layer")
-			Expect(err).NotTo(HaveOccurred())
 
 			workingDir, err = os.MkdirTemp("", "working-dir")
 			Expect(err).NotTo(HaveOccurred())
@@ -265,7 +240,6 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 		it.After(func() {
 			Expect(os.RemoveAll(workingDir)).To(Succeed())
-			Expect(os.RemoveAll(cacheDir)).To(Succeed())
 		})
 
 		context("Resolve", func() {
@@ -279,26 +253,7 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				})
 
 				it("returns an error", func() {
-					_, err := resolver.Resolve(workingDir, cacheDir)
-					Expect(err).To(MatchError(ContainSubstring("permission denied")))
-				})
-			})
-
-			context("npm-cache exists and is unreadable", func() {
-				var npmCacheItemPath string
-
-				it.Before(func() {
-					npmCacheItemPath = filepath.Join(workingDir, "npm-cache", "some-cache-dir")
-					Expect(os.MkdirAll(npmCacheItemPath, os.ModePerm)).To(Succeed())
-					Expect(os.Chmod(npmCacheItemPath, 0000)).To(Succeed())
-				})
-
-				it.After(func() {
-					Expect(os.Chmod(npmCacheItemPath, os.ModePerm)).To(Succeed())
-				})
-
-				it("fails", func() {
-					_, err := resolver.Resolve(workingDir, cacheDir)
+					_, _, err := resolver.Resolve(workingDir)
 					Expect(err).To(MatchError(ContainSubstring("permission denied")))
 				})
 			})

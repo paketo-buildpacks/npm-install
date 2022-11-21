@@ -48,30 +48,23 @@ func NewBuildProcessResolver(executable Executable, summer Summer, environment E
 	}
 }
 
-func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess, error) {
+func (r BuildProcessResolver) Resolve(workingDir string) (BuildProcess, bool, error) {
 	nodeModulesPath := filepath.Join(workingDir, "node_modules")
 	vendored, err := fs.Exists(nodeModulesPath)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	packageLockPath := filepath.Join(workingDir, "package-lock.json")
 	locked, err := fs.Exists(packageLockPath)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	npmCachePath := filepath.Join(workingDir, "npm-cache")
 	cached, err := fs.Exists(npmCachePath)
 	if err != nil {
-		return nil, err
-	}
-
-	if cached {
-		err := fs.Move(npmCachePath, filepath.Join(cacheDir, "npm-cache"))
-		if err != nil {
-			return nil, err
-		}
+		return nil, false, err
 	}
 
 	wasItFound := map[bool]string{
@@ -93,17 +86,17 @@ func (r BuildProcessResolver) Resolve(workingDir, cacheDir string) (BuildProcess
 	case !locked && vendored, locked && vendored && !cached:
 		r.logger.Subprocess("Selected NPM build process: 'npm rebuild'")
 		r.logger.Break()
-		return NewRebuildBuildProcess(r.executable, r.summer, r.environment, scribe.NewLogger(os.Stdout)), nil
+		return NewRebuildBuildProcess(r.executable, r.summer, r.environment, scribe.NewLogger(os.Stdout)), cached, nil
 
 	case !locked && !vendored:
 		r.logger.Subprocess("Selected NPM build process: 'npm install'")
 		r.logger.Break()
-		return NewInstallBuildProcess(r.executable, r.environment, scribe.NewLogger(os.Stdout)), nil
+		return NewInstallBuildProcess(r.executable, r.environment, scribe.NewLogger(os.Stdout)), cached, nil
 
 	default:
 		r.logger.Subprocess("Selected NPM build process: 'npm ci'")
 		r.logger.Break()
-		return NewCIBuildProcess(r.executable, r.summer, r.environment, scribe.NewLogger(os.Stdout)), nil
+		return NewCIBuildProcess(r.executable, r.summer, r.environment, scribe.NewLogger(os.Stdout)), cached, nil
 	}
 }
 
