@@ -310,4 +310,77 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			))
 		})
 	})
+
+	context("when the app uses npm-cache", func() {
+		it("reuses the npm-cache from the cache layer", func() {
+			var err error
+			source, err = occam.Source(filepath.Join("testdata", "npm-cache"))
+			Expect(err).NotTo(HaveOccurred())
+
+			build := pack.WithNoColor().Build.WithPullPolicy("never").WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
+
+			firstImage, logs, err := build.Execute(name, source)
+			Expect(err).NotTo(HaveOccurred(), logs.String)
+
+			imageIDs[firstImage.ID] = struct{}{}
+
+			Expect(firstImage.Buildpacks).To(HaveLen(3))
+			Expect(firstImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
+
+			container, err := docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(firstImage.ID)
+			Expect(err).NotTo(HaveOccurred())
+
+			containerIDs[container.ID] = struct{}{}
+
+			Eventually(container).Should(BeAvailable())
+
+			Expect(logs).To(ContainLines(
+				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+				"  Resolving installation process",
+				"    Process inputs:",
+				"      node_modules      -> \"Found\"",
+				"      npm-cache         -> \"Found\"",
+				"      package-lock.json -> \"Found\"",
+				"",
+				MatchRegexp(`    Selected NPM build process:`),
+			))
+
+			secondImage, logs, err := build.Execute(name, source)
+			Expect(err).NotTo(HaveOccurred(), logs.String)
+
+			imageIDs[secondImage.ID] = struct{}{}
+
+			Expect(secondImage.Buildpacks).To(HaveLen(3))
+			Expect(secondImage.Buildpacks[1].Key).To(Equal(buildpackInfo.Buildpack.ID))
+
+			container, err = docker.Container.Run.
+				WithCommand("npm start").
+				WithEnv(map[string]string{"PORT": "8080"}).
+				WithPublish("8080").
+				Execute(secondImage.ID)
+			Expect(err).NotTo(HaveOccurred())
+
+			containerIDs[container.ID] = struct{}{}
+
+			Eventually(container).Should(BeAvailable())
+			Expect(secondImage.ID).To(Equal(firstImage.ID))
+
+			Expect(logs).To(ContainLines(
+				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+				"  Resolving installation process",
+				"    Process inputs:",
+				"      node_modules      -> \"Found\"",
+				"      npm-cache         -> \"Found\"",
+				"      package-lock.json -> \"Found\"",
+				"",
+				MatchRegexp(`    Selected NPM build process:`),
+				"",
+				fmt.Sprintf("  Reusing cached layer /layers/%s/npm-cache", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+			))
+		})
+	})
 }

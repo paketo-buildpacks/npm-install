@@ -17,7 +17,7 @@ import (
 
 //go:generate faux --interface BuildManager --output fakes/build_manager.go
 type BuildManager interface {
-	Resolve(workingDir, cacheDir string) (BuildProcess, error)
+	Resolve(workingDir string) (BuildProcess, bool, error)
 }
 
 //go:generate faux --interface EntryResolver --output fakes/entry_resolver.go
@@ -84,9 +84,16 @@ func Build(projectPathParser PathParser,
 
 		projectPath = filepath.Join(context.WorkingDir, projectPath)
 
-		process, err := buildManager.Resolve(projectPath, npmCacheLayer.Path)
+		process, cacheFound, err := buildManager.Resolve(projectPath)
 		if err != nil {
 			return packit.BuildResult{}, err
+		}
+
+		if cacheFound {
+			npmCacheLayer, err = UpdateNpmCacheLayer(logger, projectPath, npmCacheLayer)
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
 		}
 
 		sbomDisabled, err := checkSbomDisabled()

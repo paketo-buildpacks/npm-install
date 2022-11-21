@@ -19,5 +19,6 @@ func TestUnitNPMInstall(t *testing.T) {
 	suite("ProjectPathParser", testProjectPathParser)
 	suite("PruneBuildProcess", testPruneBuildProcess)
 	suite("RebuildBuildProcess", testRebuildBuildProcess)
+	suite("UpdateNpmCacheLayer", testUpdateNpmCache)
 	suite.Run(t)
 }

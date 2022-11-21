@@ -12,24 +12,23 @@ type BuildManager struct {
 		CallCount int
 		Receives  struct {
 			WorkingDir string
-			CacheDir   string
 		}
 		Returns struct {
 			BuildProcess npminstall.BuildProcess
+			Bool         bool
 			Error        error
 		}
-		Stub func(string, string) (npminstall.BuildProcess, error)
+		Stub func(string) (npminstall.BuildProcess, bool, error)
 	}
 }
 
-func (f *BuildManager) Resolve(param1 string, param2 string) (npminstall.BuildProcess, error) {
+func (f *BuildManager) Resolve(param1 string) (npminstall.BuildProcess, bool, error) {
 	f.ResolveCall.mutex.Lock()
 	defer f.ResolveCall.mutex.Unlock()
 	f.ResolveCall.CallCount++
 	f.ResolveCall.Receives.WorkingDir = param1
-	f.ResolveCall.Receives.CacheDir = param2
 	if f.ResolveCall.Stub != nil {
-		return f.ResolveCall.Stub(param1, param2)
+		return f.ResolveCall.Stub(param1)
 	}
-	return f.ResolveCall.Returns.BuildProcess, f.ResolveCall.Returns.Error
+	return f.ResolveCall.Returns.BuildProcess, f.ResolveCall.Returns.Bool, f.ResolveCall.Returns.Error
 }
