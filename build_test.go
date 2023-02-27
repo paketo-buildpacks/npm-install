@@ -3,6 +3,7 @@ package npminstall_test
 import (
 	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -115,12 +116,14 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		Expect(os.RemoveAll(layersDir)).To(Succeed())
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
+		Expect(os.RemoveAll(cnbDir)).To(Succeed())
 	})
 
 	context("when required during build", func() {
 		it.Before(func() {
 			entryResolver.MergeLayerTypesCall.Returns.Build = true
 		})
+
 		it("returns a result that installs build modules", func() {
 			result, err := build(packit.BuildContext{
 				BuildpackInfo: packit.BuildpackInfo{
@@ -156,24 +159,82 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(buildLayer.Build).To(BeTrue())
 			Expect(buildLayer.Launch).To(BeFalse())
 			Expect(buildLayer.Cache).To(BeTrue())
-			Expect(buildLayer.Metadata).To(Equal(
-				map[string]interface{}{
-					"cache_sha": "some-sha",
-				}))
-			Expect(buildLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
-				{
-					Extension: "cdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
-				},
-				{
-					Extension: "spdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
-				},
-				{
-					Extension: "syft.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
-				},
+			Expect(buildLayer.Metadata).To(Equal(map[string]interface{}{
+				"cache_sha": "some-sha",
 			}))
+
+			Expect(buildLayer.SBOM.Formats()).To(HaveLen(3))
+
+			cdx := buildLayer.SBOM.Formats()[0]
+			spdx := buildLayer.SBOM.Formats()[1]
+			syft := buildLayer.SBOM.Formats()[2]
+
+			Expect(cdx.Extension).To(Equal("cdx.json"))
+			Expect(spdx.Extension).To(Equal("spdx.json"))
+			Expect(syft.Extension).To(Equal("syft.json"))
+
+			content, err := io.ReadAll(cdx.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"bomFormat": "CycloneDX",
+				"components": [],
+				"metadata": {
+					"tools": [
+						{
+							"name": "syft",
+							"vendor": "anchore",
+							"version": "[not provided]"
+						}
+					]
+				},
+				"specVersion": "1.3",
+				"version": 1
+			}`))
+
+			content, err = io.ReadAll(spdx.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"SPDXID": "SPDXRef-DOCUMENT",
+				"creationInfo": {
+					"created": "0001-01-01T00:00:00Z",
+					"creators": [
+						"Organization: Anchore, Inc",
+						"Tool: syft-"
+					],
+					"licenseListVersion": "3.16"
+				},
+				"dataLicense": "CC0-1.0",
+				"documentNamespace": "https://paketo.io/packit/unknown-source-type/unknown-88cfa225-65e0-5755-895f-c1c8f10fde76",
+				"name": "unknown",
+				"relationships": [
+					{
+						"relatedSpdxElement": "SPDXRef-DOCUMENT",
+						"relationshipType": "DESCRIBES",
+						"spdxElementId": "SPDXRef-DOCUMENT"
+					}
+				],
+				"spdxVersion": "SPDX-2.2"
+			}`))
+
+			content, err = io.ReadAll(syft.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"artifacts": [],
+				"artifactRelationships": [],
+				"source": {
+					"type": "",
+					"target": null
+				},
+				"distro": {},
+				"descriptor": {
+					"name": "",
+					"version": ""
+				},
+				"schema": {
+					"version": "3.0.1",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-3.0.1.json"
+				}
+			}`))
 
 			cacheLayer := result.Layers[1]
 			Expect(cacheLayer.Name).To(Equal(npminstall.LayerNameCache))
@@ -205,6 +266,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		it.Before(func() {
 			entryResolver.MergeLayerTypesCall.Returns.Launch = true
 		})
+
 		it("returns a result that installs build modules", func() {
 			result, err := build(packit.BuildContext{
 				BuildpackInfo: packit.BuildpackInfo{
@@ -246,20 +308,78 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					"cache_sha": "some-sha",
 				}))
 
-			Expect(launchLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
-				{
-					Extension: "cdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
+			Expect(launchLayer.SBOM.Formats()).To(HaveLen(3))
+
+			cdx := launchLayer.SBOM.Formats()[0]
+			spdx := launchLayer.SBOM.Formats()[1]
+			syft := launchLayer.SBOM.Formats()[2]
+
+			Expect(cdx.Extension).To(Equal("cdx.json"))
+			Expect(spdx.Extension).To(Equal("spdx.json"))
+			Expect(syft.Extension).To(Equal("syft.json"))
+
+			content, err := io.ReadAll(cdx.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"bomFormat": "CycloneDX",
+				"components": [],
+				"metadata": {
+					"tools": [
+						{
+							"name": "syft",
+							"vendor": "anchore",
+							"version": "[not provided]"
+						}
+					]
 				},
-				{
-					Extension: "spdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
+				"specVersion": "1.3",
+				"version": 1
+			}`))
+
+			content, err = io.ReadAll(spdx.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"SPDXID": "SPDXRef-DOCUMENT",
+				"creationInfo": {
+					"created": "0001-01-01T00:00:00Z",
+					"creators": [
+						"Organization: Anchore, Inc",
+						"Tool: syft-"
+					],
+					"licenseListVersion": "3.16"
 				},
-				{
-					Extension: "syft.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
+				"dataLicense": "CC0-1.0",
+				"documentNamespace": "https://paketo.io/packit/unknown-source-type/unknown-88cfa225-65e0-5755-895f-c1c8f10fde76",
+				"name": "unknown",
+				"relationships": [
+					{
+						"relatedSpdxElement": "SPDXRef-DOCUMENT",
+						"relationshipType": "DESCRIBES",
+						"spdxElementId": "SPDXRef-DOCUMENT"
+					}
+				],
+				"spdxVersion": "SPDX-2.2"
+			}`))
+
+			content, err = io.ReadAll(syft.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"artifacts": [],
+				"artifactRelationships": [],
+				"source": {
+					"type": "",
+					"target": null
 				},
-			}))
+				"distro": {},
+				"descriptor": {
+					"name": "",
+					"version": ""
+				},
+				"schema": {
+					"version": "3.0.1",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-3.0.1.json"
+				}
+			}`))
 
 			cacheLayer := result.Layers[1]
 			Expect(cacheLayer.Name).To(Equal(npminstall.LayerNameCache))
@@ -294,6 +414,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			entryResolver.MergeLayerTypesCall.Returns.Launch = true
 			entryResolver.MergeLayerTypesCall.Returns.Build = true
 		})
+
 		it("resolves and calls the build process", func() {
 			result, err := build(packit.BuildContext{
 				BuildpackInfo: packit.BuildpackInfo{
@@ -336,20 +457,79 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				map[string]interface{}{
 					"cache_sha": "some-sha",
 				}))
-			Expect(buildLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
-				{
-					Extension: "cdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
+
+			Expect(buildLayer.SBOM.Formats()).To(HaveLen(3))
+
+			cdx := buildLayer.SBOM.Formats()[0]
+			spdx := buildLayer.SBOM.Formats()[1]
+			syft := buildLayer.SBOM.Formats()[2]
+
+			Expect(cdx.Extension).To(Equal("cdx.json"))
+			Expect(spdx.Extension).To(Equal("spdx.json"))
+			Expect(syft.Extension).To(Equal("syft.json"))
+
+			content, err := io.ReadAll(cdx.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"bomFormat": "CycloneDX",
+				"components": [],
+				"metadata": {
+					"tools": [
+						{
+							"name": "syft",
+							"vendor": "anchore",
+							"version": "[not provided]"
+						}
+					]
 				},
-				{
-					Extension: "spdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
+				"specVersion": "1.3",
+				"version": 1
+			}`))
+
+			content, err = io.ReadAll(spdx.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"SPDXID": "SPDXRef-DOCUMENT",
+				"creationInfo": {
+					"created": "0001-01-01T00:00:00Z",
+					"creators": [
+						"Organization: Anchore, Inc",
+						"Tool: syft-"
+					],
+					"licenseListVersion": "3.16"
 				},
-				{
-					Extension: "syft.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
+				"dataLicense": "CC0-1.0",
+				"documentNamespace": "https://paketo.io/packit/unknown-source-type/unknown-88cfa225-65e0-5755-895f-c1c8f10fde76",
+				"name": "unknown",
+				"relationships": [
+					{
+						"relatedSpdxElement": "SPDXRef-DOCUMENT",
+						"relationshipType": "DESCRIBES",
+						"spdxElementId": "SPDXRef-DOCUMENT"
+					}
+				],
+				"spdxVersion": "SPDX-2.2"
+			}`))
+
+			content, err = io.ReadAll(syft.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"artifacts": [],
+				"artifactRelationships": [],
+				"source": {
+					"type": "",
+					"target": null
 				},
-			}))
+				"distro": {},
+				"descriptor": {
+					"name": "",
+					"version": ""
+				},
+				"schema": {
+					"version": "3.0.1",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-3.0.1.json"
+				}
+			}`))
 
 			launchLayer := result.Layers[1]
 			Expect(launchLayer.Name).To(Equal("launch-modules"))
@@ -374,20 +554,78 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				filepath.Join(cnbDir, "bin", "setup-symlinks"),
 			}))
 
-			Expect(launchLayer.SBOM.Formats()).To(Equal([]packit.SBOMFormat{
-				{
-					Extension: "cdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.CycloneDXFormat),
+			Expect(launchLayer.SBOM.Formats()).To(HaveLen(3))
+
+			cdx = launchLayer.SBOM.Formats()[0]
+			spdx = launchLayer.SBOM.Formats()[1]
+			syft = launchLayer.SBOM.Formats()[2]
+
+			Expect(cdx.Extension).To(Equal("cdx.json"))
+			Expect(spdx.Extension).To(Equal("spdx.json"))
+			Expect(syft.Extension).To(Equal("syft.json"))
+
+			content, err = io.ReadAll(cdx.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"bomFormat": "CycloneDX",
+				"components": [],
+				"metadata": {
+					"tools": [
+						{
+							"name": "syft",
+							"vendor": "anchore",
+							"version": "[not provided]"
+						}
+					]
 				},
-				{
-					Extension: "spdx.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SPDXFormat),
+				"specVersion": "1.3",
+				"version": 1
+			}`))
+
+			content, err = io.ReadAll(spdx.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"SPDXID": "SPDXRef-DOCUMENT",
+				"creationInfo": {
+					"created": "0001-01-01T00:00:00Z",
+					"creators": [
+						"Organization: Anchore, Inc",
+						"Tool: syft-"
+					],
+					"licenseListVersion": "3.16"
 				},
-				{
-					Extension: "syft.json",
-					Content:   sbom.NewFormattedReader(sbom.SBOM{}, sbom.SyftFormat),
+				"dataLicense": "CC0-1.0",
+				"documentNamespace": "https://paketo.io/packit/unknown-source-type/unknown-88cfa225-65e0-5755-895f-c1c8f10fde76",
+				"name": "unknown",
+				"relationships": [
+					{
+						"relatedSpdxElement": "SPDXRef-DOCUMENT",
+						"relationshipType": "DESCRIBES",
+						"spdxElementId": "SPDXRef-DOCUMENT"
+					}
+				],
+				"spdxVersion": "SPDX-2.2"
+			}`))
+
+			content, err = io.ReadAll(syft.Content)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(MatchJSON(`{
+				"artifacts": [],
+				"artifactRelationships": [],
+				"source": {
+					"type": "",
+					"target": null
 				},
-			}))
+				"distro": {},
+				"descriptor": {
+					"name": "",
+					"version": ""
+				},
+				"schema": {
+					"version": "3.0.1",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-3.0.1.json"
+				}
+			}`))
 
 			cacheLayer := result.Layers[2]
 			Expect(cacheLayer.Name).To(Equal(npminstall.LayerNameCache))
@@ -443,6 +681,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			it.Before(func() {
 				os.Setenv("NPM_CONFIG_GLOBALCONFIG", "some/path/.npmrc")
 			})
+
 			it.After(func() {
 				os.Unsetenv("NPM_CONFIG_GLOBALCONFIG")
 			})
@@ -762,6 +1001,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				it.Before(func() {
 					sbomGenerator.GenerateCall.Returns.Error = errors.New("failed to generate SBOM")
 				})
+
 				it("returns an error", func() {
 					_, err := build(packit.BuildContext{
 						BuildpackInfo: packit.BuildpackInfo{
@@ -782,8 +1022,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			context("when the BOM cannot be formatted", func() {
 				it("returns an error", func() {
 					_, err := build(packit.BuildContext{
-						Layers:  packit.Layers{Path: layersDir},
-						CNBPath: cnbDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						WorkingDir: workingDir,
 						BuildpackInfo: packit.BuildpackInfo{
 							SBOMFormats: []string{"random-format"},
 						},
@@ -915,6 +1156,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						return nil
 					}
 				})
+
 				it("returns an error", func() {
 					_, err := build(packit.BuildContext{
 						WorkingDir: workingDir,
@@ -979,6 +1221,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				it.Before(func() {
 					sbomGenerator.GenerateCall.Returns.Error = errors.New("failed to generate SBOM")
 				})
+
 				it("returns an error", func() {
 					_, err := build(packit.BuildContext{
 						BuildpackInfo: packit.BuildpackInfo{
@@ -999,8 +1242,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			context("when the BOM cannot be formatted", func() {
 				it("returns an error", func() {
 					_, err := build(packit.BuildContext{
-						Layers:  packit.Layers{Path: layersDir},
-						CNBPath: cnbDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						WorkingDir: workingDir,
 						BuildpackInfo: packit.BuildpackInfo{
 							SBOMFormats: []string{"random-format"},
 						},
