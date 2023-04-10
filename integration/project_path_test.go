@@ -55,14 +55,18 @@ func testProjectPath(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			image, _, err = pack.Build.
-				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
+				WithBuildpacks(
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
+				).
 				WithEnv(map[string]string{"BP_NODE_PROJECT_PATH": "server"}).
 				WithPullPolicy("never").
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
 			container, err = docker.Container.Run.
-				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"))).
 				Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 

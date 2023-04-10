@@ -70,7 +70,14 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 				)), 0644)
 			Expect(err).NotTo(HaveOccurred())
 
-			build := pack.Build.WithPullPolicy("never").WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
+			build := pack.Build.
+				WithPullPolicy("never").
+				WithBuildpacks(
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
+				)
+
 			_, logs, err := build.Execute(name, source)
 			Expect(err).To(HaveOccurred(), logs.String)
 
@@ -86,7 +93,13 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "locked_app"))
 			Expect(err).NotTo(HaveOccurred())
 
-			build := pack.Build.WithPullPolicy("never").WithBuildpacks(nodeURI, buildpackURI, buildPlanURI)
+			build := pack.Build.
+				WithPullPolicy("never").
+				WithBuildpacks(
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
+				)
 
 			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -119,7 +132,7 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).To(HaveOccurred(), logs.String)
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+				fmt.Sprintf("%s 1.2.3", settings.Buildpack.Name),
 				"  Resolving installation process",
 				"    Process inputs:",
 				"      node_modules      -> \"Not found\"",
@@ -129,7 +142,7 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 				"    Selected NPM build process: 'npm ci'",
 				"",
 				"  Executing launch environment install process",
-				fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 			))
 
 			Expect(logs).To(ContainSubstring(

@@ -64,9 +64,9 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			image, logs, err = pack.Build.
 				WithPullPolicy("never").
 				WithBuildpacks(
-					nodeURI,
-					buildpackURI,
-					buildPlanURI,
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
 				).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
@@ -89,7 +89,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			Expect(string(content)).To(ContainSubstring("Hello, World!"))
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+				fmt.Sprintf("%s 1.2.3", settings.Buildpack.Name),
 				"  Resolving installation process",
 				"    Process inputs:",
 				"      node_modules      -> \"Found\"",
@@ -110,7 +110,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				"  Configuring launch environment",
 				"    NODE_PROJECT_PATH   -> \"/workspace\"",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
-				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 				"",
 			))
 		})
@@ -121,9 +121,9 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				image, _, err = pack.Build.
 					WithPullPolicy("never").
 					WithBuildpacks(
-						nodeOfflineURI,
-						buildpackOfflineURI,
-						buildPlanURI,
+						settings.Buildpacks.NodeEngine.Offline,
+						settings.Buildpacks.NPMInstall.Online,
+						settings.Buildpacks.BuildPlan.Online,
 					).
 					WithNetwork("none").
 					Execute(name, source)

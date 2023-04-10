@@ -20,9 +20,9 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 		workingDir string
 
-		executable  *fakes.Executable
-		summer      *fakes.Summer
-		environment *fakes.EnvironmentConfig
+		rebuild *fakes.BuildProcess
+		install *fakes.BuildProcess
+		ci      *fakes.BuildProcess
 
 		resolver npminstall.BuildProcessResolver
 
@@ -31,33 +31,36 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 	it.Before(func() {
 		var err error
-
-		Expect(err).NotTo(HaveOccurred())
-
 		workingDir, err = os.MkdirTemp("", "working-dir")
 		Expect(err).NotTo(HaveOccurred())
-
-		executable = &fakes.Executable{}
-		summer = &fakes.Summer{}
-		environment = &fakes.EnvironmentConfig{}
 
 		buffer = bytes.NewBuffer(nil)
 		logger := scribe.NewLogger(buffer)
 
-		resolver = npminstall.NewBuildProcessResolver(executable, summer, environment, logger)
+		rebuild = &fakes.BuildProcess{}
+		rebuild.ShouldRunCall.Returns.Sha = "rebuild-sha"
+
+		install = &fakes.BuildProcess{}
+		install.ShouldRunCall.Returns.Sha = "install-sha"
+
+		ci = &fakes.BuildProcess{}
+		ci.ShouldRunCall.Returns.Sha = "ci-sha"
+
+		resolver = npminstall.NewBuildProcessResolver(logger, rebuild, install, ci)
 	})
+
 	it.After(func() {
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
 	})
 
 	context("the build process is install", func() {
 		context("there is no node_modules, package-lock.json, or cache", func() {
-			it("returns an InstallBuildProcess", func() {
+			it("returns the install process", func() {
 				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cacheUsed).To(BeFalse())
 
-				Expect(buildProcess).To(Equal(npminstall.NewInstallBuildProcess(executable, environment, scribe.NewLogger(os.Stdout))))
+				Expect(buildProcess).To(Equal(install))
 
 				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm install'"))
 			})
@@ -67,12 +70,13 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 			it.Before(func() {
 				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
 			})
-			it("returns an InstallBuildProcess", func() {
+
+			it("returns the install process", func() {
 				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cacheUsed).To(BeTrue())
 
-				Expect(buildProcess).To(Equal(npminstall.NewInstallBuildProcess(executable, environment, scribe.NewLogger(os.Stdout))))
+				Expect(buildProcess).To(Equal(install))
 			})
 		})
 	})
@@ -83,12 +87,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm)).To(Succeed())
 			})
 
-			it("returns a RebuildBuildProcess", func() {
+			it("returns the rebuild process", func() {
 				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cacheUsed).To(BeFalse())
 
-				Expect(buildProcess).To(Equal(npminstall.NewRebuildBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
+				Expect(buildProcess).To(Equal(rebuild))
 
 				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm rebuild'"))
 			})
@@ -101,12 +105,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
 			})
 
-			it("returns a RebuildBuildProcess", func() {
+			it("returns the rebuild process", func() {
 				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cacheUsed).To(BeTrue())
 
-				Expect(buildProcess).To(Equal(npminstall.NewRebuildBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
+				Expect(buildProcess).To(Equal(rebuild))
 			})
 		})
 
@@ -118,12 +122,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			it("returns a RebuildBuildProcess", func() {
+			it("returns the rebuild process", func() {
 				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cacheUsed).To(BeFalse())
 
-				Expect(buildProcess).To(Equal(npminstall.NewRebuildBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
+				Expect(buildProcess).To(Equal(rebuild))
 			})
 		})
 	})
@@ -135,12 +139,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			it("returns a CIBuildProcess", func() {
+			it("returns the ci process", func() {
 				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cacheUsed).To(BeFalse())
 
-				Expect(buildProcess).To(Equal(npminstall.NewCIBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
+				Expect(buildProcess).To(Equal(ci))
 
 				Expect(buffer.String()).To(ContainSubstring("Selected NPM build process: 'npm ci'"))
 			})
@@ -154,12 +158,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
 			})
 
-			it("returns a CIBuildProcess", func() {
+			it("returns the ci process", func() {
 				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cacheUsed).To(BeTrue())
 
-				Expect(buildProcess).To(Equal(npminstall.NewCIBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
+				Expect(buildProcess).To(Equal(ci))
 			})
 		})
 
@@ -173,12 +177,12 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 				Expect(os.MkdirAll(filepath.Join(workingDir, "npm-cache"), os.ModePerm)).To(Succeed())
 			})
 
-			it("returns a CIBuildProcess", func() {
+			it("returns the ci process", func() {
 				buildProcess, cacheUsed, err := resolver.Resolve(workingDir)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(cacheUsed).To(BeTrue())
-				Expect(buildProcess).To(Equal(npminstall.NewCIBuildProcess(executable, summer, environment, scribe.NewLogger(os.Stdout))))
+				Expect(buildProcess).To(Equal(ci))
 			})
 		})
 	})
@@ -230,12 +234,11 @@ func testBuildProcessResolver(t *testing.T, context spec.G, it spec.S) {
 
 		it.Before(func() {
 			var err error
-
 			workingDir, err = os.MkdirTemp("", "working-dir")
 			Expect(err).NotTo(HaveOccurred())
 
 			logger := scribe.NewLogger(bytes.NewBuffer(nil))
-			resolver = npminstall.NewBuildProcessResolver(executable, summer, environment, logger)
+			resolver = npminstall.NewBuildProcessResolver(logger, rebuild, install, ci)
 		})
 
 		it.After(func() {

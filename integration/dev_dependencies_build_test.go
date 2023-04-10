@@ -63,10 +63,10 @@ func testDevDependenciesDuringBuild(t *testing.T, context spec.G, it spec.S) {
 
 			image, logs, err = pack.Build.
 				WithBuildpacks(
-					nodeURI,
-					buildpackURI,
-					buildPlanURI,
-					npmList,
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
+					settings.Buildpacks.NPMList.Online,
 				).
 				WithPullPolicy("never").
 				WithSBOMOutputDir(sbomDir).
@@ -78,7 +78,7 @@ func testDevDependenciesDuringBuild(t *testing.T, context spec.G, it spec.S) {
 			// check the contents of the node modules
 			container, err = docker.Container.Run.
 				WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules",
-					strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+					strings.ReplaceAll(settings.Buildpack.ID, "/", "_"))).
 				Execute(image.ID)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -89,22 +89,22 @@ func testDevDependenciesDuringBuild(t *testing.T, context spec.G, it spec.S) {
 			}).Should(ContainSubstring("leftpad"))
 
 			// check that all expected SBOM files are present
-			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "launch-modules", "sbom.cdx.json")).To(BeARegularFile())
-			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "launch-modules", "sbom.spdx.json")).To(BeARegularFile())
-			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "launch-modules", "sbom.syft.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"), "launch-modules", "sbom.cdx.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"), "launch-modules", "sbom.spdx.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"), "launch-modules", "sbom.syft.json")).To(BeARegularFile())
 
-			Expect(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "build-modules", "sbom.cdx.json")).To(BeARegularFile())
-			Expect(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "build-modules", "sbom.spdx.json")).To(BeARegularFile())
-			Expect(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "build-modules", "sbom.syft.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"), "build-modules", "sbom.cdx.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"), "build-modules", "sbom.spdx.json")).To(BeARegularFile())
+			Expect(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"), "build-modules", "sbom.syft.json")).To(BeARegularFile())
 
 			// check an SBOM file to make sure it has an entry for an app node module
-			contents, err := os.ReadFile(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "launch-modules", "sbom.cdx.json"))
+			contents, err := os.ReadFile(filepath.Join(sbomDir, "sbom", "launch", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"), "launch-modules", "sbom.cdx.json"))
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(contents)).To(ContainSubstring(`"name": "leftpad"`))
 
 			// check the build SBOM file to make sure it has an entry for an app node module
-			contents, err = os.ReadFile(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"), "build-modules", "sbom.cdx.json"))
+			contents, err = os.ReadFile(filepath.Join(sbomDir, "sbom", "build", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"), "build-modules", "sbom.cdx.json"))
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(contents)).To(ContainSubstring(`"name": "chalk"`))

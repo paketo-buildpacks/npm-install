@@ -14,5 +14,32 @@ api = "0.7"
   include-files = ["bin/build", "bin/detect", "bin/run", "bin/setup-symlinks", "buildpack.toml"]
   pre-package = "./scripts/build.sh"
 
+  [[metadata.configurations]]
+    name = "BP_DISABLE_SBOM"
+    default = "false"
+    description = "disables generation of SBOM documents during the build process"
+
+  [[metadata.configurations]]
+    name = "BP_LOG_LEVEL"
+    default = "INFO"
+    description = "configures buildpack output verbosity. options include INFO and DEBUG"
+
+  [[metadata.configurations]]
+	  name = "BP_NODE_PROJECT_PATH"
+    description = "path to the root of the Node.js project"
+
+  [[metadata.configurations]]
+	  name = "NODE_HOME"
+    description = "path the Node.js installation"
+
+  [[metadata.configurations]]
+    name = "NPM_CONFIG_GLOBALCONFIG"
+    description = "configures npm to read this file for global config options"
+
+	[[metadata.configurations]]
+    name = "NPM_CONFIG_LOGLEVEL"
+    default = "error"
+    description = "configures npm output verbosity"
+
 [[stacks]]
   id = "*"

@@ -29,22 +29,23 @@ type Summer interface {
 
 //go:generate faux --interface EnvironmentConfig --output fakes/environment_config.go
 type EnvironmentConfig interface {
-	GetValue(key string) string
+	Lookup(key string) (value string, found bool)
+	LookupBool(key string) (bool, error)
 }
 
 type BuildProcessResolver struct {
-	executable  Executable
-	summer      Summer
-	environment EnvironmentConfig
-	logger      scribe.Logger
+	logger  scribe.Logger
+	rebuild BuildProcess
+	install BuildProcess
+	ci      BuildProcess
 }
 
-func NewBuildProcessResolver(executable Executable, summer Summer, environment EnvironmentConfig, logger scribe.Logger) BuildProcessResolver {
+func NewBuildProcessResolver(logger scribe.Logger, rebuild, install, ci BuildProcess) BuildProcessResolver {
 	return BuildProcessResolver{
-		executable:  executable,
-		summer:      summer,
-		environment: environment,
-		logger:      logger,
+		logger:  logger,
+		rebuild: rebuild,
+		install: install,
+		ci:      ci,
 	}
 }
 
@@ -86,17 +87,17 @@ func (r BuildProcessResolver) Resolve(workingDir string) (BuildProcess, bool, er
 	case !locked && vendored, locked && vendored && !cached:
 		r.logger.Subprocess("Selected NPM build process: 'npm rebuild'")
 		r.logger.Break()
-		return NewRebuildBuildProcess(r.executable, r.summer, r.environment, scribe.NewLogger(os.Stdout)), cached, nil
+		return r.rebuild, cached, nil
 
 	case !locked && !vendored:
 		r.logger.Subprocess("Selected NPM build process: 'npm install'")
 		r.logger.Break()
-		return NewInstallBuildProcess(r.executable, r.environment, scribe.NewLogger(os.Stdout)), cached, nil
+		return r.install, cached, nil
 
 	default:
 		r.logger.Subprocess("Selected NPM build process: 'npm ci'")
 		r.logger.Break()
-		return NewCIBuildProcess(r.executable, r.summer, r.environment, scribe.NewLogger(os.Stdout)), cached, nil
+		return r.ci, cached, nil
 	}
 }
 

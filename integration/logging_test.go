@@ -56,15 +56,15 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 			image, logs, err = pack.WithNoColor().Build.
 				WithPullPolicy("never").
 				WithBuildpacks(
-					nodeURI,
-					buildpackURI,
-					buildPlanURI,
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
 				).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+				fmt.Sprintf("%s 1.2.3", settings.Buildpack.Name),
 				"  Resolving installation process",
 				"    Process inputs:",
 				"      node_modules      -> \"Not found\"",
@@ -74,13 +74,13 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"    Selected NPM build process: 'npm install'",
 				"",
 				"  Executing launch environment install process",
-				fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
 				"",
 				"  Configuring launch environment",
 				"    NODE_PROJECT_PATH   -> \"/workspace\"",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
-				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 				"",
 			))
 		})
@@ -95,15 +95,15 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				image, logs, err = pack.WithNoColor().Build.
 					WithPullPolicy("never").
 					WithBuildpacks(
-						nodeURI,
-						buildpackURI,
-						buildPlanURI,
+						settings.Buildpacks.NodeEngine.Online,
+						settings.Buildpacks.NPMInstall.Online,
+						settings.Buildpacks.BuildPlan.Online,
 					).
 					Execute(name, source)
 				Expect(err).NotTo(HaveOccurred(), logs.String)
 
 				Expect(logs).To(ContainLines(
-					fmt.Sprintf("%s 1.2.3", buildpackInfo.Buildpack.Name),
+					fmt.Sprintf("%s 1.2.3", settings.Buildpack.Name),
 					"  Resolving installation process",
 					"    Process inputs:",
 					"      node_modules      -> \"Not found\"",
@@ -113,14 +113,14 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 					"    Selected NPM build process: 'npm install'",
 					"",
 					"  Executing build environment install process",
-					fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
 					"",
 					"  Configuring build environment",
 					"    NODE_ENV -> \"development\"",
-					fmt.Sprintf("    PATH     -> \"$PATH:/layers/%s/build-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					fmt.Sprintf("    PATH     -> \"$PATH:/layers/%s/build-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					"",
-					fmt.Sprintf(`  Generating SBOM for /layers/%s/build-modules`, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					fmt.Sprintf(`  Generating SBOM for /layers/%s/build-modules`, strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					MatchRegexp(`      Completed in (\d+)(\.\d+)?(ms|s)`),
 					"",
 					"  Executing launch environment install process",
@@ -130,9 +130,9 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 					"  Configuring launch environment",
 					"    NODE_PROJECT_PATH   -> \"/workspace\"",
 					"    NPM_CONFIG_LOGLEVEL -> \"error\"",
-					fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					"",
-					fmt.Sprintf(`  Generating SBOM for /layers/%s/launch-modules`, strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_")),
+					fmt.Sprintf(`  Generating SBOM for /layers/%s/launch-modules`, strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					MatchRegexp(`      Completed in (\d+)(\.\d+)?(ms|s)`),
 					"",
 				))

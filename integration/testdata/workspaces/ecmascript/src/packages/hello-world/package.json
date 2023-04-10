@@ -1,0 +1,5 @@
+{
+  "name": "@paketo-buildpacks/hello-world",
+  "main": "index.js",
+  "type": "module"
+}

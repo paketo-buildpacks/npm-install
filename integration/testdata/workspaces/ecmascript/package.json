@@ -1,0 +1,21 @@
+{
+  "name": "simple_app",
+  "version": "0.0.0",
+  "description": "some app",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "leftpad": "~0.0.1"
+  },
+  "devDependencies": {
+    "spellchecker-cli": "^4.8.1"
+  },
+  "workspaces": [
+    "src/packages/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "type": "module"
+}

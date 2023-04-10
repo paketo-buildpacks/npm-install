@@ -61,9 +61,16 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		}
 
 		summer = &fakes.Summer{}
-		environment = &fakes.EnvironmentConfig{}
 
-		environment.GetValueCall.Returns.String = "some-val"
+		environment = &fakes.EnvironmentConfig{}
+		environment.LookupCall.Stub = func(key string) (string, bool) {
+			switch key {
+			case "NPM_CONFIG_LOGLEVEL":
+				return "some-val", true
+			default:
+				return "", false
+			}
+		}
 
 		buffer = bytes.NewBuffer(nil)
 		commandOutput = bytes.NewBuffer(nil)

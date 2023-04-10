@@ -1,5 +1,9 @@
 {
-  "builders": ["paketobuildpacks/builder-jammy-buildpackless-full"],
+  "builders": [
+    "paketobuildpacks/builder-jammy-buildpackless-full"
+  ],
   "build-plan": "github.com/ForestEckhardt/build-plan",
-  "node-engine": "github.com/paketo-buildpacks/node-engine"
+  "nginx": "github.com/paketo-buildpacks/nginx",
+  "node-engine": "github.com/paketo-buildpacks/node-engine",
+  "node-run-script": "github.com/paketo-buildpacks/node-run-script"
 }

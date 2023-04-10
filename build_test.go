@@ -25,7 +25,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		Expect = NewWithT(t).Expect
 
 		layersDir  string
-		tmpDir     string
 		workingDir string
 		cnbDir     string
 
@@ -41,17 +40,18 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		entryResolver        *fakes.EntryResolver
 		pruneProcess         *fakes.PruneProcess
 		sbomGenerator        *fakes.SBOMGenerator
-		build                packit.BuildFunc
+		linker               *fakes.Symlinker
+		environment          *fakes.EnvironmentConfig
+		symlinkResolver      *fakes.SymlinkResolver
 
 		buffer *bytes.Buffer
+
+		build packit.BuildFunc
 	)
 
 	it.Before(func() {
 		var err error
 		layersDir, err = os.MkdirTemp("", "layers")
-		Expect(err).NotTo(HaveOccurred())
-
-		tmpDir, err = os.MkdirTemp("", "tmp")
 		Expect(err).NotTo(HaveOccurred())
 
 		workingDir, err = os.MkdirTemp("", "working-dir")
@@ -99,6 +99,13 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		sbomGenerator = &fakes.SBOMGenerator{}
 		sbomGenerator.GenerateCall.Returns.SBOM = sbom.SBOM{}
 
+		linker = &fakes.Symlinker{}
+
+		environment = &fakes.EnvironmentConfig{}
+		environment.LookupBoolCall.Returns.Bool = false
+
+		symlinkResolver = &fakes.SymlinkResolver{}
+
 		build = npminstall.Build(
 			projectPathParser,
 			entryResolver,
@@ -108,13 +115,14 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			chronos.DefaultClock,
 			logger,
 			sbomGenerator,
-			tmpDir,
+			linker,
+			environment,
+			symlinkResolver,
 		)
 	})
 
 	it.After(func() {
 		Expect(os.RemoveAll(layersDir)).To(Succeed())
-		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
 		Expect(os.RemoveAll(cnbDir)).To(Succeed())
 	})
@@ -259,6 +267,12 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 			Expect(processWorkingDir).To(Equal(workingDir))
 			Expect(processNpmrcPath).To(Equal(""))
+
+			Expect(linker.LinkCall.Receives.Source).To(Equal(filepath.Join(workingDir, "node_modules")))
+			Expect(linker.LinkCall.Receives.Target).To(Equal(filepath.Join(layersDir, "build-modules", "node_modules")))
+
+			Expect(symlinkResolver.ResolveCall.Receives.LockfilePath).To(Equal(filepath.Join(workingDir, "package-lock.json")))
+			Expect(symlinkResolver.ResolveCall.Receives.LayerPath).To(Equal(filepath.Join(layersDir, "build-modules")))
 		})
 	})
 
@@ -406,6 +420,12 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 			Expect(processWorkingDir).To(Equal(workingDir))
 			Expect(processNpmrcPath).To(Equal(""))
+
+			Expect(linker.LinkCall.Receives.Source).To(Equal(filepath.Join(workingDir, "node_modules")))
+			Expect(linker.LinkCall.Receives.Target).To(Equal(filepath.Join(layersDir, "launch-modules", "node_modules")))
+
+			Expect(symlinkResolver.ResolveCall.Receives.LockfilePath).To(Equal(filepath.Join(workingDir, "package-lock.json")))
+			Expect(symlinkResolver.ResolveCall.Receives.LayerPath).To(Equal(filepath.Join(layersDir, "launch-modules")))
 		})
 	})
 
@@ -643,14 +663,11 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(pruneProcess.RunCall.Receives.WorkingDir).To(Equal(workingDir))
 			Expect(pruneProcess.RunCall.Receives.NpmrcPath).To(Equal(""))
 
-			link, err := os.Readlink(filepath.Join(tmpDir, "node_modules"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(link).To(Equal(filepath.Join(buildLayer.Path, "node_modules")))
+			Expect(linker.LinkCall.Receives.Source).To(Equal(filepath.Join(workingDir, "node_modules")))
+			Expect(linker.LinkCall.Receives.Target).To(Equal(filepath.Join(buildLayer.Path, "node_modules")))
 
-			link, err = os.Readlink(filepath.Join(workingDir, "node_modules"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(link).To(Equal(filepath.Join(tmpDir, "node_modules")))
-
+			Expect(symlinkResolver.ResolveCall.Receives.LockfilePath).To(Equal(filepath.Join(workingDir, "package-lock.json")))
+			Expect(symlinkResolver.ResolveCall.Receives.LayerPath).To(Equal(filepath.Join(buildLayer.Path)))
 		})
 	})
 
@@ -675,33 +692,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(buildProcess.ShouldRunCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
 			Expect(buildProcess.RunCall.Receives.NpmrcPath).To(Equal("some-binding-path/.npmrc"))
-		})
-
-		context("and NPM_CONFIG_GLOBALCONFIG is already set in the build environment", func() {
-			it.Before(func() {
-				os.Setenv("NPM_CONFIG_GLOBALCONFIG", "some/path/.npmrc")
-			})
-
-			it.After(func() {
-				os.Unsetenv("NPM_CONFIG_GLOBALCONFIG")
-			})
-
-			it("does not change the previously set value of the env var", func() {
-				_, err := build(packit.BuildContext{
-					WorkingDir: workingDir,
-					Layers:     packit.Layers{Path: layersDir},
-					CNBPath:    cnbDir,
-					Plan: packit.BuildpackPlan{
-						Entries: []packit.BuildpackPlanEntry{
-							{Name: "node_modules"},
-						},
-					},
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(buildProcess.ShouldRunCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
-				Expect(buildProcess.RunCall.Receives.NpmrcPath).To(Equal("some/path/.npmrc"))
-			})
 		})
 	})
 
@@ -729,13 +719,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 			Expect(buildProcess.RunCall.CallCount).To(Equal(0))
 
-			workspaceLink, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(workspaceLink).To(Equal(filepath.Join(tmpDir, "node_modules")))
-
-			tmpLink, err := os.Readlink(filepath.Join(tmpDir, "node_modules"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(tmpLink).To(Equal(filepath.Join(layersDir, "launch-modules", "node_modules")))
+			Expect(linker.LinkCall.Receives.Source).To(Equal(filepath.Join(workingDir, "node_modules")))
+			Expect(linker.LinkCall.Receives.Target).To(Equal(filepath.Join(layersDir, "launch-modules", "node_modules")))
 		})
 
 		context("when BP_NODE_PROJECT_PATH is set", func() {
@@ -768,7 +753,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				Expect(processLayerDir).To(Equal(filepath.Join(layersDir, "launch-modules")))
 				Expect(processCacheDir).To(Equal(filepath.Join(layersDir, npminstall.LayerNameCache)))
 				Expect(processWorkingDir).To(Equal(filepath.Join(workingDir, "some-dir")))
-
 			})
 		})
 
@@ -1035,11 +1019,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			context("when BP_DISABLE_SBOM is set incorrectly", func() {
 				it.Before((func() {
-					os.Setenv("BP_DISABLE_SBOM", "not-a-bool")
-				}))
-
-				it.After((func() {
-					os.Unsetenv("BP_DISABLE_SBOM")
+					environment.LookupBoolCall.Returns.Error = errors.New("failed to parse bool")
 				}))
 
 				it("returns an error", func() {
@@ -1050,18 +1030,13 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 							SBOMFormats: []string{"application/vnd.cyclonedx+json"},
 						},
 					})
-					Expect(err).To(MatchError(ContainSubstring("failed to parse BP_DISABLE_SBOM")))
+					Expect(err).To(MatchError(ContainSubstring("failed to parse bool")))
 				})
 			})
 
-			context("when the node_modules directory cannot be removed", func() {
+			context("when the node_modules directory cannot be linked", func() {
 				it.Before(func() {
-					buildProcess.ShouldRunCall.Returns.Run = false
-					Expect(os.Chmod(workingDir, 0000))
-				})
-
-				it.After(func() {
-					Expect(os.Chmod(workingDir, os.ModePerm))
+					linker.LinkCall.Returns.Error = errors.New("failed to link node_modules")
 				})
 
 				it("returns an error", func() {
@@ -1075,7 +1050,27 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 							},
 						},
 					})
-					Expect(err).To(MatchError(ContainSubstring("permission denied")))
+					Expect(err).To(MatchError("failed to link node_modules"))
+				})
+			})
+
+			context("when the linked modules cannot be resolved", func() {
+				it.Before(func() {
+					symlinkResolver.ResolveCall.Returns.Error = errors.New("failed to resolve module symlinks")
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError("failed to resolve module symlinks"))
 				})
 			})
 		})
@@ -1253,35 +1248,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				})
 			})
 
-			context("when BP_DISABLE_SBOM is set incorrectly", func() {
-				it.Before((func() {
-					os.Setenv("BP_DISABLE_SBOM", "not-a-bool")
-				}))
-
-				it.After((func() {
-					os.Unsetenv("BP_DISABLE_SBOM")
-				}))
-
-				it("returns an error", func() {
-					_, err := build(packit.BuildContext{
-						Layers:  packit.Layers{Path: layersDir},
-						CNBPath: cnbDir,
-						BuildpackInfo: packit.BuildpackInfo{
-							SBOMFormats: []string{"application/vnd.cyclonedx+json"},
-						},
-					})
-					Expect(err).To(MatchError(ContainSubstring("failed to parse BP_DISABLE_SBOM")))
-				})
-			})
-
-			context("when the node_modules directory cannot be removed", func() {
+			context("when the node_modules directory cannot be linked", func() {
 				it.Before(func() {
-					buildProcess.ShouldRunCall.Returns.Run = false
-					Expect(os.Chmod(workingDir, 0000))
-				})
-
-				it.After(func() {
-					Expect(os.Chmod(workingDir, os.ModePerm))
+					linker.LinkCall.Returns.Error = errors.New("failed to link node_modules")
 				})
 
 				it("returns an error", func() {
@@ -1295,7 +1264,27 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 							},
 						},
 					})
-					Expect(err).To(MatchError(ContainSubstring("permission denied")))
+					Expect(err).To(MatchError("failed to link node_modules"))
+				})
+			})
+
+			context("when the linked modules cannot be resolved", func() {
+				it.Before(func() {
+					symlinkResolver.ResolveCall.Returns.Error = errors.New("failed to resolve module symlinks")
+				})
+
+				it("returns an error", func() {
+					_, err := build(packit.BuildContext{
+						WorkingDir: workingDir,
+						Layers:     packit.Layers{Path: layersDir},
+						CNBPath:    cnbDir,
+						Plan: packit.BuildpackPlan{
+							Entries: []packit.BuildpackPlanEntry{
+								{Name: "node_modules"},
+							},
+						},
+					})
+					Expect(err).To(MatchError("failed to resolve module symlinks"))
 				})
 			})
 		})

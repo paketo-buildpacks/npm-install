@@ -16,45 +16,58 @@ import (
 	"github.com/onsi/gomega/format"
 )
 
-var (
-	buildpackURI        string
-	buildpackOfflineURI string
-	nodeURI             string
-	nodeOfflineURI      string
-	buildPlanURI        string
-	npmList             string
-	buildpackInfo       struct {
-		Buildpack struct {
-			ID   string
-			Name string
+var settings struct {
+	Buildpacks struct {
+		BuildPlan struct {
+			Online string
+		}
+		NGINX struct {
+			Online string
+		}
+		NodeEngine struct {
+			Online  string
+			Offline string
+		}
+		NodeRunScript struct {
+			Online string
+		}
+		NPMInstall struct {
+			Online string
+		}
+		NPMList struct {
+			Online string
 		}
 	}
-)
+
+	Buildpack struct {
+		ID   string
+		Name string
+	}
+
+	Config struct {
+		BuildPlan     string `json:"build-plan"`
+		NodeEngine    string `json:"node-engine"`
+		NodeRunScript string `json:"node-run-script"`
+		NGINX         string `json:"nginx"`
+	}
+}
 
 func TestIntegration(t *testing.T) {
 	format.MaxLength = 0
 	SetDefaultEventuallyTimeout(30 * time.Second)
 
-	var (
-		Expect = NewWithT(t).Expect
-		err    error
-	)
-
-	var config struct {
-		NodeEngine string `json:"node-engine"`
-		BuildPlan  string `json:"build-plan"`
-	}
+	var Expect = NewWithT(t).Expect
 
 	file, err := os.Open("../integration.json")
 	Expect(err).NotTo(HaveOccurred())
 	defer file.Close()
 
-	Expect(json.NewDecoder(file).Decode(&config)).To(Succeed())
+	Expect(json.NewDecoder(file).Decode(&settings.Config)).To(Succeed())
 
 	file, err = os.Open("../buildpack.toml")
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = toml.NewDecoder(file).Decode(&buildpackInfo)
+	_, err = toml.NewDecoder(file).Decode(&settings)
 	Expect(err).NotTo(HaveOccurred())
 
 	root, err := filepath.Abs("./..")
@@ -62,31 +75,33 @@ func TestIntegration(t *testing.T) {
 
 	buildpackStore := occam.NewBuildpackStore()
 
-	buildpackURI, err = buildpackStore.Get.
-		WithVersion("1.2.3").
-		Execute(root)
-	Expect(err).ToNot(HaveOccurred())
-
-	buildpackOfflineURI, err = buildpackStore.Get.
-		WithOfflineDependencies().
-		WithVersion("1.2.3").
-		Execute(root)
-	Expect(err).ToNot(HaveOccurred())
-
-	nodeURI, err = buildpackStore.Get.
-		Execute(config.NodeEngine)
-	Expect(err).ToNot(HaveOccurred())
-
-	nodeOfflineURI, err = buildpackStore.Get.
-		WithOfflineDependencies().
-		Execute(config.NodeEngine)
-	Expect(err).ToNot(HaveOccurred())
-
-	buildPlanURI, err = buildpackStore.Get.
-		Execute(config.BuildPlan)
+	settings.Buildpacks.BuildPlan.Online, err = buildpackStore.Get.
+		Execute(settings.Config.BuildPlan)
 	Expect(err).NotTo(HaveOccurred())
 
-	npmList = filepath.Join(root, "integration", "testdata", "npm-list-buildpack")
+	settings.Buildpacks.NGINX.Online, err = buildpackStore.Get.
+		Execute(settings.Config.NGINX)
+	Expect(err).NotTo(HaveOccurred())
+
+	settings.Buildpacks.NodeEngine.Online, err = buildpackStore.Get.
+		Execute(settings.Config.NodeEngine)
+	Expect(err).ToNot(HaveOccurred())
+
+	settings.Buildpacks.NodeEngine.Offline, err = buildpackStore.Get.
+		WithOfflineDependencies().
+		Execute(settings.Config.NodeEngine)
+	Expect(err).ToNot(HaveOccurred())
+
+	settings.Buildpacks.NodeRunScript.Online, err = buildpackStore.Get.
+		Execute(settings.Config.NodeRunScript)
+	Expect(err).ToNot(HaveOccurred())
+
+	settings.Buildpacks.NPMInstall.Online, err = buildpackStore.Get.
+		WithVersion("1.2.3").
+		Execute(root)
+	Expect(err).ToNot(HaveOccurred())
+
+	settings.Buildpacks.NPMList.Online = filepath.Join(root, "integration", "testdata", "npm-list-buildpack")
 
 	suite := spec.New("Integration", spec.Parallel(), spec.Report(report.Terminal{}))
 	suite("Caching", testCaching)
@@ -104,5 +119,6 @@ func TestIntegration(t *testing.T) {
 	suite("Vendored", testVendored)
 	suite("VendoredWithBinaries", testVendoredWithBinaries)
 	suite("Versioning", testVersioning)
+	suite("Workspaces", testWorkspaces)
 	suite.Run(t)
 }
