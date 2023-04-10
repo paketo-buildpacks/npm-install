@@ -16,16 +16,22 @@ type BindingResolver interface {
 type PackageManagerConfigurationManager struct {
 	bindingResolver BindingResolver
 	logs            scribe.Emitter
+	defaultPath     string
 }
 
-func NewPackageManagerConfigurationManager(bindingResolver BindingResolver, logs scribe.Emitter) PackageManagerConfigurationManager {
+func NewPackageManagerConfigurationManager(bindingResolver BindingResolver, logs scribe.Emitter, defaultPath string) PackageManagerConfigurationManager {
 	return PackageManagerConfigurationManager{
 		bindingResolver: bindingResolver,
 		logs:            logs,
+		defaultPath:     defaultPath,
 	}
 }
 
 func (p PackageManagerConfigurationManager) DeterminePath(typ, platformDir, entry string) (string, error) {
+	if p.defaultPath != "" {
+		return p.defaultPath, nil
+	}
+
 	bindings, err := p.bindingResolver.Resolve(typ, "", platformDir)
 	if err != nil {
 		return "", err

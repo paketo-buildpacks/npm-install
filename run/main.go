@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"os"
+	"path/filepath"
 
 	npminstall "github.com/paketo-buildpacks/npm-install"
 
@@ -22,32 +24,52 @@ func (s SBOMGenerator) Generate(path string) (sbom.SBOM, error) {
 }
 
 func main() {
-	projectPathParser := npminstall.NewProjectPathParser()
-	packageJSONParser := npminstall.NewPackageJSONParser()
-	logger := scribe.NewEmitter(os.Stdout).WithLevel(os.Getenv("BP_LOG_LEVEL"))
-	executable := pexec.NewExecutable("npm")
-	buildProcessResolver := npminstall.NewBuildProcessResolver(executable, fs.NewChecksumCalculator(), npminstall.NewEnvironment(), scribe.NewLogger(os.Stdout))
-	pruneBuildProcess := npminstall.NewPruneBuildProcess(executable, npminstall.NewEnvironment(), scribe.NewLogger(os.Stdout))
-	entryResolver := draft.NewPlanner()
-	sbomGenerator := SBOMGenerator{}
-	packageManagerConfigurationManager := npminstall.NewPackageManagerConfigurationManager(servicebindings.NewResolver(), logger)
-	tmpDir := os.TempDir()
+	environment, err := npminstall.ParseEnvironment(filepath.Join(os.Getenv("CNB_BUILDPACK_DIR"), "buildpack.toml"), os.Environ())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	logLevel, _ := environment.Lookup("BP_LOG_LEVEL")
+	globalConfigPath, _ := environment.Lookup("NPM_CONFIG_GLOBALCONFIG")
+
+	emitter := scribe.NewEmitter(os.Stdout).WithLevel(logLevel)
+	logger := scribe.NewLogger(os.Stdout).WithLevel(logLevel)
+
+	projectPathParser := npminstall.NewProjectPathParser(environment)
+	npm := pexec.NewExecutable("npm")
+	checksumCalculator := fs.NewChecksumCalculator()
+	linker := npminstall.NewLinker(os.TempDir())
 
 	packit.Run(
 		npminstall.Detect(
 			projectPathParser,
-			packageJSONParser,
+			npminstall.NewPackageJSONParser(),
 		),
 		npminstall.Build(
 			projectPathParser,
-			entryResolver,
-			packageManagerConfigurationManager,
-			buildProcessResolver,
-			pruneBuildProcess,
+			draft.NewPlanner(),
+			npminstall.NewPackageManagerConfigurationManager(
+				servicebindings.NewResolver(),
+				emitter,
+				globalConfigPath,
+			),
+			npminstall.NewBuildProcessResolver(
+				logger,
+				npminstall.NewRebuildBuildProcess(npm, checksumCalculator, environment, logger),
+				npminstall.NewInstallBuildProcess(npm, environment, logger),
+				npminstall.NewCIBuildProcess(npm, checksumCalculator, environment, logger),
+			),
+			npminstall.NewPruneBuildProcess(
+				npm,
+				environment,
+				logger,
+			),
 			chronos.DefaultClock,
-			logger,
-			sbomGenerator,
-			tmpDir,
+			emitter,
+			SBOMGenerator{},
+			linker,
+			environment,
+			npminstall.NewLinkedModuleResolver(linker),
 		),
 	)
 }

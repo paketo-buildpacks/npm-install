@@ -45,9 +45,9 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 			_, logs, err := pack.WithNoColor().Build.
 				WithPullPolicy("never").
 				WithBuildpacks(
-					nodeURI,
-					buildpackURI,
-					buildPlanURI,
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
 				).
 				Execute(name, source)
 			Expect(err).To(HaveOccurred())

@@ -1,0 +1,4 @@
+{
+  "name": "@my-dummy-namespace/dummy-component",
+  "main": "index.tsx"
+}

@@ -50,7 +50,6 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		context("when a .npmrc file is in the application root directory", func() {
-
 			it("is respected during npm install", func() {
 				var err error
 				source, err = occam.Source(filepath.Join("testdata", "npmrc"))
@@ -59,9 +58,9 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 				var logs fmt.Stringer
 				image, logs, err = pack.Build.
 					WithBuildpacks(
-						nodeOfflineURI,
-						buildpackOfflineURI,
-						buildPlanURI,
+						settings.Buildpacks.NodeEngine.Online,
+						settings.Buildpacks.NPMInstall.Online,
+						settings.Buildpacks.BuildPlan.Online,
 					).
 					WithPullPolicy("never").
 					Execute(name, source)
@@ -103,7 +102,11 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 
 				image, _, err = pack.Build.
-					WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
+					WithBuildpacks(
+						settings.Buildpacks.NodeEngine.Online,
+						settings.Buildpacks.NPMInstall.Online,
+						settings.Buildpacks.BuildPlan.Online,
+					).
 					WithPullPolicy("never").
 					WithEnv(map[string]string{
 						"SERVICE_BINDING_ROOT": "/bindings",
@@ -113,7 +116,7 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 
 				container, err = docker.Container.Run.
-					WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(buildpackInfo.Buildpack.ID, "/", "_"))).
+					WithCommand(fmt.Sprintf("ls -alR /layers/%s/launch-modules/node_modules", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"))).
 					Execute(image.ID)
 				Expect(err).NotTo(HaveOccurred())
 

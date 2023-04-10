@@ -59,9 +59,9 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 			var logs fmt.Stringer
 			image, logs, err = pack.Build.
 				WithBuildpacks(
-					nodeOfflineURI,
-					buildpackURI,
-					buildPlanURI,
+					settings.Buildpacks.NodeEngine.Offline,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
 				).
 				WithPullPolicy("never").
 				WithNetwork("none").

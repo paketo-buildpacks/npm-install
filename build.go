@@ -1,10 +1,8 @@
 package npminstall
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/paketo-buildpacks/packit/v2/sbom"
@@ -41,6 +39,17 @@ type PruneProcess interface {
 	Run(modulesDir, cacheDir, workingDir, npmrcPath string, launch bool) error
 }
 
+//go:generate faux --interface Symlinker --output fakes/symlinker.go
+type Symlinker interface {
+	WithPath(path string) Symlinker
+	Link(source, target string) error
+}
+
+//go:generate faux --interface SymlinkResolver --output fakes/symlink_resolver.go
+type SymlinkResolver interface {
+	Resolve(lockfilePath, layerPath string) error
+}
+
 func Build(projectPathParser PathParser,
 	entryResolver EntryResolver,
 	configurationManager ConfigurationManager,
@@ -49,30 +58,16 @@ func Build(projectPathParser PathParser,
 	clock chronos.Clock,
 	logger scribe.Emitter,
 	sbomGenerator SBOMGenerator,
-	tmpDir string,
+	linker Symlinker,
+	environment EnvironmentConfig,
+	symlinkResolver SymlinkResolver,
 ) packit.BuildFunc {
 	return func(context packit.BuildContext) (packit.BuildResult, error) {
 		logger.Title("%s %s", context.BuildpackInfo.Name, context.BuildpackInfo.Version)
 
-		launch, build := entryResolver.MergeLayerTypes(NodeModules, context.Plan.Entries)
-
-		npmCacheLayer, err := context.Layers.Get(LayerNameCache)
+		globalNpmrcPath, err := configurationManager.DeterminePath("npmrc", context.Platform.Path, ".npmrc")
 		if err != nil {
 			return packit.BuildResult{}, err
-		}
-
-		npmCacheLayer.Cache = true
-
-		var globalNpmrcPath string
-		path, ok := os.LookupEnv("NPM_CONFIG_GLOBALCONFIG")
-		if ok {
-			globalNpmrcPath = path
-		} else {
-			var err error
-			globalNpmrcPath, err = configurationManager.DeterminePath("npmrc", context.Platform.Path, ".npmrc")
-			if err != nil {
-				return packit.BuildResult{}, err
-			}
 		}
 
 		logger.Process("Resolving installation process")
@@ -83,6 +78,13 @@ func Build(projectPathParser PathParser,
 		}
 
 		projectPath = filepath.Join(context.WorkingDir, projectPath)
+
+		npmCacheLayer, err := context.Layers.Get(LayerNameCache)
+		if err != nil {
+			return packit.BuildResult{}, err
+		}
+
+		npmCacheLayer.Cache = true
 
 		process, cacheFound, err := buildManager.Resolve(projectPath)
 		if err != nil {
@@ -96,10 +98,12 @@ func Build(projectPathParser PathParser,
 			}
 		}
 
-		sbomDisabled, err := checkSbomDisabled()
+		sbomDisabled, err := environment.LookupBool("BP_DISABLE_SBOM")
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
+
+		launch, build := entryResolver.MergeLayerTypes(NodeModules, context.Plan.Entries)
 
 		var layers []packit.Layer
 		var buildLayerPath string
@@ -130,7 +134,12 @@ func Build(projectPathParser PathParser,
 					return packit.BuildResult{}, err
 				}
 
-				err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
+				err = linker.Link(filepath.Join(projectPath, "node_modules"), filepath.Join(layer.Path, "node_modules"))
+				if err != nil {
+					return packit.BuildResult{}, err
+				}
+
+				err = symlinkResolver.Resolve(filepath.Join(projectPath, "package-lock.json"), layer.Path)
 				if err != nil {
 					return packit.BuildResult{}, err
 				}
@@ -178,7 +187,7 @@ func Build(projectPathParser PathParser,
 			} else {
 				logger.Process("Reusing cached layer %s", layer.Path)
 
-				err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
+				err = linker.Link(filepath.Join(projectPath, "node_modules"), filepath.Join(layer.Path, "node_modules"))
 				if err != nil {
 					return packit.BuildResult{}, err
 				}
@@ -234,7 +243,13 @@ func Build(projectPathParser PathParser,
 				}
 
 				layer.ExecD = []string{filepath.Join(context.CNBPath, "bin", "setup-symlinks")}
-				err = ensureNodeModulesSymlink(projectPath, targetLayerPath, tmpDir)
+
+				err = linker.Link(filepath.Join(projectPath, "node_modules"), filepath.Join(targetLayerPath, "node_modules"))
+				if err != nil {
+					return packit.BuildResult{}, err
+				}
+
+				err = symlinkResolver.Resolve(filepath.Join(projectPath, "package-lock.json"), targetLayerPath)
 				if err != nil {
 					return packit.BuildResult{}, err
 				}
@@ -280,7 +295,7 @@ func Build(projectPathParser PathParser,
 			} else {
 				logger.Process("Reusing cached layer %s", layer.Path)
 				if !build {
-					err = ensureNodeModulesSymlink(projectPath, layer.Path, tmpDir)
+					err = linker.Link(filepath.Join(projectPath, "node_modules"), filepath.Join(layer.Path, "node_modules"))
 					if err != nil {
 						return packit.BuildResult{}, err
 					}
@@ -306,40 +321,4 @@ func Build(projectPathParser PathParser,
 
 		return packit.BuildResult{Layers: layers}, nil
 	}
-}
-
-func checkSbomDisabled() (bool, error) {
-	if disableStr, ok := os.LookupEnv("BP_DISABLE_SBOM"); ok {
-		disable, err := strconv.ParseBool(disableStr)
-		if err != nil {
-			return false, fmt.Errorf("failed to parse BP_DISABLE_SBOM value %s: %w", disableStr, err)
-		}
-		return disable, nil
-	}
-	return false, nil
-}
-
-func ensureNodeModulesSymlink(projectDir, targetLayer, tmpDir string) error {
-	projectDirNodeModules := filepath.Join(projectDir, "node_modules")
-	layerNodeModules := filepath.Join(targetLayer, "node_modules")
-	tmpNodeModules := filepath.Join(tmpDir, "node_modules")
-
-	for _, d := range []string{projectDirNodeModules, tmpNodeModules} {
-		err := os.RemoveAll(d)
-		if err != nil {
-			return err
-		}
-	}
-
-	err := os.Symlink(tmpNodeModules, projectDirNodeModules)
-	if err != nil {
-		return err
-	}
-
-	err = os.Symlink(layerNodeModules, tmpNodeModules)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

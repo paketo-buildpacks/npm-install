@@ -55,7 +55,11 @@ func testRestart(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 
 		image, _, err = pack.Build.
-			WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
+			WithBuildpacks(
+				settings.Buildpacks.NodeEngine.Online,
+				settings.Buildpacks.NPMInstall.Online,
+				settings.Buildpacks.BuildPlan.Online,
+			).
 			WithPullPolicy("never").
 			WithSBOMOutputDir(sbomDir).
 			Execute(name, source)

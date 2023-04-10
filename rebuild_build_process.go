@@ -88,12 +88,17 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 		return fmt.Errorf("preinstall script failed on rebuild: %s", err)
 	}
 
-	env := append(environment, fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")))
+	env := environment
+	if value, ok := r.environment.Lookup("NPM_CONFIG_LOGLEVEL"); ok {
+		env = append(env, fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", value))
+	}
+
 	if !launch {
 		env = append(env, "NODE_ENV=development")
 	}
 
-	args = []string{"rebuild", fmt.Sprintf("--nodedir=%s", os.Getenv("NODE_HOME"))}
+	nodeHome, _ := r.environment.Lookup("NODE_HOME")
+	args = []string{"rebuild", fmt.Sprintf("--nodedir=%s", nodeHome)}
 	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 	err = r.executable.Execute(pexec.Execution{
 		Args:   args,

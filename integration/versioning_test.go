@@ -61,7 +61,11 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 
 			image, _, err = pack.Build.
 				WithPullPolicy("never").
-				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
+				WithBuildpacks(
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
+				).
 				Execute(name, source)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -93,7 +97,11 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 
 			image, _, err = pack.Build.
 				WithPullPolicy("never").
-				WithBuildpacks(nodeURI, buildpackURI, buildPlanURI).
+				WithBuildpacks(
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
+				).
 				Execute(name, source)
 			Expect(err).ToNot(HaveOccurred())
 

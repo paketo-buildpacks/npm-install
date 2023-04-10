@@ -29,14 +29,19 @@ func (r PruneBuildProcess) ShouldRun(workingDir string, metadata map[string]inte
 }
 
 func (r PruneBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath string, launch bool) error {
-	buffer := bytes.NewBuffer(nil)
-	args := []string{"prune"}
-	environment := append(os.Environ(), fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", r.environment.GetValue("NPM_CONFIG_LOGLEVEL")))
+	environment := os.Environ()
+	if value, ok := r.environment.Lookup("NPM_CONFIG_LOGLEVEL"); ok {
+		environment = append(environment, fmt.Sprintf("NPM_CONFIG_LOGLEVEL=%s", value))
+	}
+
 	if npmrcPath != "" {
 		environment = append(environment, fmt.Sprintf("NPM_CONFIG_GLOBALCONFIG=%s", npmrcPath))
 	}
 
+	args := []string{"prune"}
 	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
+
+	buffer := bytes.NewBuffer(nil)
 	err := r.executable.Execute(pexec.Execution{
 		Args:   args,
 		Dir:    workingDir,

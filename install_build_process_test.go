@@ -46,7 +46,8 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		executable = &fakes.Executable{}
 		environment = &fakes.EnvironmentConfig{}
 
-		environment.GetValueCall.Returns.String = "some-val"
+		environment.LookupCall.Returns.Value = "some-val"
+		environment.LookupCall.Returns.Found = true
 
 		buffer = bytes.NewBuffer(nil)
 		commandOutput = bytes.NewBuffer(nil)

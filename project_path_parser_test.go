@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	npminstall "github.com/paketo-buildpacks/npm-install"
+	"github.com/paketo-buildpacks/npm-install/fakes"
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
@@ -16,8 +17,11 @@ func testProjectPathParser(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		workingDir        string
-		projectDir        string
+		workingDir string
+		projectDir string
+
+		environment *fakes.EnvironmentConfig
+
 		projectPathParser npminstall.ProjectPathParser
 	)
 
@@ -25,17 +29,21 @@ func testProjectPathParser(t *testing.T, context spec.G, it spec.S) {
 		var err error
 		workingDir, err = os.MkdirTemp("", "working-dir")
 		Expect(err).NotTo(HaveOccurred())
+
 		projectDir = filepath.Join(workingDir, "custom", "path")
+
 		err = os.MkdirAll(projectDir, os.ModePerm)
 		Expect(err).NotTo(HaveOccurred())
 
-		projectPathParser = npminstall.NewProjectPathParser()
-		os.Setenv("BP_NODE_PROJECT_PATH", "custom/path")
+		environment = &fakes.EnvironmentConfig{}
+		environment.LookupCall.Returns.Value = "custom/path"
+		environment.LookupCall.Returns.Found = true
+
+		projectPathParser = npminstall.NewProjectPathParser(environment)
 	})
 
 	it.After(func() {
 		Expect(os.RemoveAll(workingDir)).To(Succeed())
-		os.Unsetenv("BP_NODE_PROJECT_PATH")
 	})
 
 	context("Get", func() {
@@ -64,11 +72,7 @@ func testProjectPathParser(t *testing.T, context spec.G, it spec.S) {
 
 		context("when the project path subdirectory does not exist", func() {
 			it.Before(func() {
-				os.Setenv("BP_NODE_PROJECT_PATH", "some-garbage")
-			})
-
-			it.After(func() {
-				os.Unsetenv("BP_NODE_PROJECT_PATH")
+				environment.LookupCall.Returns.Value = "some-garbage"
 			})
 
 			it("returns an error", func() {

@@ -30,7 +30,7 @@ func testPackageManagerConfigurationManager(t *testing.T, context spec.G, it spe
 
 		buffer = bytes.NewBuffer(nil)
 
-		packageManagerConfigurationManager = npminstall.NewPackageManagerConfigurationManager(bindingResolver, scribe.NewEmitter(buffer))
+		packageManagerConfigurationManager = npminstall.NewPackageManagerConfigurationManager(bindingResolver, scribe.NewEmitter(buffer), "")
 	})
 
 	context("DeterminePath", func() {
@@ -47,6 +47,7 @@ func testPackageManagerConfigurationManager(t *testing.T, context spec.G, it spe
 					},
 				}
 			})
+
 			it("returns a path to the configuration file", func() {
 				path, err := packageManagerConfigurationManager.DeterminePath("some-typ", "platform-dir", "some-entry")
 				Expect(err).NotTo(HaveOccurred())
@@ -57,6 +58,18 @@ func testPackageManagerConfigurationManager(t *testing.T, context spec.G, it spe
 				Expect(bindingResolver.ResolveCall.Receives.PlatformDir).To(Equal("platform-dir"))
 
 				Expect(buffer.String()).To(ContainSubstring("Loading service binding of type 'some-typ'"))
+			})
+		})
+
+		context("when there is a default path set", func() {
+			it.Before(func() {
+				packageManagerConfigurationManager = npminstall.NewPackageManagerConfigurationManager(bindingResolver, scribe.NewEmitter(buffer), "default-path")
+			})
+
+			it("returns that path", func() {
+				path, err := packageManagerConfigurationManager.DeterminePath("some-typ", "platform-dir", "some-entry")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(path).To(Equal("default-path"))
 			})
 		})
 

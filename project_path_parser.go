@@ -9,18 +9,22 @@ import (
 
 // ProjectPathParser provides a mechanism for determining the proper working
 // directory for the build process.
-type ProjectPathParser struct{}
+type ProjectPathParser struct {
+	environment EnvironmentConfig
+}
 
 // NewProjectPathParser creates an instance of a ProjectPathParser.
-func NewProjectPathParser() ProjectPathParser {
-	return ProjectPathParser{}
+func NewProjectPathParser(environment EnvironmentConfig) ProjectPathParser {
+	return ProjectPathParser{
+		environment: environment,
+	}
 }
 
 // Get will resolve the $BP_NODE_PROJECT_PATH environment variable. It
 // validates that $BP_NODE_PROJECT_PATH is valid relative to the provided path.
 func (p ProjectPathParser) Get(path string) (string, error) {
-	customProjPath := os.Getenv("BP_NODE_PROJECT_PATH")
-	if customProjPath == "" {
+	customProjPath, ok := p.environment.Lookup("BP_NODE_PROJECT_PATH")
+	if !ok {
 		return "", nil
 	}
 
