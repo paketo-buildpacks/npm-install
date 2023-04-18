@@ -147,12 +147,13 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				"      npm-cache         -> \"Not found\"",
 				"      package-lock.json -> \"Found\"",
 				"",
-				"    Selected NPM build process: 'npm ci'",
-				"",
+				"    Selected NPM build process: 'npm ci'"))
+			Expect(logs).To(ContainLines(
 				"  Executing launch environment install process",
 				fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
-				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
-				"",
+			))
+			Expect(logs).To(ContainLines(MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`)))
+			Expect(logs).To(ContainLines(
 				"  Configuring launch environment",
 				"    NODE_PROJECT_PATH   -> \"/workspace\"",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",

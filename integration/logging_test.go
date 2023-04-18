@@ -72,16 +72,19 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				"      package-lock.json -> \"Not found\"",
 				"",
 				"    Selected NPM build process: 'npm install'",
-				"",
+			))
+			Expect(logs).To(ContainLines(
 				"  Executing launch environment install process",
 				fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+			))
+			Expect(logs).To(ContainLines(
 				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
-				"",
+			))
+			Expect(logs).To(ContainLines(
 				"  Configuring launch environment",
 				"    NODE_PROJECT_PATH   -> \"/workspace\"",
 				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
 				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
-				"",
 			))
 		})
 
@@ -110,23 +113,27 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 					"      npm-cache         -> \"Not found\"",
 					"      package-lock.json -> \"Not found\"",
 					"",
-					"    Selected NPM build process: 'npm install'",
-					"",
+					"    Selected NPM build process: 'npm install'"))
+				Expect(logs).To(ContainLines(
 					"  Executing build environment install process",
 					fmt.Sprintf("    Running 'npm install --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+				))
+				Expect(logs).To(ContainLines(
 					MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
-					"",
+				))
+				Expect(logs).To(ContainLines(
 					"  Configuring build environment",
 					"    NODE_ENV -> \"development\"",
 					fmt.Sprintf("    PATH     -> \"$PATH:/layers/%s/build-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					"",
 					fmt.Sprintf(`  Generating SBOM for /layers/%s/build-modules`, strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					MatchRegexp(`      Completed in (\d+)(\.\d+)?(ms|s)`),
-					"",
+				))
+				Expect(logs).To(ContainLines(
 					"  Executing launch environment install process",
 					"    Running 'npm prune'",
-					MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
-					"",
+				))
+				Expect(logs).To(ContainLines(
 					"  Configuring launch environment",
 					"    NODE_PROJECT_PATH   -> \"/workspace\"",
 					"    NPM_CONFIG_LOGLEVEL -> \"error\"",
@@ -134,7 +141,6 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 					"",
 					fmt.Sprintf(`  Generating SBOM for /layers/%s/launch-modules`, strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					MatchRegexp(`      Completed in (\d+)(\.\d+)?(ms|s)`),
-					"",
 				))
 			})
 

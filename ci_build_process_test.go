@@ -15,21 +15,21 @@ import (
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
+	. "github.com/paketo-buildpacks/occam/matchers"
 )
 
 func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		modulesDir    string
-		cacheDir      string
-		workingDir    string
-		executable    *fakes.Executable
-		executions    []pexec.Execution
-		summer        *fakes.Summer
-		environment   *fakes.EnvironmentConfig
-		buffer        *bytes.Buffer
-		commandOutput *bytes.Buffer
+		modulesDir  string
+		cacheDir    string
+		workingDir  string
+		executable  *fakes.Executable
+		executions  []pexec.Execution
+		summer      *fakes.Summer
+		environment *fakes.EnvironmentConfig
+		buffer      *bytes.Buffer
 
 		process npminstall.CIBuildProcess
 	)
@@ -48,6 +48,8 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		executable = &fakes.Executable{}
 		executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 			executions = append(executions, execution)
+			fmt.Fprintln(execution.Stdout, "stdout output")
+			fmt.Fprintln(execution.Stderr, "stderr output")
 			return nil
 		}
 
@@ -58,7 +60,6 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		environment.LookupCall.Returns.Found = true
 
 		buffer = bytes.NewBuffer(nil)
-		commandOutput = bytes.NewBuffer(nil)
 
 		process = npminstall.NewCIBuildProcess(executable, summer, environment, scribe.NewLogger(buffer))
 	})
@@ -192,13 +193,14 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 			it("succeeds", func() {
 				Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path", false)).To(Succeed())
 
-				Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
-					Args:   []string{"ci", "--unsafe-perm", "--cache", cacheDir},
-					Dir:    workingDir,
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-					Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NODE_ENV=development"),
-				}))
+				Expect(executable.ExecuteCall.Receives.Execution.Args).To(Equal([]string{"ci", "--unsafe-perm", "--cache", cacheDir}))
+				Expect(executable.ExecuteCall.Receives.Execution.Dir).To(Equal(workingDir))
+				Expect(executable.ExecuteCall.Receives.Execution.Env).To(Equal(append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NODE_ENV=development")))
+				Expect(buffer.String()).To(ContainLines(
+					fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache %s'", cacheDir),
+					"      stdout output",
+					"      stderr output",
+				))
 
 				path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 				Expect(err).NotTo(HaveOccurred())
@@ -210,13 +212,14 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 			it("succeeds", func() {
 				Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path", true)).To(Succeed())
 
-				Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
-					Args:   []string{"ci", "--unsafe-perm", "--cache", cacheDir},
-					Dir:    workingDir,
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-					Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-				}))
+				Expect(executable.ExecuteCall.Receives.Execution.Args).To(Equal([]string{"ci", "--unsafe-perm", "--cache", cacheDir}))
+				Expect(executable.ExecuteCall.Receives.Execution.Dir).To(Equal(workingDir))
+				Expect(executable.ExecuteCall.Receives.Execution.Env).To(Equal(append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				Expect(buffer.String()).To(ContainLines(
+					fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache %s'", cacheDir),
+					"      stdout output",
+					"      stderr output",
+				))
 
 				path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 				Expect(err).NotTo(HaveOccurred())
@@ -266,7 +269,11 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir, "", false)
-					Expect(buffer.String()).To(ContainSubstring("    ci failure on stdout\n    ci failure on stderr"))
+					Expect(buffer.String()).To(ContainLines(
+						fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache %s'", cacheDir),
+						"      ci failure on stdout",
+						"      ci failure on stderr",
+					))
 					Expect(err).To(MatchError("npm ci failed: failed to execute"))
 				})
 			})

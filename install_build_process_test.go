@@ -15,19 +15,19 @@ import (
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
+	. "github.com/paketo-buildpacks/occam/matchers"
 )
 
 func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		modulesDir    string
-		cacheDir      string
-		workingDir    string
-		executable    *fakes.Executable
-		environment   *fakes.EnvironmentConfig
-		buffer        *bytes.Buffer
-		commandOutput *bytes.Buffer
+		modulesDir  string
+		cacheDir    string
+		workingDir  string
+		executable  *fakes.Executable
+		environment *fakes.EnvironmentConfig
+		buffer      *bytes.Buffer
 
 		process npminstall.InstallBuildProcess
 	)
@@ -44,13 +44,17 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 
 		executable = &fakes.Executable{}
+		executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
+			fmt.Fprintln(execution.Stdout, "stdout output")
+			fmt.Fprintln(execution.Stderr, "stderr output")
+			return nil
+		}
 		environment = &fakes.EnvironmentConfig{}
 
 		environment.LookupCall.Returns.Value = "some-val"
 		environment.LookupCall.Returns.Found = true
 
 		buffer = bytes.NewBuffer(nil)
-		commandOutput = bytes.NewBuffer(nil)
 
 		process = npminstall.NewInstallBuildProcess(executable, environment, scribe.NewLogger(buffer))
 	})
@@ -78,13 +82,14 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		context("launch is false", func() {
 			it("succeeds", func() {
 				Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path", false)).To(Succeed())
-				Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
-					Args:   []string{"install", "--unsafe-perm", "--cache", cacheDir},
-					Dir:    workingDir,
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-					Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NODE_ENV=development"),
-				}))
+				Expect(executable.ExecuteCall.Receives.Execution.Args).To(Equal([]string{"install", "--unsafe-perm", "--cache", cacheDir}))
+				Expect(executable.ExecuteCall.Receives.Execution.Dir).To(Equal(workingDir))
+				Expect(executable.ExecuteCall.Receives.Execution.Env).To(Equal(append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NODE_ENV=development")))
+				Expect(buffer.String()).To(ContainLines(
+					fmt.Sprintf("    Running 'npm install --unsafe-perm --cache %s'", cacheDir),
+					"      stdout output",
+					"      stderr output",
+				))
 
 				path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 				Expect(err).NotTo(HaveOccurred())
@@ -95,13 +100,14 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		context("launch is true", func() {
 			it("succeeds", func() {
 				Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path", true)).To(Succeed())
-				Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
-					Args:   []string{"install", "--unsafe-perm", "--cache", cacheDir},
-					Dir:    workingDir,
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-					Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-				}))
+				Expect(executable.ExecuteCall.Receives.Execution.Args).To(Equal([]string{"install", "--unsafe-perm", "--cache", cacheDir}))
+				Expect(executable.ExecuteCall.Receives.Execution.Dir).To(Equal(workingDir))
+				Expect(executable.ExecuteCall.Receives.Execution.Env).To(Equal(append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				Expect(buffer.String()).To(ContainLines(
+					fmt.Sprintf("    Running 'npm install --unsafe-perm --cache %s'", cacheDir),
+					"      stdout output",
+					"      stderr output",
+				))
 
 				path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 				Expect(err).NotTo(HaveOccurred())
@@ -148,7 +154,11 @@ func testInstallBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir, "", true)
-					Expect(buffer.String()).To(ContainSubstring("    install error on stdout\n    install error on stderr\n"))
+					Expect(buffer.String()).To(ContainLines(
+						fmt.Sprintf("    Running 'npm install --unsafe-perm --cache %s'", cacheDir),
+						"      install error on stdout",
+						"      install error on stderr",
+					))
 					Expect(err).To(MatchError("npm install failed: failed to execute"))
 				})
 			})

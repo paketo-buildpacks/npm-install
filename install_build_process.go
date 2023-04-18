@@ -1,7 +1,6 @@
 package npminstall
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -53,16 +52,14 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 	args := []string{"install", "--unsafe-perm", "--cache", cacheDir}
 	r.logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 
-	buffer := bytes.NewBuffer(nil)
 	err = r.executable.Execute(pexec.Execution{
 		Args:   args,
 		Dir:    workingDir,
-		Stdout: buffer,
-		Stderr: buffer,
+		Stdout: r.logger.ActionWriter,
+		Stderr: r.logger.ActionWriter,
 		Env:    environment,
 	})
 	if err != nil {
-		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("npm install failed: %w", err)
 	}
 

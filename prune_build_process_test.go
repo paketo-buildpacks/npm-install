@@ -14,19 +14,19 @@ import (
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
+	. "github.com/paketo-buildpacks/occam/matchers"
 )
 
 func testPruneBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		modulesDir    string
-		cacheDir      string
-		workingDir    string
-		executable    *fakes.Executable
-		environment   *fakes.EnvironmentConfig
-		buffer        *bytes.Buffer
-		commandOutput *bytes.Buffer
+		modulesDir  string
+		cacheDir    string
+		workingDir  string
+		executable  *fakes.Executable
+		environment *fakes.EnvironmentConfig
+		buffer      *bytes.Buffer
 
 		process npminstall.PruneBuildProcess
 	)
@@ -43,13 +43,17 @@ func testPruneBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 
 		executable = &fakes.Executable{}
+		executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
+			fmt.Fprintln(execution.Stdout, "stdout output")
+			fmt.Fprintln(execution.Stderr, "stderr output")
+			return nil
+		}
 
 		environment = &fakes.EnvironmentConfig{}
 		environment.LookupCall.Returns.Value = "some-val"
 		environment.LookupCall.Returns.Found = true
 
 		buffer = bytes.NewBuffer(nil)
-		commandOutput = bytes.NewBuffer(nil)
 
 		process = npminstall.NewPruneBuildProcess(executable, environment, scribe.NewLogger(buffer))
 	})
@@ -72,13 +76,14 @@ func testPruneBuildProcess(t *testing.T, context spec.G, it spec.S) {
 	context("Run", func() {
 		it("succeeds", func() {
 			Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path", true)).To(Succeed())
-			Expect(executable.ExecuteCall.Receives.Execution).To(Equal(pexec.Execution{
-				Args:   []string{"prune"},
-				Dir:    workingDir,
-				Stdout: commandOutput,
-				Stderr: commandOutput,
-				Env:    append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-			}))
+			Expect(executable.ExecuteCall.Receives.Execution.Args).To(Equal([]string{"prune"}))
+			Expect(executable.ExecuteCall.Receives.Execution.Dir).To(Equal(workingDir))
+			Expect(executable.ExecuteCall.Receives.Execution.Env).To(Equal(append(os.Environ(), "NPM_CONFIG_LOGLEVEL=some-val", "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+			Expect(buffer.String()).To(ContainLines(
+				"    Running 'npm prune'",
+				"      stdout output",
+				"      stderr output",
+			))
 		})
 
 		context("failure cases", func() {
@@ -93,7 +98,11 @@ func testPruneBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir, "", true)
-					Expect(buffer.String()).To(ContainSubstring("    install error on stdout\n    install error on stderr\n"))
+					Expect(buffer.String()).To(ContainLines(
+						"    Running 'npm prune'",
+						"      install error on stdout",
+						"      install error on stderr",
+					))
 					Expect(err).To(MatchError("npm install failed: failed to execute"))
 				})
 			})

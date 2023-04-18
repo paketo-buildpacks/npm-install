@@ -16,6 +16,7 @@ import (
 	"github.com/sclevine/spec"
 
 	. "github.com/onsi/gomega"
+	. "github.com/paketo-buildpacks/occam/matchers"
 )
 
 func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
@@ -32,8 +33,7 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		summer      *fakes.Summer
 		environment *fakes.EnvironmentConfig
 
-		buffer        *bytes.Buffer
-		commandOutput *bytes.Buffer
+		buffer *bytes.Buffer
 
 		process npminstall.RebuildBuildProcess
 	)
@@ -57,6 +57,8 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		executable = &fakes.Executable{}
 		executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 			executions = append(executions, execution)
+			fmt.Fprintln(execution.Stdout, "stdout output")
+			fmt.Fprintln(execution.Stderr, "stderr output")
 			return nil
 		}
 
@@ -73,7 +75,6 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		}
 
 		buffer = bytes.NewBuffer(nil)
-		commandOutput = bytes.NewBuffer(nil)
 
 		process = npminstall.NewRebuildBuildProcess(executable, summer, environment, scribe.NewLogger(buffer))
 	})
@@ -188,34 +189,36 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path", false)).To(Succeed())
 
 				Expect(executable.ExecuteCall.CallCount).To(Equal(4))
-				Expect(executions[0]).To(Equal(pexec.Execution{
-					Args:   []string{"list"},
-					Dir:    workingDir,
-					Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-				}))
-				Expect(executions[1]).To(Equal(pexec.Execution{
-					Args:   []string{"run-script", "preinstall", "--if-present"},
-					Dir:    workingDir,
-					Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-				}))
-				Expect(executions[2]).To(Equal(pexec.Execution{
-					Args:   []string{"rebuild", "--nodedir="},
-					Dir:    workingDir,
-					Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NPM_CONFIG_LOGLEVEL=some-val", "NODE_ENV=development"),
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-				}))
-				Expect(executions[3]).To(Equal(pexec.Execution{
-					Args:   []string{"run-script", "postinstall", "--if-present"},
-					Dir:    workingDir,
-					Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-				}))
+				Expect(executions[0].Args).To(Equal([]string{"list"}))
+				Expect(executions[0].Dir).To(Equal(workingDir))
+				Expect(executions[0].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+
+				Expect(executions[1].Args).To(Equal([]string{"run-script", "preinstall", "--if-present"}))
+				Expect(executions[1].Dir).To(Equal(workingDir))
+				Expect(executions[1].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				Expect(buffer.String()).To(ContainLines(
+					"    Running 'npm run-script preinstall --if-present'",
+					"      stdout output",
+					"      stderr output",
+				))
+
+				Expect(executions[2].Args).To(Equal([]string{"rebuild", "--nodedir="}))
+				Expect(executions[2].Dir).To(Equal(workingDir))
+				Expect(executions[2].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NPM_CONFIG_LOGLEVEL=some-val", "NODE_ENV=development")))
+				Expect(buffer.String()).To(ContainLines(
+					"    Running 'npm rebuild --nodedir='",
+					"      stdout output",
+					"      stderr output",
+				))
+
+				Expect(executions[3].Args).To(Equal([]string{"run-script", "postinstall", "--if-present"}))
+				Expect(executions[3].Dir).To(Equal(workingDir))
+				Expect(executions[3].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				Expect(buffer.String()).To(ContainLines(
+					"    Running 'npm run-script postinstall --if-present'",
+					"      stdout output",
+					"      stderr output",
+				))
 
 				path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 				Expect(err).NotTo(HaveOccurred())
@@ -228,34 +231,36 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path", true)).To(Succeed())
 
 				Expect(executable.ExecuteCall.CallCount).To(Equal(4))
-				Expect(executions[0]).To(Equal(pexec.Execution{
-					Args:   []string{"list"},
-					Dir:    workingDir,
-					Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-				}))
-				Expect(executions[1]).To(Equal(pexec.Execution{
-					Args:   []string{"run-script", "preinstall", "--if-present"},
-					Dir:    workingDir,
-					Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-				}))
-				Expect(executions[2]).To(Equal(pexec.Execution{
-					Args:   []string{"rebuild", "--nodedir="},
-					Dir:    workingDir,
-					Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NPM_CONFIG_LOGLEVEL=some-val"),
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-				}))
-				Expect(executions[3]).To(Equal(pexec.Execution{
-					Args:   []string{"run-script", "postinstall", "--if-present"},
-					Dir:    workingDir,
-					Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-					Stdout: commandOutput,
-					Stderr: commandOutput,
-				}))
+				Expect(executions[0].Args).To(Equal([]string{"list"}))
+				Expect(executions[0].Dir).To(Equal(workingDir))
+				Expect(executions[0].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+
+				Expect(executions[1].Args).To(Equal([]string{"run-script", "preinstall", "--if-present"}))
+				Expect(executions[1].Dir).To(Equal(workingDir))
+				Expect(executions[1].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				Expect(buffer.String()).To(ContainLines(
+					"    Running 'npm run-script preinstall --if-present'",
+					"      stdout output",
+					"      stderr output",
+				))
+
+				Expect(executions[2].Args).To(Equal([]string{"rebuild", "--nodedir="}))
+				Expect(executions[2].Dir).To(Equal(workingDir))
+				Expect(executions[2].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NPM_CONFIG_LOGLEVEL=some-val")))
+				Expect(buffer.String()).To(ContainLines(
+					"    Running 'npm rebuild --nodedir='",
+					"      stdout output",
+					"      stderr output",
+				))
+
+				Expect(executions[3].Args).To(Equal([]string{"run-script", "postinstall", "--if-present"}))
+				Expect(executions[3].Dir).To(Equal(workingDir))
+				Expect(executions[3].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				Expect(buffer.String()).To(ContainLines(
+					"    Running 'npm run-script postinstall --if-present'",
+					"      stdout output",
+					"      stderr output",
+				))
 
 				path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 				Expect(err).NotTo(HaveOccurred())
@@ -268,36 +273,36 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				Expect(process.Run(modulesDir, cacheDir, workingDir, "some-npmrc-path", true)).To(Succeed())
 
 				Expect(executable.ExecuteCall.CallCount).To(Equal(4))
-				Expect(executions).To(Equal([]pexec.Execution{
-					{
-						Args:   []string{"list"},
-						Dir:    workingDir,
-						Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-						Stdout: commandOutput,
-						Stderr: commandOutput,
-					},
-					{
-						Args:   []string{"run-script", "preinstall", "--if-present"},
-						Dir:    workingDir,
-						Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-						Stdout: commandOutput,
-						Stderr: commandOutput,
-					},
-					{
-						Args:   []string{"rebuild", "--nodedir="},
-						Dir:    workingDir,
-						Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NPM_CONFIG_LOGLEVEL=some-val"),
-						Stdout: commandOutput,
-						Stderr: commandOutput,
-					},
-					{
-						Args:   []string{"run-script", "postinstall", "--if-present"},
-						Dir:    workingDir,
-						Env:    append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path"),
-						Stdout: commandOutput,
-						Stderr: commandOutput,
-					},
-				}))
+				Expect(executions[0].Args).To(Equal([]string{"list"}))
+				Expect(executions[0].Dir).To(Equal(workingDir))
+				Expect(executions[0].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+
+				Expect(executions[1].Args).To(Equal([]string{"run-script", "preinstall", "--if-present"}))
+				Expect(executions[1].Dir).To(Equal(workingDir))
+				Expect(executions[1].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				Expect(buffer.String()).To(ContainLines(
+					"    Running 'npm run-script preinstall --if-present'",
+					"      stdout output",
+					"      stderr output",
+				))
+
+				Expect(executions[2].Args).To(Equal([]string{"rebuild", "--nodedir="}))
+				Expect(executions[2].Dir).To(Equal(workingDir))
+				Expect(executions[2].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path", "NPM_CONFIG_LOGLEVEL=some-val")))
+				Expect(buffer.String()).To(ContainLines(
+					"    Running 'npm rebuild --nodedir='",
+					"      stdout output",
+					"      stderr output",
+				))
+
+				Expect(executions[3].Args).To(Equal([]string{"run-script", "postinstall", "--if-present"}))
+				Expect(executions[3].Dir).To(Equal(workingDir))
+				Expect(executions[3].Env).To(Equal(append(os.Environ(), "NPM_CONFIG_GLOBALCONFIG=some-npmrc-path")))
+				Expect(buffer.String()).To(ContainLines(
+					"    Running 'npm run-script postinstall --if-present'",
+					"      stdout output",
+					"      stderr output",
+				))
 
 				path, err := os.Readlink(filepath.Join(workingDir, "node_modules"))
 				Expect(err).NotTo(HaveOccurred())
@@ -319,7 +324,10 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 					}
 
 					err := process.Run(modulesDir, cacheDir, workingDir, "", true)
-					Expect(buffer.String()).To(ContainSubstring("    stdout output\n    stderr output\n"))
+					Expect(buffer.String()).To(ContainLines(
+						"      stdout output",
+						"      stderr output",
+					))
 					Expect(err).To(MatchError("vendored node_modules have unmet dependencies: npm list failed: exit status 1"))
 				})
 			})
@@ -354,7 +362,11 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir, "", true)
-					Expect(buffer.String()).To(ContainSubstring("    pre-install on stdout\n    pre-install on stderr\n"))
+					Expect(buffer.String()).To(ContainLines(
+						"    Running 'npm run-script preinstall --if-present'",
+						"      pre-install on stdout",
+						"      pre-install on stderr",
+					))
 					Expect(err).To(MatchError("preinstall script failed on rebuild: an actual error"))
 				})
 			})
@@ -374,7 +386,11 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir, "", true)
-					Expect(buffer.String()).To(ContainSubstring("    rebuild error on stdout\n    rebuild error on stderr\n"))
+					Expect(buffer.String()).To(ContainLines(
+						"    Running 'npm rebuild --nodedir='",
+						"      rebuild error on stdout",
+						"      rebuild error on stderr",
+					))
 					Expect(err).To(MatchError("npm rebuild failed: failed to rebuild"))
 				})
 			})
@@ -394,7 +410,11 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 
 				it("returns an error", func() {
 					err := process.Run(modulesDir, cacheDir, workingDir, "", true)
-					Expect(buffer.String()).To(ContainSubstring("    postinstall on stdout\n    postinstall on stderr\n"))
+					Expect(buffer.String()).To(ContainLines(
+						"    Running 'npm run-script postinstall --if-present'",
+						"      postinstall on stdout",
+						"      postinstall on stderr",
+					))
 					Expect(err).To(MatchError("postinstall script failed on rebuild: an actual error"))
 				})
 			})
