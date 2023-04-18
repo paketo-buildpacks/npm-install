@@ -1,7 +1,6 @@
 package npminstall
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -55,7 +54,6 @@ func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]in
 }
 
 func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath string, launch bool) error {
-	buffer := bytes.NewBuffer(nil)
 	environment := os.Environ()
 	if npmrcPath != "" {
 		environment = append(environment, fmt.Sprintf("NPM_CONFIG_GLOBALCONFIG=%s", npmrcPath))
@@ -65,11 +63,10 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 		Args:   []string{"list"},
 		Dir:    workingDir,
 		Env:    environment,
-		Stdout: buffer,
-		Stderr: buffer,
+		Stdout: r.logger.ActionWriter,
+		Stderr: r.logger.ActionWriter,
 	})
 	if err != nil {
-		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("vendored node_modules have unmet dependencies: npm list failed: %w", err)
 	}
 
@@ -79,12 +76,11 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 		Args:   args,
 		Dir:    workingDir,
 		Env:    environment,
-		Stdout: buffer,
-		Stderr: buffer,
+		Stdout: r.logger.ActionWriter,
+		Stderr: r.logger.ActionWriter,
 	})
 
 	if err != nil {
-		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("preinstall script failed on rebuild: %s", err)
 	}
 
@@ -103,12 +99,11 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 	err = r.executable.Execute(pexec.Execution{
 		Args:   args,
 		Dir:    workingDir,
-		Stdout: buffer,
-		Stderr: buffer,
+		Stdout: r.logger.ActionWriter,
+		Stderr: r.logger.ActionWriter,
 		Env:    env,
 	})
 	if err != nil {
-		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("npm rebuild failed: %s", err)
 	}
 
@@ -118,12 +113,11 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 		Args:   args,
 		Dir:    workingDir,
 		Env:    environment,
-		Stdout: buffer,
-		Stderr: buffer,
+		Stdout: r.logger.ActionWriter,
+		Stderr: r.logger.ActionWriter,
 	})
 
 	if err != nil {
-		r.logger.Subprocess("%s", buffer.String())
 		return fmt.Errorf("postinstall script failed on rebuild: %s", err)
 	}
 

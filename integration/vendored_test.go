@@ -96,16 +96,11 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				"      npm-cache         -> \"Not found\"",
 				"      package-lock.json -> \"Found\"",
 				"",
-				"    Selected NPM build process: 'npm rebuild'",
-				"",
-				"  Executing launch environment install process",
-				"    Running 'npm run-script preinstall --if-present'",
-				MatchRegexp(`    Running 'npm rebuild --nodedir=/layers/.+/node'`),
-				"    Running 'npm run-script postinstall --if-present'",
-			))
-			Expect(logs).To(ContainLines(
-				MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`),
-			))
+				"    Selected NPM build process: 'npm rebuild'"))
+			Expect(logs).To(ContainLines("  Executing launch environment install process"))
+			Expect(logs).To(ContainLines("    Running 'npm run-script preinstall --if-present'"))
+			Expect(logs).To(ContainLines(MatchRegexp(`    Running 'npm rebuild --nodedir=/layers/.+/node'`)))
+			Expect(logs).To(ContainLines("    Running 'npm run-script postinstall --if-present'"))
 			Expect(logs).To(ContainLines(
 				"  Configuring launch environment",
 				"    NODE_PROJECT_PATH   -> \"/workspace\"",
