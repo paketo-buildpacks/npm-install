@@ -18,7 +18,6 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		Expect = NewWithT(t).Expect
 
 		packageJSONParser *fakes.VersionParser
-		projectPathParser *fakes.PathParser
 		detect            packit.DetectFunc
 	)
 
@@ -26,10 +25,9 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		packageJSONParser = &fakes.VersionParser{}
 		packageJSONParser.ParseVersionCall.Returns.Version = "1.2.3"
 
-		projectPathParser = &fakes.PathParser{}
-		projectPathParser.GetCall.Returns.ProjectPath = ""
+		t.Setenv("BP_NODE_PROJECT_PATH", "")
 
-		detect = npminstall.Detect(projectPathParser, packageJSONParser)
+		detect = npminstall.Detect(packageJSONParser)
 	})
 
 	it("returns a plan that provides node_modules", func() {
@@ -60,7 +58,6 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		}))
 
 		Expect(packageJSONParser.ParseVersionCall.Receives.Path).To(Equal("/working-dir/package.json"))
-		Expect(projectPathParser.GetCall.Receives.Path).To(Equal("/working-dir"))
 	})
 
 	context("when the package.json does not declare a node engine version", func() {
@@ -94,7 +91,6 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 			}))
 
 			Expect(packageJSONParser.ParseVersionCall.Receives.Path).To(Equal("/working-dir/package.json"))
-			Expect(projectPathParser.GetCall.Receives.Path).To(Equal("/working-dir"))
 		})
 	})
 
@@ -128,14 +124,14 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 
 		context("when the project path parser fails", func() {
 			it.Before(func() {
-				projectPathParser.GetCall.Returns.Err = errors.New("some-error")
+				t.Setenv("BP_NODE_PROJECT_PATH", "does_not_exist")
 			})
 
 			it("returns an error", func() {
 				_, err := detect(packit.DetectContext{
 					WorkingDir: "/working-dir",
 				})
-				Expect(err).To(MatchError("some-error"))
+				Expect(err).To(MatchError("could not find project path \"/working-dir/does_not_exist\": stat /working-dir/does_not_exist: no such file or directory"))
 			})
 		})
 	})
