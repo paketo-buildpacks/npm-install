@@ -35,18 +35,15 @@ func main() {
 	emitter := scribe.NewEmitter(os.Stdout).WithLevel(logLevel)
 	logger := scribe.NewLogger(os.Stdout).WithLevel(logLevel)
 
-	projectPathParser := npminstall.NewProjectPathParser(environment)
 	npm := pexec.NewExecutable("npm")
 	checksumCalculator := fs.NewChecksumCalculator()
 	linker := npminstall.NewLinker(os.TempDir())
 
 	packit.Run(
 		npminstall.Detect(
-			projectPathParser,
 			npminstall.NewPackageJSONParser(),
 		),
 		npminstall.Build(
-			projectPathParser,
 			draft.NewPlanner(),
 			npminstall.NewPackageManagerConfigurationManager(
 				servicebindings.NewResolver(),
