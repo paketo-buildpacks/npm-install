@@ -36,7 +36,7 @@ func Detect(projectPathParser PathParser, packageJSONParser VersionParser) packi
 		version, err := packageJSONParser.ParseVersion(filepath.Join(context.WorkingDir, projectPath, "package.json"))
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return packit.DetectResult{}, packit.Fail
+				return packit.DetectResult{}, packit.Fail.WithMessage(`no "package.json" found in project path %s`, filepath.Join(context.WorkingDir, projectPath))
 			}
 
 			return packit.DetectResult{}, err
