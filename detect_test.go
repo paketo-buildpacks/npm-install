@@ -1,12 +1,11 @@
 package npminstall_test
 
 import (
-	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	npminstall "github.com/paketo-buildpacks/npm-install"
-	"github.com/paketo-buildpacks/npm-install/fakes"
 	"github.com/paketo-buildpacks/packit/v2"
 	"github.com/sclevine/spec"
 
@@ -17,22 +16,28 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		packageJSONParser *fakes.VersionParser
-		detect            packit.DetectFunc
+		detect     packit.DetectFunc
+		filePath   string
+		workingDir string
 	)
 
 	it.Before(func() {
-		packageJSONParser = &fakes.VersionParser{}
-		packageJSONParser.ParseVersionCall.Returns.Version = "1.2.3"
+		workingDir = t.TempDir()
+		filePath = filepath.Join(workingDir, "package.json")
+		Expect(os.WriteFile(filePath, []byte(`{
+			"engines": {
+					"node": "1.2.3"
+			}
+		}`), 0600)).To(Succeed())
 
 		t.Setenv("BP_NODE_PROJECT_PATH", "")
 
-		detect = npminstall.Detect(packageJSONParser)
+		detect = npminstall.Detect()
 	})
 
 	it("returns a plan that provides node_modules", func() {
 		result, err := detect(packit.DetectContext{
-			WorkingDir: "/working-dir",
+			WorkingDir: workingDir,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result.Plan).To(Equal(packit.BuildPlan{
@@ -57,17 +62,17 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 			},
 		}))
 
-		Expect(packageJSONParser.ParseVersionCall.Receives.Path).To(Equal("/working-dir/package.json"))
 	})
 
 	context("when the package.json does not declare a node engine version", func() {
 		it.Before(func() {
-			packageJSONParser.ParseVersionCall.Returns.Version = ""
+			Expect(os.WriteFile(filePath, []byte(`{
+			}`), 0600)).To(Succeed())
 		})
 
 		it("returns a plan that does not declare a node version", func() {
 			result, err := detect(packit.DetectContext{
-				WorkingDir: "/working-dir",
+				WorkingDir: workingDir,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Plan).To(Equal(packit.BuildPlan{
@@ -89,36 +94,33 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 					},
 				},
 			}))
-
-			Expect(packageJSONParser.ParseVersionCall.Receives.Path).To(Equal("/working-dir/package.json"))
 		})
 	})
 
 	context("when the package.json file does not exist", func() {
 		it.Before(func() {
-			_, err := os.Stat("no such file")
-			packageJSONParser.ParseVersionCall.Returns.Err = err
+			Expect(os.Remove(filePath)).To(Succeed())
 		})
 
 		it("fails detection", func() {
 			_, err := detect(packit.DetectContext{
-				WorkingDir: "/working-dir",
+				WorkingDir: workingDir,
 			})
-			Expect(err).To(MatchError(packit.Fail.WithMessage("no 'package.json' found in project path /working-dir")))
+			Expect(err).To(MatchError(packit.Fail.WithMessage("no 'package.json' found in project path %s", workingDir)))
 		})
 	})
 
 	context("failure cases", func() {
 		context("when the package.json parser fails", func() {
 			it.Before(func() {
-				packageJSONParser.ParseVersionCall.Returns.Err = errors.New("failed to parse package.json")
+				Expect(os.WriteFile(filePath, []byte(`%%%`), 0600)).To(Succeed())
 			})
 
 			it("returns an error", func() {
 				_, err := detect(packit.DetectContext{
-					WorkingDir: "/working-dir",
+					WorkingDir: workingDir,
 				})
-				Expect(err).To(MatchError("failed to parse package.json"))
+				Expect(err).To(MatchError("unable to decode package.json invalid character '%' looking for beginning of value"))
 			})
 		})
 

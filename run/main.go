@@ -40,9 +40,7 @@ func main() {
 	linker := npminstall.NewLinker(os.TempDir())
 
 	packit.Run(
-		npminstall.Detect(
-			npminstall.NewPackageJSONParser(),
-		),
+		npminstall.Detect(),
 		npminstall.Build(
 			draft.NewPlanner(),
 			npminstall.NewPackageManagerConfigurationManager(

@@ -20,7 +20,6 @@ func TestUnitNPMInstall(t *testing.T) {
 	suite("InstallBuildProcess", testInstallBuildProcess)
 	suite("LinkedModuleResolver", testLinkedModuleResolver)
 	suite("Linker", testLinker)
-	suite("PackageJSONParser", testPackageJSONParser)
 	suite("PackageManangerConfigurationManager", testPackageManagerConfigurationManager)
 	suite("PruneBuildProcess", testPruneBuildProcess)
 	suite("RebuildBuildProcess", testRebuildBuildProcess)

@@ -21,7 +21,7 @@ type VersionParser interface {
 	ParseVersion(path string) (version string, err error)
 }
 
-func Detect(packageJSONParser VersionParser) packit.DetectFunc {
+func Detect() packit.DetectFunc {
 	return func(context packit.DetectContext) (packit.DetectResult, error) {
 
 		projectPath, err := libnodejs.FindProjectPath(context.WorkingDir)
@@ -29,7 +29,7 @@ func Detect(packageJSONParser VersionParser) packit.DetectFunc {
 			return packit.DetectResult{}, err
 		}
 
-		version, err := packageJSONParser.ParseVersion(filepath.Join(projectPath, "package.json"))
+		pkg, err := libnodejs.ParsePackageJSON(projectPath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return packit.DetectResult{}, packit.Fail.WithMessage("no 'package.json' found in project path %s", filepath.Join(projectPath))
@@ -37,6 +37,7 @@ func Detect(packageJSONParser VersionParser) packit.DetectFunc {
 
 			return packit.DetectResult{}, err
 		}
+		version := pkg.GetVersion()
 
 		nodeDependency := packit.BuildPlanRequirement{
 			Name: Node,
