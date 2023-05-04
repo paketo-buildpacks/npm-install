@@ -108,7 +108,7 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 			_, err := detect(packit.DetectContext{
 				WorkingDir: "/working-dir",
 			})
-			Expect(err).To(MatchError(packit.Fail))
+			Expect(err).To(MatchError(packit.Fail.WithMessage("no 'package.json' found in project path /working-dir")))
 		})
 	})
 
