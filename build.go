@@ -47,6 +47,8 @@ type Symlinker interface {
 
 //go:generate faux --interface SymlinkResolver --output fakes/symlink_resolver.go
 type SymlinkResolver interface {
+	ParseLockfile(lockfilePath string) (Lockfile, error)
+	Copy(lockfilePath, sourceLayerPath, targetLayerPath string) error
 	Resolve(lockfilePath, layerPath string) error
 }
 
@@ -249,9 +251,16 @@ func Build(projectPathParser PathParser,
 					return packit.BuildResult{}, err
 				}
 
-				err = symlinkResolver.Resolve(filepath.Join(projectPath, "package-lock.json"), targetLayerPath)
-				if err != nil {
-					return packit.BuildResult{}, err
+				if build {
+					err = symlinkResolver.Copy(filepath.Join(projectPath, "package-lock.json"), buildLayerPath, layer.Path)
+					if err != nil {
+						return packit.BuildResult{}, err
+					}
+				} else {
+					err = symlinkResolver.Resolve(filepath.Join(projectPath, "package-lock.json"), targetLayerPath)
+					if err != nil {
+						return packit.BuildResult{}, err
+					}
 				}
 
 				logger.Action("Completed in %s", duration.Round(time.Millisecond))

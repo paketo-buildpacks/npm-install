@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	npminstall "github.com/paketo-buildpacks/npm-install"
 	"github.com/paketo-buildpacks/npm-install/cmd/setup-symlinks/internal"
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
@@ -26,6 +27,7 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 		executablePath string
 		appDir         string
 		tmpDir         string
+		resolver       npminstall.LinkedModuleResolver
 	)
 
 	it.Before(func() {
@@ -49,6 +51,40 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 		err = os.WriteFile(executablePath, []byte(""), 0600)
 		Expect(err).NotTo(HaveOccurred())
 
+		Expect(os.MkdirAll(filepath.Join(appDir, "src", "packages", "module-1"), os.ModePerm)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(appDir, "src", "packages", "module-1", "index.js"), nil, 0400)).To(Succeed())
+
+		Expect(os.MkdirAll(filepath.Join(appDir, "workspaces", "example", "module-3"), os.ModePerm)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(appDir, "workspaces", "example", "module-3", "index.js"), nil, 0400)).To(Succeed())
+
+		Expect(os.MkdirAll(filepath.Join(appDir, "module-5"), os.ModePerm)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(appDir, "module-5", "index.js"), nil, 0400)).To(Succeed())
+
+		resolver = npminstall.NewLinkedModuleResolver(npminstall.NewLinker(tmpDir))
+		err = os.WriteFile(filepath.Join(appDir, "package-lock.json"), []byte(`{
+			"packages": {
+				"module-1": {
+					"resolved": "src/packages/module-1",
+					"link": true
+				},
+				"module-2": {
+					"resolved": "http://example.com/module-2.tgz"
+				},
+				"module-3": {
+					"resolved": "workspaces/example/module-3",
+					"link": true
+				},
+				"module-4": {
+					"resolved": "http://example.com/module-4.tgz"
+				},
+				"module-5": {
+					"resolved": "module-5",
+					"link": true
+				}
+			}
+		}`), 0600)
+		Expect(err).NotTo(HaveOccurred())
+
 	})
 
 	it.After(func() {
@@ -58,7 +94,10 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	it("creates a symlink to the node_modules dir in the layer", func() {
-		err := internal.Run(executablePath, appDir)
+		err := resolver.Resolve(filepath.Join(appDir, "package-lock.json"), layerDir)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = internal.Run(executablePath, appDir, resolver)
 		Expect(err).NotTo(HaveOccurred())
 
 		link, err := os.Readlink(filepath.Join(tmpDir, "node_modules"))
@@ -72,7 +111,10 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it("replaces it", func() {
-			err := internal.Run(executablePath, appDir)
+			err := resolver.Resolve(filepath.Join(appDir, "package-lock.json"), layerDir)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = internal.Run(executablePath, appDir, resolver)
 			Expect(err).NotTo(HaveOccurred())
 
 			link, err := os.Readlink(filepath.Join(tmpDir, "node_modules"))
@@ -88,12 +130,52 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it("ensures the parent directory exists", func() {
-			err := internal.Run(executablePath, appDir)
+			err := resolver.Resolve(filepath.Join(appDir, "package-lock.json"), layerDir)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = internal.Run(executablePath, appDir, resolver)
 			Expect(err).NotTo(HaveOccurred())
 
 			link, err := os.Readlink(filepath.Join(tmpDir, "non-existing-tempdir", "node_modules"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(link).To(Equal(filepath.Join(layerDir, "node_modules")))
+		})
+	})
+
+	context("when appDir contains workspace packages ", func() {
+
+		it("ensures symlinks to the layer exist at launch time", func() {
+
+			err := resolver.Resolve(filepath.Join(appDir, "package-lock.json"), layerDir)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = internal.Run(executablePath, appDir, resolver)
+			Expect(err).NotTo(HaveOccurred())
+
+			link, err := os.Readlink(filepath.Join(appDir, "src", "packages", "module-1"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(tmpDir, "src", "packages", "module-1")))
+
+			link, err = os.Readlink(link)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(layerDir, "src", "packages", "module-1")))
+
+			link, err = os.Readlink(filepath.Join(appDir, "workspaces", "example", "module-3"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(tmpDir, "workspaces", "example", "module-3")))
+
+			link, err = os.Readlink(link)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(layerDir, "workspaces", "example", "module-3")))
+
+			link, err = os.Readlink(filepath.Join(appDir, "module-5"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(tmpDir, "module-5")))
+
+			link, err = os.Readlink(link)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(layerDir, "module-5")))
+
 		})
 	})
 
@@ -108,7 +190,7 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it("returns an error", func() {
-				err := internal.Run(executablePath, appDir)
+				err := internal.Run(executablePath, appDir, resolver)
 				Expect(err).To(MatchError(ContainSubstring("permission denied")))
 			})
 		})

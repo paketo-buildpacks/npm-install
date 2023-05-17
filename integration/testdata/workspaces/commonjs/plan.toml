@@ -8,4 +8,5 @@
   name = "node_modules"
 
   [requires.metadata]
+    build = true
     launch = true
