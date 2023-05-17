@@ -3,6 +3,7 @@ package npminstall_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -33,7 +34,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		processCacheDir   string
 		processNpmrcPath  string
 
-		projectPathParser    *fakes.PathParser
 		buildProcess         *fakes.BuildProcess
 		buildManager         *fakes.BuildManager
 		configurationManager *fakes.ConfigurationManager
@@ -60,8 +60,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		cnbDir, err = os.MkdirTemp("", "cnb")
 		Expect(err).NotTo(HaveOccurred())
 
-		projectPathParser = &fakes.PathParser{}
-		projectPathParser.GetCall.Returns.ProjectPath = ""
+		t.Setenv("BP_NODE_PROJECT_PATH", "")
 
 		buildProcess = &fakes.BuildProcess{}
 		buildProcess.ShouldRunCall.Returns.Run = true
@@ -107,7 +106,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		symlinkResolver = &fakes.SymlinkResolver{}
 
 		build = npminstall.Build(
-			projectPathParser,
 			entryResolver,
 			configurationManager,
 			buildManager,
@@ -254,8 +252,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(cacheLayer.Build).To(BeFalse())
 			Expect(cacheLayer.Launch).To(BeFalse())
 			Expect(cacheLayer.Cache).To(BeTrue())
-
-			Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
 
 			Expect(configurationManager.DeterminePathCall.Receives.Typ).To(Equal("npmrc"))
 			Expect(configurationManager.DeterminePathCall.Receives.PlatformDir).To(Equal("some-platform-path"))
@@ -405,8 +401,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(cacheLayer.Build).To(BeFalse())
 			Expect(cacheLayer.Launch).To(BeFalse())
 			Expect(cacheLayer.Cache).To(BeTrue())
-
-			Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
 
 			Expect(configurationManager.DeterminePathCall.Receives.Typ).To(Equal("npmrc"))
 			Expect(configurationManager.DeterminePathCall.Receives.PlatformDir).To(Equal("some-platform-path"))
@@ -722,7 +716,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
 			Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(workingDir))
 			Expect(buildProcess.RunCall.CallCount).To(Equal(0))
 
@@ -733,7 +726,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		context("when BP_NODE_PROJECT_PATH is set", func() {
 			it.Before(func() {
 				buildProcess.ShouldRunCall.Returns.Run = true
-				projectPathParser.GetCall.Returns.ProjectPath = "some-dir"
+				t.Setenv("BP_NODE_PROJECT_PATH", "some-dir")
 				Expect(os.MkdirAll(filepath.Join(workingDir, "some-dir", "node_modules"), os.ModePerm))
 			})
 
@@ -752,8 +745,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-
-				Expect(projectPathParser.GetCall.Receives.Path).To(Equal(workingDir))
 
 				Expect(buildManager.ResolveCall.Receives.WorkingDir).To(Equal(filepath.Join(workingDir, "some-dir")))
 
@@ -859,7 +850,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 		context("when the project path parser provided fails", func() {
 			it.Before(func() {
-				projectPathParser.GetCall.Returns.Err = errors.New("failed to parse project path")
+				t.Setenv("BP_NODE_PROJECT_PATH", "does_not_exist")
 			})
 
 			it("returns an error", func() {
@@ -873,7 +864,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 						},
 					},
 				})
-				Expect(err).To(MatchError("failed to parse project path"))
+				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("could not find project path \"%s/does_not_exist\": stat %s/does_not_exist: no such file or directory", workingDir, workingDir))))
 			})
 		})
 

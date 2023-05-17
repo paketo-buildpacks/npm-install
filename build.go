@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/paketo-buildpacks/libnodejs"
 	"github.com/paketo-buildpacks/packit/v2/sbom"
 
 	"github.com/paketo-buildpacks/packit/v2"
@@ -52,8 +53,7 @@ type SymlinkResolver interface {
 	Resolve(lockfilePath, layerPath string) error
 }
 
-func Build(projectPathParser PathParser,
-	entryResolver EntryResolver,
+func Build(entryResolver EntryResolver,
 	configurationManager ConfigurationManager,
 	buildManager BuildManager,
 	pruneProcess PruneProcess,
@@ -74,12 +74,10 @@ func Build(projectPathParser PathParser,
 
 		logger.Process("Resolving installation process")
 
-		projectPath, err := projectPathParser.Get(context.WorkingDir)
+		projectPath, err := libnodejs.FindProjectPath(context.WorkingDir)
 		if err != nil {
 			return packit.BuildResult{}, err
 		}
-
-		projectPath = filepath.Join(context.WorkingDir, projectPath)
 
 		npmCacheLayer, err := context.Layers.Get(LayerNameCache)
 		if err != nil {

@@ -22,7 +22,6 @@ func TestUnitNPMInstall(t *testing.T) {
 	suite("Linker", testLinker)
 	suite("PackageJSONParser", testPackageJSONParser)
 	suite("PackageManangerConfigurationManager", testPackageManagerConfigurationManager)
-	suite("ProjectPathParser", testProjectPathParser)
 	suite("PruneBuildProcess", testPruneBuildProcess)
 	suite("RebuildBuildProcess", testRebuildBuildProcess)
 	suite("UpdateNpmCacheLayer", testUpdateNpmCache)

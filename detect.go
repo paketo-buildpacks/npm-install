@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/paketo-buildpacks/libnodejs"
 	"github.com/paketo-buildpacks/packit/v2"
 )
 
@@ -20,23 +21,18 @@ type VersionParser interface {
 	ParseVersion(path string) (version string, err error)
 }
 
-//go:generate faux --interface PathParser --output fakes/path_parser.go
-type PathParser interface {
-	Get(path string) (projectPath string, err error)
-}
-
-func Detect(projectPathParser PathParser, packageJSONParser VersionParser) packit.DetectFunc {
+func Detect(packageJSONParser VersionParser) packit.DetectFunc {
 	return func(context packit.DetectContext) (packit.DetectResult, error) {
 
-		projectPath, err := projectPathParser.Get(context.WorkingDir)
+		projectPath, err := libnodejs.FindProjectPath(context.WorkingDir)
 		if err != nil {
 			return packit.DetectResult{}, err
 		}
 
-		version, err := packageJSONParser.ParseVersion(filepath.Join(context.WorkingDir, projectPath, "package.json"))
+		version, err := packageJSONParser.ParseVersion(filepath.Join(projectPath, "package.json"))
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return packit.DetectResult{}, packit.Fail
+				return packit.DetectResult{}, packit.Fail.WithMessage("no 'package.json' found in project path %s", filepath.Join(projectPath))
 			}
 
 			return packit.DetectResult{}, err
