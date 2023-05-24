@@ -662,6 +662,13 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(symlinkResolver.ResolveCall.Receives.LockfilePath).To(Equal(filepath.Join(workingDir, "package-lock.json")))
 			Expect(symlinkResolver.ResolveCall.Receives.LayerPath).To(Equal(filepath.Join(buildLayer.Path)))
+			//Resolve should only be called once targeting the build-modules layer
+			Expect(symlinkResolver.ResolveCall.CallCount).To(Equal(1))
+
+			//Copy should be called in place of Resolve to copy workspace files to the launch-modules layer
+			Expect(symlinkResolver.CopyCall.Receives.LockfilePath).To(Equal(filepath.Join(workingDir, "package-lock.json")))
+			Expect(symlinkResolver.CopyCall.Receives.SourceLayerPath).To(Equal(filepath.Join(buildLayer.Path)))
+			Expect(symlinkResolver.CopyCall.Receives.TargetLayerPath).To(Equal(filepath.Join(launchLayer.Path)))
 		})
 	})
 

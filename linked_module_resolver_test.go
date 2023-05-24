@@ -15,8 +15,8 @@ func testLinkedModuleResolver(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 
-		workspace, layerPath, tmpDir string
-		resolver                     npminstall.LinkedModuleResolver
+		workspace, layerPath, otherLayerPath, tmpDir string
+		resolver                                     npminstall.LinkedModuleResolver
 	)
 
 	it.Before(func() {
@@ -25,6 +25,9 @@ func testLinkedModuleResolver(t *testing.T, context spec.G, it spec.S) {
 		Expect(err).NotTo(HaveOccurred())
 
 		layerPath, err = os.MkdirTemp("", "layer")
+		Expect(err).NotTo(HaveOccurred())
+
+		otherLayerPath, err = os.MkdirTemp("", "another-layer")
 		Expect(err).NotTo(HaveOccurred())
 
 		tmpDir, err = os.MkdirTemp("", "")
@@ -69,6 +72,7 @@ func testLinkedModuleResolver(t *testing.T, context spec.G, it spec.S) {
 	it.After(func() {
 		Expect(os.RemoveAll(workspace)).To(Succeed())
 		Expect(os.RemoveAll(layerPath)).To(Succeed())
+		Expect(os.RemoveAll(otherLayerPath)).To(Succeed())
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
@@ -158,6 +162,74 @@ func testLinkedModuleResolver(t *testing.T, context spec.G, it spec.S) {
 					Expect(err).To(MatchError(ContainSubstring("failed to symlink linked module directory")))
 				})
 			})
+		})
+	})
+
+	context("Copy", func() {
+		it.Before(func() {
+			Expect(os.MkdirAll(filepath.Join(layerPath, "module-5"), os.ModePerm)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(layerPath, "module-5", "index.js"), nil, 0400)).To(Succeed())
+
+			Expect(os.MkdirAll(filepath.Join(layerPath, "src", "packages", "module-1"), os.ModePerm)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(layerPath, "src", "packages", "module-1", "index.js"), nil, 0400)).To(Succeed())
+
+			Expect(os.MkdirAll(filepath.Join(layerPath, "workspaces", "example", "module-3"), os.ModePerm)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(layerPath, "workspaces", "example", "module-3", "index.js"), nil, 0400)).To(Succeed())
+
+		})
+
+		it("resolves all linked modules in a package-lock.json", func() {
+			err := resolver.Copy(filepath.Join(workspace, "package-lock.json"), layerPath, otherLayerPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(filepath.Join(layerPath, "module-5", "index.js")).To(BeARegularFile())
+			Expect(filepath.Join(layerPath, "src", "packages", "module-1", "index.js")).To(BeARegularFile())
+			Expect(filepath.Join(layerPath, "workspaces", "example", "module-3", "index.js")).To(BeARegularFile())
+
+		})
+
+		context("failure cases", func() {
+			context("when the lockfile cannot be opened", func() {
+				it("returns an error", func() {
+					err := resolver.Resolve("/no/such/path/to/package-lock.json", layerPath)
+					Expect(err).To(MatchError(ContainSubstring(`failed to open "package-lock.json"`)))
+				})
+			})
+
+			context("when the lockfile cannot be parsed", func() {
+				it.Before(func() {
+					Expect(os.WriteFile(filepath.Join(workspace, "package-lock.json"), []byte("%%%"), 0600)).To(Succeed())
+				})
+
+				it("returns an error", func() {
+					err := resolver.Resolve(filepath.Join(workspace, "package-lock.json"), layerPath)
+					Expect(err).To(MatchError(ContainSubstring(`failed to parse "package-lock.json"`)))
+				})
+			})
+
+			context("when the destination cannot be scaffolded", func() {
+				it.Before(func() {
+					Expect(os.Mkdir(filepath.Join(otherLayerPath, "sub-dir"), 0400)).To(Succeed())
+				})
+
+				it("returns an error", func() {
+					err := resolver.Resolve(filepath.Join(workspace, "package-lock.json"), filepath.Join(otherLayerPath, "sub-dir"))
+					Expect(err).To(MatchError(ContainSubstring("failed to setup linked module directory scaffolding")))
+				})
+			})
+
+			context("when the destination exists", func() {
+				it.Before(func() {
+					Expect(os.MkdirAll(filepath.Join(otherLayerPath, "module-5"), os.ModePerm)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(otherLayerPath, "module-5", "index.js"), nil, 0400)).To(Succeed())
+				})
+
+				it("returns an error", func() {
+					err := resolver.Resolve(filepath.Join(workspace, "package-lock.json"), layerPath)
+					Expect(err).To(MatchError(ContainSubstring("failed to copy linked module directory to layer path")))
+				})
+			})
+
 		})
 	})
 }
