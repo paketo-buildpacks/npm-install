@@ -1,6 +1,7 @@
 package internal_test
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -143,9 +144,7 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when appDir contains workspace packages ", func() {
-
 		it("ensures symlinks to the layer exist at launch time", func() {
-
 			err := resolver.Resolve(filepath.Join(appDir, "package-lock.json"), layerDir)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -175,7 +174,36 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 			link, err = os.Readlink(link)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(link).To(Equal(filepath.Join(layerDir, "module-5")))
+		})
 
+		it("ensures symlinks to the layer exists if the resolved path is missing", func() {
+			err := resolver.Resolve(filepath.Join(appDir, "package-lock.json"), layerDir)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = os.RemoveAll(filepath.Join(appDir, "module-5"))
+			Expect(err).NotTo(HaveOccurred())
+
+			err = internal.Run(executablePath, appDir, resolver)
+			Expect(err).NotTo(HaveOccurred())
+
+			link, err := os.Readlink(filepath.Join(appDir, "src", "packages", "module-1"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(tmpDir, "src", "packages", "module-1")))
+
+			link, err = os.Readlink(link)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(layerDir, "src", "packages", "module-1")))
+
+			link, err = os.Readlink(filepath.Join(appDir, "workspaces", "example", "module-3"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(tmpDir, "workspaces", "example", "module-3")))
+
+			link, err = os.Readlink(link)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(link).To(Equal(filepath.Join(layerDir, "workspaces", "example", "module-3")))
+
+			_, err = os.Readlink(filepath.Join(appDir, "module-5"))
+			Expect(err).To(MatchError(fs.ErrNotExist))
 		})
 	})
 
