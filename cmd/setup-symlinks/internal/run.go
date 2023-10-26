@@ -46,22 +46,23 @@ func Run(executablePath, appDir string, symlinkResolver npminstall.SymlinkResolv
 }
 
 func resolveWorkspaceModules(symlinkResolver npminstall.SymlinkResolver, appDir, layerPath string) error {
-
 	lockFile, err := symlinkResolver.ParseLockfile(filepath.Join(appDir, "package-lock.json"))
 	if err != nil {
 		return err
 	}
 
-	dir := filepath.Dir(filepath.Join(appDir, "package-lock.json"))
 	for _, pkg := range lockFile.Packages {
 		if pkg.Link {
-
-			linkPath, err := os.Readlink(filepath.Join(dir, pkg.Resolved))
+			linkPath, err := os.Readlink(filepath.Join(appDir, pkg.Resolved))
 			if err != nil {
-				return err
+				if errors.Is(err, fs.ErrNotExist) {
+					continue
+				} else {
+					return err
+				}
 			}
 
-			err = createSymlink(filepath.Join(layerPath, pkg.Resolved), filepath.Join(linkPath, pkg.Resolved))
+			err = createSymlink(filepath.Join(layerPath, pkg.Resolved), linkPath)
 			if err != nil {
 				return err
 			}
