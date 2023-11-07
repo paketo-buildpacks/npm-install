@@ -16,7 +16,7 @@ import (
 	. "github.com/paketo-buildpacks/occam/matchers"
 )
 
-func testVendored(t *testing.T, context spec.G, it spec.S) {
+func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect     = NewWithT(t).Expect
 		Eventually = NewWithT(t).Eventually
@@ -34,7 +34,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 		docker = occam.NewDocker()
 	})
 
-	context("when the node_modules are vendored", func() {
+	context("when there are node modules that need to be compiled", func() {
 		var (
 			image     occam.Image
 			container occam.Container
@@ -48,7 +48,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 			name, err = occam.RandomName()
 			Expect(err).NotTo(HaveOccurred())
 
-			source, err = occam.Source(filepath.Join("testdata", "vendored"))
+			source, err = occam.Source(filepath.Join("testdata", "with_native_modules"))
 			Expect(err).NotTo(HaveOccurred())
 
 			if settings.Extensions.UbiNodejsExtension.Online != "" {

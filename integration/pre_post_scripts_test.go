@@ -22,6 +22,8 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 
 		pack   occam.Pack
 		docker occam.Docker
+
+		pullPolicy = "never"
 	)
 
 	it.Before(func() {
@@ -30,6 +32,12 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when the npm and node buildpacks are cached", func() {
+		//UBI does not support offline installation at the moment,
+		//so we are skipping it.
+		if settings.Extensions.UbiNodejsExtension.Online != "" {
+			return
+		}
+
 		var (
 			image     occam.Image
 			container occam.Container
@@ -42,6 +50,10 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 			var err error
 			name, err = occam.RandomName()
 			Expect(err).NotTo(HaveOccurred())
+
+			if settings.Extensions.UbiNodejsExtension.Online != "" {
+				pullPolicy = "always"
+			}
 		})
 
 		it.After(func() {
@@ -58,13 +70,16 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 
 			var logs fmt.Stringer
 			image, logs, err = pack.Build.
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Offline,
 					settings.Buildpacks.NPMInstall.Online,
 					settings.Buildpacks.BuildPlan.Online,
 				).
-				WithPullPolicy("never").
 				WithNetwork("none").
+				WithPullPolicy(pullPolicy).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
 

@@ -34,17 +34,21 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 		const nvmrcVersion = `18.\d+\.\d+`
 
 		var (
-			image     occam.Image
-			container occam.Container
-
-			name   string
-			source string
+			image      occam.Image
+			container  occam.Container
+			name       string
+			source     string
+			pullPolicy = "never"
 		)
 
 		it.Before(func() {
 			var err error
 			name, err = occam.RandomName()
 			Expect(err).ToNot(HaveOccurred())
+
+			if settings.Extensions.UbiNodejsExtension.Online != "" {
+				pullPolicy = "always"
+			}
 		})
 
 		it.After(func() {
@@ -60,7 +64,10 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 
 			image, _, err = pack.Build.
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
@@ -96,7 +103,10 @@ func testVersioning(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).ToNot(HaveOccurred())
 
 			image, _, err = pack.Build.
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
