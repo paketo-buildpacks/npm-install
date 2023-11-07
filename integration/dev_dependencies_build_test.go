@@ -20,11 +20,17 @@ func testDevDependenciesDuringBuild(t *testing.T, context spec.G, it spec.S) {
 
 		pack   occam.Pack
 		docker occam.Docker
+
+		pullPolicy = "never"
 	)
 
 	it.Before(func() {
 		pack = occam.NewPack()
 		docker = occam.NewDocker()
+
+		if settings.Extensions.UbiNodejsExtension.Online != "" {
+			pullPolicy = "always"
+		}
 	})
 
 	context("when the node_modules are needed during build", func() {
@@ -62,13 +68,16 @@ func testDevDependenciesDuringBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			image, logs, err = pack.Build.
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
 					settings.Buildpacks.BuildPlan.Online,
 					settings.Buildpacks.NPMList.Online,
 				).
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
 				WithSBOMOutputDir(sbomDir).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())

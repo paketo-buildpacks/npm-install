@@ -26,6 +26,9 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 
 		name   string
 		source string
+
+		pullPolicy       = "never"
+		extenderBuildStr = ""
 	)
 
 	it.Before(func() {
@@ -38,6 +41,11 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 		var err error
 		name, err = occam.RandomName()
 		Expect(err).NotTo(HaveOccurred())
+
+		if settings.Extensions.UbiNodejsExtension.Online != "" {
+			pullPolicy = "always"
+			extenderBuildStr = "[extender (build)] "
+		}
 	})
 
 	it.After(func() {
@@ -71,7 +79,10 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			build := pack.Build.
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
@@ -94,7 +105,10 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			build := pack.Build.
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
@@ -132,17 +146,17 @@ func testPackageLockMismatch(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).To(HaveOccurred(), logs.String)
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s 1.2.3", settings.Buildpack.Name),
-				"  Resolving installation process",
-				"    Process inputs:",
-				"      node_modules      -> \"Not found\"",
-				"      npm-cache         -> \"Not found\"",
-				"      package-lock.json -> \"Found\"",
-				"",
-				"    Selected NPM build process: 'npm ci'",
-				"",
-				"  Executing launch environment install process",
-				fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("%s%s 1.2.3", extenderBuildStr, settings.Buildpack.Name),
+				extenderBuildStr+"  Resolving installation process",
+				extenderBuildStr+"    Process inputs:",
+				extenderBuildStr+"      node_modules      -> \"Not found\"",
+				extenderBuildStr+"      npm-cache         -> \"Not found\"",
+				extenderBuildStr+"      package-lock.json -> \"Found\"",
+				extenderBuildStr+"",
+				extenderBuildStr+"    Selected NPM build process: 'npm ci'",
+				extenderBuildStr+"",
+				extenderBuildStr+"  Executing launch environment install process",
+				fmt.Sprintf(extenderBuildStr+"    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 			))
 
 			Expect(logs).To(ContainSubstring(

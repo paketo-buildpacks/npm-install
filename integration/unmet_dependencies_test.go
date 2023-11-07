@@ -20,6 +20,8 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 
 		name   string
 		source string
+
+		pullPolicy = "never"
 	)
 
 	it.Before(func() {
@@ -29,6 +31,10 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 		var err error
 		name, err = occam.RandomName()
 		Expect(err).NotTo(HaveOccurred())
+
+		if settings.Extensions.UbiNodejsExtension.Online != "" {
+			pullPolicy = "always"
+		}
 	})
 
 	it.After(func() {
@@ -43,7 +49,10 @@ func testUnmetDependencies(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			_, logs, err := pack.WithNoColor().Build.
-				WithPullPolicy("never").
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
+				WithPullPolicy(pullPolicy).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
