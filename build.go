@@ -156,7 +156,7 @@ func Build(entryResolver EntryResolver,
 				}
 				path := filepath.Join(layer.Path, "node_modules", ".bin")
 				layer.BuildEnv.Append("PATH", path, string(os.PathListSeparator))
-				layer.BuildEnv.Override("NODE_ENV", "development")
+				layer.BuildEnv.Override("NODE_ENV", "production")
 
 				logger.EnvironmentVariables(layer)
 

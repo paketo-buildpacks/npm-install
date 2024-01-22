@@ -46,7 +46,7 @@ func (r InstallBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 	}
 
 	if !launch {
-		environment = append(environment, "NODE_ENV=development")
+		environment = append(environment, "NODE_ENV=production")
 	}
 
 	args := []string{"install", "--unsafe-perm", "--cache", cacheDir}

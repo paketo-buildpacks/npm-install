@@ -90,7 +90,7 @@ func (r RebuildBuildProcess) Run(modulesDir, cacheDir, workingDir, npmrcPath str
 	}
 
 	if !launch {
-		env = append(env, "NODE_ENV=development")
+		env = append(env, "NODE_ENV=production")
 	}
 
 	nodeHome, _ := r.environment.Lookup("NODE_HOME")
