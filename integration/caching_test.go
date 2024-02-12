@@ -168,7 +168,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				extenderBuildStr+"  Executing launch environment install process",
 				fmt.Sprintf(extenderBuildStr+"    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 			))
-			Expect(logs).To(ContainLines(MatchRegexp(`\[extender \(build\)\]       Completed in (\d+\.\d+|\d{3})`)))
+			Expect(logs).To(ContainLines(MatchRegexp(extenderBuildStrEscaped + `      Completed in (\d+\.\d+|\d{3})`)))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring launch environment",
 				extenderBuildStr+"    NODE_PROJECT_PATH   -> \"/workspace\"",
