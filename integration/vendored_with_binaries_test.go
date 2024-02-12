@@ -22,6 +22,8 @@ func testVendoredWithBinaries(t *testing.T, context spec.G, it spec.S) {
 
 		pack   occam.Pack
 		docker occam.Docker
+
+		pullPolicy = "never"
 	)
 
 	it.Before(func() {
@@ -42,6 +44,10 @@ func testVendoredWithBinaries(t *testing.T, context spec.G, it spec.S) {
 			var err error
 			name, err = occam.RandomName()
 			Expect(err).NotTo(HaveOccurred())
+
+			if settings.Extensions.UbiNodejsExtension.Online != "" {
+				pullPolicy = "always"
+			}
 		})
 
 		it.After(func() {
@@ -58,7 +64,10 @@ func testVendoredWithBinaries(t *testing.T, context spec.G, it spec.S) {
 
 			var logs fmt.Stringer
 			image, logs, err = pack.WithVerbose().WithNoColor().Build.
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,

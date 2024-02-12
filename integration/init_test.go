@@ -39,16 +39,23 @@ var settings struct {
 		}
 	}
 
+	Extensions struct {
+		UbiNodejsExtension struct {
+			Online string
+		}
+	}
+
 	Buildpack struct {
 		ID   string
 		Name string
 	}
 
 	Config struct {
-		BuildPlan     string `json:"build-plan"`
-		NodeEngine    string `json:"node-engine"`
-		NodeRunScript string `json:"node-run-script"`
-		NGINX         string `json:"nginx"`
+		BuildPlan          string `json:"build-plan"`
+		NodeEngine         string `json:"node-engine"`
+		NodeRunScript      string `json:"node-run-script"`
+		NGINX              string `json:"nginx"`
+		UbiNodejsExtension string `json:"ubi-nodejs-extension"`
 	}
 }
 
@@ -75,6 +82,16 @@ func TestIntegration(t *testing.T) {
 
 	buildpackStore := occam.NewBuildpackStore()
 
+	pack := occam.NewPack()
+
+	builder, err := pack.Builder.Inspect.Execute()
+	Expect(err).NotTo(HaveOccurred())
+
+	if builder.BuilderName == "paketocommunity/builder-ubi-buildpackless-base:latest" {
+		settings.Extensions.UbiNodejsExtension.Online, err = buildpackStore.Get.
+			Execute(settings.Config.UbiNodejsExtension)
+		Expect(err).ToNot(HaveOccurred())
+	}
 	settings.Buildpacks.BuildPlan.Online, err = buildpackStore.Get.
 		Execute(settings.Config.BuildPlan)
 	Expect(err).NotTo(HaveOccurred())
@@ -108,6 +125,7 @@ func TestIntegration(t *testing.T) {
 	suite("DevDependenciesDuringBuild", testDevDependenciesDuringBuild)
 	suite("EmptyNodeModules", testEmptyNodeModules)
 	suite("Logging", testLogging)
+	suite("NativeModules", testNativeModules)
 	suite("NoNodeModules", testNoNodeModules)
 	suite("Npmrc", testNpmrc)
 	suite("PackageLockMismatch", testPackageLockMismatch)

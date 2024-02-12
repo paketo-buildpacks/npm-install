@@ -18,13 +18,18 @@ func testProjectPath(t *testing.T, context spec.G, it spec.S) {
 		Expect     = NewWithT(t).Expect
 		Eventually = NewWithT(t).Eventually
 
-		pack   occam.Pack
-		docker occam.Docker
+		pack       occam.Pack
+		docker     occam.Docker
+		pullPolicy = "never"
 	)
 
 	it.Before(func() {
 		pack = occam.NewPack()
 		docker = occam.NewDocker()
+
+		if settings.Extensions.UbiNodejsExtension.Online != "" {
+			pullPolicy = "always"
+		}
 	})
 
 	context("when the PROJECT_PATH env var is set", func() {
@@ -55,13 +60,16 @@ func testProjectPath(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			image, _, err = pack.Build.
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
 					settings.Buildpacks.BuildPlan.Online,
 				).
 				WithEnv(map[string]string{"BP_NODE_PROJECT_PATH": "server"}).
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 

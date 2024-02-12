@@ -26,6 +26,10 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 
 		name   string
 		source string
+
+		pullPolicy              = "never"
+		extenderBuildStr        = ""
+		extenderBuildStrEscaped = ""
 	)
 
 	it.Before(func() {
@@ -38,6 +42,12 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 		var err error
 		name, err = occam.RandomName()
 		Expect(err).NotTo(HaveOccurred())
+
+		if settings.Extensions.UbiNodejsExtension.Online != "" {
+			pullPolicy = "always"
+			extenderBuildStr = "[extender (build)] "
+			extenderBuildStrEscaped = `\[extender \(build\)\] `
+		}
 	})
 
 	it.After(func() {
@@ -60,7 +70,10 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			build := pack.Build.
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
@@ -111,7 +124,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].SHA))
 
 			Expect(logs).To(ContainLines(
-				"  Executing launch environment install process",
+				extenderBuildStr + "  Executing launch environment install process",
 			))
 		})
 	})
@@ -123,7 +136,10 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			build := pack.Build.
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
@@ -140,25 +156,25 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(firstImage.Buildpacks[1].Layers).To(HaveKey("launch-modules"))
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s 1.2.3", settings.Buildpack.Name),
-				"  Resolving installation process",
-				"    Process inputs:",
-				"      node_modules      -> \"Not found\"",
-				"      npm-cache         -> \"Not found\"",
-				"      package-lock.json -> \"Found\"",
-				"",
-				"    Selected NPM build process: 'npm ci'"))
+				fmt.Sprintf("%s%s 1.2.3", extenderBuildStr, settings.Buildpack.Name),
+				extenderBuildStr+"  Resolving installation process",
+				extenderBuildStr+"    Process inputs:",
+				extenderBuildStr+"      node_modules      -> \"Not found\"",
+				extenderBuildStr+"      npm-cache         -> \"Not found\"",
+				extenderBuildStr+"      package-lock.json -> \"Found\"",
+				extenderBuildStr+"",
+				extenderBuildStr+"    Selected NPM build process: 'npm ci'"))
 			Expect(logs).To(ContainLines(
-				"  Executing launch environment install process",
-				fmt.Sprintf("    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+				extenderBuildStr+"  Executing launch environment install process",
+				fmt.Sprintf(extenderBuildStr+"    Running 'npm ci --unsafe-perm --cache /layers/%s/npm-cache'", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 			))
-			Expect(logs).To(ContainLines(MatchRegexp(`      Completed in (\d+\.\d+|\d{3})`)))
+			Expect(logs).To(ContainLines(MatchRegexp(extenderBuildStrEscaped + `      Completed in (\d+\.\d+|\d{3})`)))
 			Expect(logs).To(ContainLines(
-				"  Configuring launch environment",
-				"    NODE_PROJECT_PATH   -> \"/workspace\"",
-				"    NPM_CONFIG_LOGLEVEL -> \"error\"",
-				fmt.Sprintf("    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
-				"",
+				extenderBuildStr+"  Configuring launch environment",
+				extenderBuildStr+"    NODE_PROJECT_PATH   -> \"/workspace\"",
+				extenderBuildStr+"    NPM_CONFIG_LOGLEVEL -> \"error\"",
+				fmt.Sprintf(extenderBuildStr+"    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+				extenderBuildStr+"",
 			))
 
 			container, err := docker.Container.Run.
@@ -203,8 +219,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 
 				build := pack.Build.
-					WithPullPolicy("never").
-					WithEnv(map[string]string{"BP_NODE_VERSION": "~18"}).
+					WithPullPolicy(pullPolicy).
+					WithExtensions(
+						settings.Extensions.UbiNodejsExtension.Online,
+					).
+					WithEnv(map[string]string{"BP_NODE_VERSION": "~16"}).
 					WithBuildpacks(
 						settings.Buildpacks.NodeEngine.Online,
 						settings.Buildpacks.NPMInstall.Online,
@@ -232,8 +251,11 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 				Eventually(container).Should(BeAvailable())
 
 				build = pack.Build.
-					WithPullPolicy("never").
-					WithEnv(map[string]string{"BP_NODE_VERSION": "~20"}).
+					WithPullPolicy(pullPolicy).
+					WithExtensions(
+						settings.Extensions.UbiNodejsExtension.Online,
+					).
+					WithEnv(map[string]string{"BP_NODE_VERSION": "~18"}).
 					WithBuildpacks(
 						settings.Buildpacks.NodeEngine.Online,
 						settings.Buildpacks.NPMInstall.Online,
@@ -278,7 +300,10 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			build := pack.WithNoColor().Build.
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
@@ -329,16 +354,16 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.Buildpacks[1].Layers["launch-modules"].SHA).To(Equal(firstImage.Buildpacks[1].Layers["launch-modules"].SHA))
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s 1.2.3", settings.Buildpack.Name),
-				"  Resolving installation process",
-				"    Process inputs:",
-				"      node_modules      -> \"Found\"",
-				"      npm-cache         -> \"Not found\"",
-				"      package-lock.json -> \"Found\"",
-				"",
-				MatchRegexp(`    Selected NPM build process:`),
-				"",
-				fmt.Sprintf("  Reusing cached layer /layers/%s/launch-modules", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("%s%s 1.2.3", extenderBuildStr, settings.Buildpack.Name),
+				extenderBuildStr+"  Resolving installation process",
+				extenderBuildStr+"    Process inputs:",
+				extenderBuildStr+"      node_modules      -> \"Found\"",
+				extenderBuildStr+"      npm-cache         -> \"Not found\"",
+				extenderBuildStr+"      package-lock.json -> \"Found\"",
+				extenderBuildStr+"",
+				MatchRegexp(extenderBuildStrEscaped+`    Selected NPM build process:`),
+				extenderBuildStr+"",
+				fmt.Sprintf("%s  Reusing cached layer /layers/%s/launch-modules", extenderBuildStr, strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 			))
 		})
 	})
@@ -349,11 +374,16 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "npm-cache"))
 			Expect(err).NotTo(HaveOccurred())
 
-			build := pack.WithNoColor().Build.WithPullPolicy("never").WithBuildpacks(
-				settings.Buildpacks.NodeEngine.Online,
-				settings.Buildpacks.NPMInstall.Online,
-				settings.Buildpacks.BuildPlan.Online,
-			)
+			build := pack.WithNoColor().Build.
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
+				WithBuildpacks(
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
+				)
 
 			firstImage, logs, err := build.Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
@@ -375,14 +405,14 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Eventually(container).Should(BeAvailable())
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s 1.2.3", settings.Buildpack.Name),
-				"  Resolving installation process",
-				"    Process inputs:",
-				"      node_modules      -> \"Found\"",
-				"      npm-cache         -> \"Found\"",
-				"      package-lock.json -> \"Found\"",
-				"",
-				MatchRegexp(`    Selected NPM build process:`),
+				fmt.Sprintf("%s%s 1.2.3", extenderBuildStr, settings.Buildpack.Name),
+				extenderBuildStr+"  Resolving installation process",
+				extenderBuildStr+"    Process inputs:",
+				extenderBuildStr+"      node_modules      -> \"Found\"",
+				extenderBuildStr+"      npm-cache         -> \"Found\"",
+				extenderBuildStr+"      package-lock.json -> \"Found\"",
+				extenderBuildStr+"",
+				MatchRegexp(extenderBuildStrEscaped+`    Selected NPM build process:`),
 			))
 
 			secondImage, logs, err := build.Execute(name, source)
@@ -406,16 +436,16 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(secondImage.ID).To(Equal(firstImage.ID))
 
 			Expect(logs).To(ContainLines(
-				fmt.Sprintf("%s 1.2.3", settings.Buildpack.Name),
-				"  Resolving installation process",
-				"    Process inputs:",
-				"      node_modules      -> \"Found\"",
-				"      npm-cache         -> \"Found\"",
-				"      package-lock.json -> \"Found\"",
-				"",
-				MatchRegexp(`    Selected NPM build process:`),
-				"",
-				fmt.Sprintf("  Reusing cached layer /layers/%s/npm-cache", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+				fmt.Sprintf("%s%s 1.2.3", extenderBuildStr, settings.Buildpack.Name),
+				extenderBuildStr+"  Resolving installation process",
+				extenderBuildStr+"    Process inputs:",
+				extenderBuildStr+"      node_modules      -> \"Found\"",
+				extenderBuildStr+"      npm-cache         -> \"Found\"",
+				extenderBuildStr+"      package-lock.json -> \"Found\"",
+				extenderBuildStr+"",
+				MatchRegexp(extenderBuildStrEscaped+`    Selected NPM build process:`),
+				extenderBuildStr+"",
+				fmt.Sprintf(extenderBuildStr+"  Reusing cached layer /layers/%s/npm-cache", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 			))
 		})
 	})
@@ -427,7 +457,10 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 			Expect(err).NotTo(HaveOccurred())
 
 			build := pack.Build.
-				WithPullPolicy("never").
+				WithPullPolicy(pullPolicy).
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
 				WithBuildpacks(
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,

@@ -19,11 +19,17 @@ func testWorkspaces(t *testing.T, context spec.G, it spec.S) {
 
 		pack   occam.Pack
 		docker occam.Docker
+
+		pullPolicy = "never"
 	)
 
 	it.Before(func() {
 		pack = occam.NewPack().WithVerbose()
 		docker = occam.NewDocker()
+
+		if settings.Extensions.UbiNodejsExtension.Online != "" {
+			pullPolicy = "always"
+		}
 	})
 
 	context("when a package.json references workspaces", func() {
@@ -55,12 +61,15 @@ func testWorkspaces(t *testing.T, context spec.G, it spec.S) {
 			it("ensures those modules are reachable", func() {
 				var err error
 				image, _, err = pack.Build.
+					WithExtensions(
+						settings.Extensions.UbiNodejsExtension.Online,
+					).
 					WithBuildpacks(
 						settings.Buildpacks.NodeEngine.Online,
 						settings.Buildpacks.NPMInstall.Online,
 						settings.Buildpacks.BuildPlan.Online,
 					).
-					WithPullPolicy("never").
+					WithPullPolicy(pullPolicy).
 					Execute(name, source)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -97,12 +106,15 @@ func testWorkspaces(t *testing.T, context spec.G, it spec.S) {
 			it("ensures those modules are reachable", func() {
 				var err error
 				image, _, err = pack.Build.
+					WithExtensions(
+						settings.Extensions.UbiNodejsExtension.Online,
+					).
 					WithBuildpacks(
 						settings.Buildpacks.NodeEngine.Online,
 						settings.Buildpacks.NPMInstall.Online,
 						settings.Buildpacks.BuildPlan.Online,
 					).
-					WithPullPolicy("never").
+					WithPullPolicy(pullPolicy).
 					Execute(name, source)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -119,51 +131,57 @@ func testWorkspaces(t *testing.T, context spec.G, it spec.S) {
 			})
 		})
 
-		context("when using webpack", func() {
-			it.Before(func() {
-				var err error
-				name, err = occam.RandomName()
-				Expect(err).NotTo(HaveOccurred())
+		if settings.Extensions.UbiNodejsExtension.Online == "" {
 
-				source, err = occam.Source(filepath.Join("testdata", "workspaces", "webpack"))
-				Expect(err).NotTo(HaveOccurred())
+			context("when using webpack", func() {
+				it.Before(func() {
+					var err error
+					name, err = occam.RandomName()
+					Expect(err).NotTo(HaveOccurred())
+
+					source, err = occam.Source(filepath.Join("testdata", "workspaces", "webpack"))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				it.After(func() {
+					Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed())
+					Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
+					Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
+					Expect(os.RemoveAll(source)).To(Succeed())
+				})
+
+				it("ensures those modules are reachable", func() {
+					var err error
+					image, _, err = pack.Build.
+						WithPullPolicy(pullPolicy).
+						WithExtensions(
+							settings.Extensions.UbiNodejsExtension.Online,
+						).
+						WithBuildpacks(
+							settings.Buildpacks.NodeEngine.Online,
+							settings.Buildpacks.NPMInstall.Online,
+							settings.Buildpacks.NodeRunScript.Online,
+							settings.Buildpacks.NGINX.Online,
+						).
+						WithEnv(map[string]string{
+							"BP_NODE_RUN_SCRIPTS": "build",
+							"BP_WEB_SERVER":       "nginx",
+							"BP_WEB_SERVER_ROOT":  "build",
+						}).
+						Execute(name, source)
+					Expect(err).NotTo(HaveOccurred())
+
+					container, err = docker.Container.Run.
+						WithPublish("8080").
+						WithEnv(map[string]string{
+							"PORT": "8080",
+						}).
+						Execute(image.ID)
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(container).Should(Serve(ContainSubstring("Hello World!")).OnPort(8080))
+				})
 			})
-
-			it.After(func() {
-				Expect(docker.Container.Remove.Execute(container.ID)).To(Succeed())
-				Expect(docker.Image.Remove.Execute(image.ID)).To(Succeed())
-				Expect(docker.Volume.Remove.Execute(occam.CacheVolumeNames(name))).To(Succeed())
-				Expect(os.RemoveAll(source)).To(Succeed())
-			})
-
-			it("ensures those modules are reachable", func() {
-				var err error
-				image, _, err = pack.Build.
-					WithPullPolicy("never").
-					WithBuildpacks(
-						settings.Buildpacks.NodeEngine.Online,
-						settings.Buildpacks.NPMInstall.Online,
-						settings.Buildpacks.NodeRunScript.Online,
-						settings.Buildpacks.NGINX.Online,
-					).
-					WithEnv(map[string]string{
-						"BP_NODE_RUN_SCRIPTS": "build",
-						"BP_WEB_SERVER":       "nginx",
-						"BP_WEB_SERVER_ROOT":  "build",
-					}).
-					Execute(name, source)
-				Expect(err).NotTo(HaveOccurred())
-
-				container, err = docker.Container.Run.
-					WithPublish("8080").
-					WithEnv(map[string]string{
-						"PORT": "8080",
-					}).
-					Execute(image.ID)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(container).Should(Serve(ContainSubstring("Hello World!")).OnPort(8080))
-			})
-		})
+		}
 	})
 }
