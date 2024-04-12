@@ -41,6 +41,7 @@ func testRun(t *testing.T, context spec.G, it spec.S) {
 
 		tmpDir, err = os.MkdirTemp("", "tmp")
 		Expect(err).NotTo(HaveOccurred())
+		t.Setenv("TMPDIR", tmpDir)
 
 		Expect(os.Symlink(filepath.Join(tmpDir, "node_modules"), filepath.Join(appDir, "node_modules"))).To(Succeed())
 

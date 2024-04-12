@@ -60,6 +60,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		cnbDir, err = os.MkdirTemp("", "cnb")
 		Expect(err).NotTo(HaveOccurred())
 
+		tempDir := t.TempDir()
+		t.Setenv("TMPDIR", tempDir)
+
 		t.Setenv("BP_NODE_PROJECT_PATH", "")
 
 		buildProcess = &fakes.BuildProcess{}
@@ -117,6 +120,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			environment,
 			symlinkResolver,
 		)
+
 	})
 
 	it.After(func() {
@@ -154,6 +158,13 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			buildLayer := result.Layers[0]
 			Expect(buildLayer.Name).To(Equal("build-modules"))
 			Expect(buildLayer.Path).To(Equal(filepath.Join(layersDir, "build-modules")))
+
+			nodeModuleCache := filepath.Join(layersDir, "build-modules", "node_modules", ".cache")
+			_, err = os.Stat(nodeModuleCache)
+			Expect(err).NotTo(HaveOccurred())
+			// FIXME: Why does this not work?
+			//Expect(info.Mode()&os.ModeSymlink == os.ModeSymlink).To(BeTrue())
+
 			Expect(buildLayer.SharedEnv).To(Equal(packit.Environment{}))
 			Expect(buildLayer.BuildEnv).To(Equal(packit.Environment{
 				"PATH.append":       filepath.Join(layersDir, "build-modules", "node_modules", ".bin"),
