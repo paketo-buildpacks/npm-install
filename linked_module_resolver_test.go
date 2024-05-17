@@ -131,7 +131,7 @@ func testLinkedModuleResolver(t *testing.T, context spec.G, it spec.S) {
 
 			context("when the destination cannot be scaffolded", func() {
 				it.Before(func() {
-					Expect(os.Mkdir(filepath.Join(layerPath, "sub-dir"), 0400)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(layerPath, "sub-dir"), nil, 0400)).To(Succeed())
 				})
 
 				it("returns an error", func() {
@@ -209,7 +209,7 @@ func testLinkedModuleResolver(t *testing.T, context spec.G, it spec.S) {
 
 			context("when the destination cannot be scaffolded", func() {
 				it.Before(func() {
-					Expect(os.Mkdir(filepath.Join(otherLayerPath, "sub-dir"), 0400)).To(Succeed())
+					Expect(os.WriteFile(filepath.Join(otherLayerPath, "sub-dir"), nil, 0400)).To(Succeed())
 				})
 
 				it("returns an error", func() {
