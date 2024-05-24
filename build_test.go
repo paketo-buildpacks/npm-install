@@ -28,6 +28,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		layersDir  string
 		workingDir string
 		cnbDir     string
+		tempDir    string
 
 		processLayerDir   string
 		processWorkingDir string
@@ -60,7 +61,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 		cnbDir, err = os.MkdirTemp("", "cnb")
 		Expect(err).NotTo(HaveOccurred())
 
-		tempDir := t.TempDir()
+		tempDir = t.TempDir()
 		t.Setenv("TMPDIR", tempDir)
 
 		t.Setenv("BP_NODE_PROJECT_PATH", "")
@@ -120,7 +121,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			environment,
 			symlinkResolver,
 		)
-
 	})
 
 	it.After(func() {
@@ -158,13 +158,6 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			buildLayer := result.Layers[0]
 			Expect(buildLayer.Name).To(Equal("build-modules"))
 			Expect(buildLayer.Path).To(Equal(filepath.Join(layersDir, "build-modules")))
-
-			nodeModuleCache := filepath.Join(layersDir, "build-modules", "node_modules", ".cache")
-			_, err = os.Stat(nodeModuleCache)
-			Expect(err).NotTo(HaveOccurred())
-			// FIXME: Why does this not work?
-			//Expect(info.Mode()&os.ModeSymlink == os.ModeSymlink).To(BeTrue())
-
 			Expect(buildLayer.SharedEnv).To(Equal(packit.Environment{}))
 			Expect(buildLayer.BuildEnv).To(Equal(packit.Environment{
 				"PATH.append":       filepath.Join(layersDir, "build-modules", "node_modules", ".bin"),
@@ -434,6 +427,38 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(symlinkResolver.ResolveCall.Receives.LockfilePath).To(Equal(filepath.Join(workingDir, "package-lock.json")))
 			Expect(symlinkResolver.ResolveCall.Receives.LayerPath).To(Equal(filepath.Join(layersDir, "launch-modules")))
 		})
+
+		it("symlinks node_modules/.cache to tmp/node_modules_cache in order to work for the run user", func() {
+			err := os.MkdirAll(filepath.Join(tempDir, "node_modules_cache", "temp-content"), os.ModePerm)
+			Expect(err).NotTo(HaveOccurred())
+			result, err := build(packit.BuildContext{
+				BuildpackInfo: packit.BuildpackInfo{
+					SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
+				},
+				Platform: packit.Platform{
+					Path: "some-platform-path",
+				},
+				WorkingDir: workingDir,
+				Layers:     packit.Layers{Path: layersDir},
+				CNBPath:    cnbDir,
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{Name: "node_modules"},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(len(result.Layers)).To(Equal(2))
+
+			launchLayer := result.Layers[0]
+			Expect(launchLayer.Name).To(Equal("launch-modules"))
+			Expect(launchLayer.Path).To(Equal(filepath.Join(layersDir, "launch-modules")))
+
+			linkedTmpContent := filepath.Join(launchLayer.Path, "node_modules", ".cache", "temp-content")
+			_, err = os.Stat(linkedTmpContent)
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	context("when node_modules is required at build and launch", func() {
@@ -685,6 +710,39 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(symlinkResolver.CopyCall.Receives.SourceLayerPath).To(Equal(filepath.Join(buildLayer.Path)))
 			Expect(symlinkResolver.CopyCall.Receives.TargetLayerPath).To(Equal(filepath.Join(launchLayer.Path)))
 		})
+
+		it("symlinks node_modules/.cache to tmp/node_modules_cache in order to work for the run user", func() {
+			err := os.MkdirAll(filepath.Join(tempDir, "node_modules_cache", "temp-content"), os.ModePerm)
+			Expect(err).NotTo(HaveOccurred())
+			result, err := build(packit.BuildContext{
+				BuildpackInfo: packit.BuildpackInfo{
+					SBOMFormats: []string{"application/vnd.cyclonedx+json", "application/spdx+json", "application/vnd.syft+json"},
+				},
+				Platform: packit.Platform{
+					Path: "some-platform-path",
+				},
+				WorkingDir: workingDir,
+				Layers:     packit.Layers{Path: layersDir},
+				CNBPath:    cnbDir,
+				Plan: packit.BuildpackPlan{
+					Entries: []packit.BuildpackPlanEntry{
+						{Name: "node_modules"},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(len(result.Layers)).To(Equal(3))
+
+			launchLayer := result.Layers[1]
+			Expect(launchLayer.Name).To(Equal("launch-modules"))
+			Expect(launchLayer.Path).To(Equal(filepath.Join(layersDir, "launch-modules")))
+
+			linkedTmpContent := filepath.Join(launchLayer.Path, "node_modules", ".cache", "temp-content")
+			_, err = os.Stat(linkedTmpContent)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 	})
 
 	context("when one npmrc binding is detected", func() {
@@ -776,6 +834,10 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			entryResolver.MergeLayerTypesCall.Returns.Launch = true
 			buildProcess.RunCall.Stub = func(ld, cd, wd, rc string, l bool) error {
 				err := os.MkdirAll(cd, os.ModePerm)
+				if err != nil {
+					return err
+				}
+				err = os.MkdirAll(filepath.Join(ld, "node_modules"), os.ModePerm)
 				if err != nil {
 					return err
 				}
