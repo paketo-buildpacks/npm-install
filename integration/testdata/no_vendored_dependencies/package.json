@@ -12,5 +12,5 @@
     "express": "~4.0.0",
     "chalk-cli": "~3.0.0"
   },
-  "engines" : { "node" : "~>16" }
+  "engines" : { "node" : "~>18" }
 }
