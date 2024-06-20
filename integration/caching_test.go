@@ -223,7 +223,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 					WithExtensions(
 						settings.Extensions.UbiNodejsExtension.Online,
 					).
-					WithEnv(map[string]string{"BP_NODE_VERSION": "~16"}).
+					WithEnv(map[string]string{"BP_NODE_VERSION": "~18"}).
 					WithBuildpacks(
 						settings.Buildpacks.NodeEngine.Online,
 						settings.Buildpacks.NPMInstall.Online,
@@ -255,7 +255,7 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 					WithExtensions(
 						settings.Extensions.UbiNodejsExtension.Online,
 					).
-					WithEnv(map[string]string{"BP_NODE_VERSION": "~18"}).
+					WithEnv(map[string]string{"BP_NODE_VERSION": "~20"}).
 					WithBuildpacks(
 						settings.Buildpacks.NodeEngine.Online,
 						settings.Buildpacks.NPMInstall.Online,
