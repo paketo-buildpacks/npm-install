@@ -82,9 +82,9 @@ func Build(entryResolver EntryResolver,
 			return packit.BuildResult{}, err
 		}
 
-		logger.Process("Checking custom npm version")
 		npmVersion, found := environment.Lookup("BP_NPM_VERSION")
 		if found {
+			logger.Process("Installling custom npm version %s", npmVersion)
 			args := []string{"install", fmt.Sprintf("npm@%s", npmVersion)}
 			logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
 
@@ -94,7 +94,8 @@ func Build(entryResolver EntryResolver,
 				Stdout: logger.ActionWriter,
 				Stderr: logger.ActionWriter,
 			})
-			os.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Join(projectPath, "node_modules", ".bin"), os.Getenv("PATH")))
+			moduleBinPath := filepath.Join(projectPath, "node_modules", ".bin")
+			os.Setenv("PATH", fmt.Sprintf("%s:%s:%s", filepath.Join(moduleBinPath, "npm"), os.Getenv("PATH"), moduleBinPath))
 			if err != nil {
 				return packit.BuildResult{}, fmt.Errorf("update of npm failed: %w", err)
 			}
@@ -176,7 +177,8 @@ func Build(entryResolver EntryResolver,
 					layer.BuildEnv.Default("NPM_CONFIG_GLOBALCONFIG", globalNpmrcPath)
 				}
 				path := filepath.Join(layer.Path, "node_modules", ".bin")
-				layer.BuildEnv.Prepend("PATH", path, string(os.PathListSeparator))
+				layer.BuildEnv.Append("PATH", path, string(os.PathListSeparator))
+				layer.BuildEnv.Prepend("PATH", filepath.Join(path, "npm"), string(os.PathListSeparator))
 				layer.BuildEnv.Override("NODE_ENV", "development")
 
 				logger.EnvironmentVariables(layer)
@@ -292,7 +294,8 @@ func Build(entryResolver EntryResolver,
 				layer.LaunchEnv.Default("NPM_CONFIG_LOGLEVEL", "error")
 				layer.LaunchEnv.Default("NODE_PROJECT_PATH", projectPath)
 				path := filepath.Join(layer.Path, "node_modules", ".bin")
-				layer.LaunchEnv.Prepend("PATH", path, string(os.PathListSeparator))
+				layer.LaunchEnv.Append("PATH", path, string(os.PathListSeparator))
+				layer.LaunchEnv.Prepend("PATH", filepath.Join(path, "npm"), string(os.PathListSeparator))
 
 				logger.EnvironmentVariables(layer)
 

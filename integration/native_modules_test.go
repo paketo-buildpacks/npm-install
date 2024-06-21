@@ -118,11 +118,12 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 				Expect(logs).To(ContainLines(MatchRegexp(`    Running 'npm rebuild --nodedir=/layers/.+/node'`)))
 			}
 			Expect(logs).To(ContainLines(extenderBuildStr + "    Running 'npm run-script postinstall --if-present'"))
+			moduleBinPath := fmt.Sprintf("/layers/%s/launch-modules/node_modules/.bin", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring launch environment",
 				extenderBuildStr+"    NODE_PROJECT_PATH   -> \"/workspace\"",
 				extenderBuildStr+"    NPM_CONFIG_LOGLEVEL -> \"error\"",
-				fmt.Sprintf(extenderBuildStr+"    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+				fmt.Sprintf(extenderBuildStr+"    PATH                -> \"%s/npm:$PATH:%s\"", moduleBinPath, moduleBinPath),
 				extenderBuildStr+"",
 			))
 		})
