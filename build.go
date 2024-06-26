@@ -1,11 +1,14 @@
 package npminstall
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/paketo-buildpacks/libnodejs"
+	"github.com/paketo-buildpacks/packit/v2/pexec"
 	"github.com/paketo-buildpacks/packit/v2/sbom"
 
 	"github.com/paketo-buildpacks/packit/v2"
@@ -77,6 +80,25 @@ func Build(entryResolver EntryResolver,
 		projectPath, err := libnodejs.FindProjectPath(context.WorkingDir)
 		if err != nil {
 			return packit.BuildResult{}, err
+		}
+
+		npmVersion, found := environment.Lookup("BP_NPM_VERSION")
+		if found {
+			logger.Process("Installling custom npm version %s", npmVersion)
+			args := []string{"install", fmt.Sprintf("npm@%s", npmVersion)}
+			logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
+
+			err = pexec.NewExecutable("npm").Execute(pexec.Execution{
+				Args:   args,
+				Dir:    projectPath,
+				Stdout: logger.ActionWriter,
+				Stderr: logger.ActionWriter,
+			})
+			moduleBinPath := filepath.Join(projectPath, "node_modules", ".bin")
+			os.Setenv("PATH", fmt.Sprintf("%s:%s:%s", filepath.Join(moduleBinPath, "npm"), os.Getenv("PATH"), moduleBinPath))
+			if err != nil {
+				return packit.BuildResult{}, fmt.Errorf("update of npm failed: %w", err)
+			}
 		}
 
 		npmCacheLayer, err := context.Layers.Get(LayerNameCache)
@@ -156,6 +178,7 @@ func Build(entryResolver EntryResolver,
 				}
 				path := filepath.Join(layer.Path, "node_modules", ".bin")
 				layer.BuildEnv.Append("PATH", path, string(os.PathListSeparator))
+				layer.BuildEnv.Prepend("PATH", filepath.Join(path, "npm"), string(os.PathListSeparator))
 				layer.BuildEnv.Override("NODE_ENV", "development")
 
 				logger.EnvironmentVariables(layer)
@@ -272,6 +295,7 @@ func Build(entryResolver EntryResolver,
 				layer.LaunchEnv.Default("NODE_PROJECT_PATH", projectPath)
 				path := filepath.Join(layer.Path, "node_modules", ".bin")
 				layer.LaunchEnv.Append("PATH", path, string(os.PathListSeparator))
+				layer.LaunchEnv.Prepend("PATH", filepath.Join(path, "npm"), string(os.PathListSeparator))
 
 				logger.EnvironmentVariables(layer)
 
