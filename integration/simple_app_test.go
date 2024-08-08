@@ -102,6 +102,41 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 		})
 	})
 
+	context("when a specific npm version is requested", func() {
+		it("builds a working OCI image for a simple app", func() {
+			var err error
+			source, err = occam.Source(filepath.Join("testdata", "simple_app"))
+			Expect(err).NotTo(HaveOccurred())
+
+			image, _, err = pack.Build.
+				WithExtensions(
+					settings.Extensions.UbiNodejsExtension.Online,
+				).
+				WithBuildpacks(
+					settings.Buildpacks.NodeEngine.Online,
+					settings.Buildpacks.NPMInstall.Online,
+					settings.Buildpacks.BuildPlan.Online,
+				).
+				WithEnv(map[string]string{"BP_NPM_VERSION": "10.5", "BP_NODE_VERSION": "20"}).
+				WithPullPolicy(pullPolicy).
+				WithSBOMOutputDir(sbomDir).
+				Execute(name, source)
+			Expect(err).NotTo(HaveOccurred())
+
+			container, err = docker.Container.Run.
+				WithCommand("npm version").
+				Execute(image.ID)
+			Expect(err).NotTo(HaveOccurred())
+
+			cLogs := func() string {
+				cLogs, err := docker.Container.Logs.Execute(container.ID)
+				Expect(err).NotTo(HaveOccurred())
+				return cLogs.String()
+			}
+			Eventually(cLogs).Should(ContainSubstring("10.5"))
+		})
+	})
+
 	context("BP_DISABLE_SBOM is set to true", func() {
 		it("skips SBOM generation", func() {
 			var err error
