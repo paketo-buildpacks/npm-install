@@ -3,6 +3,7 @@ package npminstall
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -94,11 +95,20 @@ func Build(entryResolver EntryResolver,
 				Stdout: logger.ActionWriter,
 				Stderr: logger.ActionWriter,
 			})
-			moduleBinPath := filepath.Join(projectPath, "node_modules", ".bin")
-			os.Setenv("PATH", fmt.Sprintf("%s:%s:%s", filepath.Join(moduleBinPath, "npm"), os.Getenv("PATH"), moduleBinPath))
 			if err != nil {
 				return packit.BuildResult{}, fmt.Errorf("update of npm failed: %w", err)
 			}
+			moduleBinPath := filepath.Join(projectPath, "node_modules", ".bin")
+			localBinPath := filepath.Join(projectPath, "node_modules", ".bin_local")
+			err = os.Mkdir(localBinPath, os.ModePerm)
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
+			err = os.Link(path.Join(moduleBinPath, "npm"), filepath.Join(localBinPath, "npm"))
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
+			os.Setenv("PATH", fmt.Sprintf("%s:%s:%s", filepath.Join(localBinPath), os.Getenv("PATH"), moduleBinPath))
 		}
 
 		npmCacheLayer, err := context.Layers.Get(LayerNameCache)
@@ -176,9 +186,9 @@ func Build(entryResolver EntryResolver,
 				if globalNpmrcPath != "" {
 					layer.BuildEnv.Default("NPM_CONFIG_GLOBALCONFIG", globalNpmrcPath)
 				}
-				path := filepath.Join(layer.Path, "node_modules", ".bin")
-				layer.BuildEnv.Append("PATH", path, string(os.PathListSeparator))
-				layer.BuildEnv.Prepend("PATH", filepath.Join(path, "npm"), string(os.PathListSeparator))
+				nodeModulesPath := filepath.Join(layer.Path, "node_modules")
+				layer.BuildEnv.Append("PATH", filepath.Join(nodeModulesPath, ".bin"), string(os.PathListSeparator))
+				layer.BuildEnv.Prepend("PATH", filepath.Join(nodeModulesPath, ".bin_local"), string(os.PathListSeparator))
 				layer.BuildEnv.Override("NODE_ENV", "development")
 
 				logger.EnvironmentVariables(layer)
@@ -293,9 +303,9 @@ func Build(entryResolver EntryResolver,
 
 				layer.LaunchEnv.Default("NPM_CONFIG_LOGLEVEL", "error")
 				layer.LaunchEnv.Default("NODE_PROJECT_PATH", projectPath)
-				path := filepath.Join(layer.Path, "node_modules", ".bin")
-				layer.LaunchEnv.Append("PATH", path, string(os.PathListSeparator))
-				layer.LaunchEnv.Prepend("PATH", filepath.Join(path, "npm"), string(os.PathListSeparator))
+				nodeModulesPath := filepath.Join(layer.Path, "node_modules")
+				layer.LaunchEnv.Append("PATH", filepath.Join(nodeModulesPath, ".bin"), string(os.PathListSeparator))
+				layer.LaunchEnv.Prepend("PATH", filepath.Join(nodeModulesPath, ".bin_local"), string(os.PathListSeparator))
 
 				logger.EnvironmentVariables(layer)
 
