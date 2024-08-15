@@ -118,7 +118,7 @@ func testVendored(t *testing.T, context spec.G, it spec.S) {
 				Expect(logs).To(ContainLines(MatchRegexp(`    Running 'npm rebuild --nodedir=/layers/.+/node'`)))
 			}
 			Expect(logs).To(ContainLines(extenderBuildStr + "    Running 'npm run-script postinstall --if-present'"))
-			moduleBinPath := fmt.Sprintf("/layers/%s/build-modules/node_modules/.bin", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"))
+			moduleBinPath := fmt.Sprintf("/layers/%s/launch-modules/node_modules/.bin", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring launch environment",
 				extenderBuildStr+"    NODE_PROJECT_PATH   -> \"/workspace\"",
