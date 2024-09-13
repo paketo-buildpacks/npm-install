@@ -157,6 +157,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(buildLayer.SharedEnv).To(Equal(packit.Environment{}))
 			Expect(buildLayer.BuildEnv).To(Equal(packit.Environment{
 				"PATH.append":       filepath.Join(layersDir, "build-modules", "node_modules", ".bin"),
+				"PATH.prepend":      filepath.Join(layersDir, "build-modules", "node_modules", ".bin_local"),
 				"PATH.delim":        ":",
 				"NODE_ENV.override": "development",
 			}))
@@ -307,6 +308,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				"NPM_CONFIG_LOGLEVEL.default": "error",
 				"NODE_PROJECT_PATH.default":   workingDir,
 				"PATH.append":                 filepath.Join(layersDir, "launch-modules", "node_modules", ".bin"),
+				"PATH.prepend":                filepath.Join(layersDir, "launch-modules", "node_modules", ".bin_local"),
 				"PATH.delim":                  ":",
 			}))
 			Expect(launchLayer.ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))
@@ -459,6 +461,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 			Expect(buildLayer.SharedEnv).To(Equal(packit.Environment{}))
 			Expect(buildLayer.BuildEnv).To(Equal(packit.Environment{
 				"PATH.append":       filepath.Join(layersDir, "build-modules", "node_modules", ".bin"),
+				"PATH.prepend":      filepath.Join(layersDir, "build-modules", "node_modules", ".bin_local"),
 				"PATH.delim":        ":",
 				"NODE_ENV.override": "development",
 			}))
@@ -554,6 +557,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 				"NPM_CONFIG_LOGLEVEL.default": "error",
 				"NODE_PROJECT_PATH.default":   workingDir,
 				"PATH.append":                 filepath.Join(layersDir, "launch-modules", "node_modules", ".bin"),
+				"PATH.prepend":                filepath.Join(layersDir, "launch-modules", "node_modules", ".bin_local"),
 				"PATH.delim":                  ":",
 			}))
 			Expect(launchLayer.ProcessLaunchEnv).To(Equal(map[string]packit.Environment{}))

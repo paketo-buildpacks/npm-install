@@ -28,6 +28,10 @@ api = "0.7"
 	  name = "BP_NODE_PROJECT_PATH"
     description = "path to the root of the Node.js project"
 
+	[[metadata.configurations]]
+    name = "BP_NPM_VERSION"
+    description = "configures a custom npm version"
+
   [[metadata.configurations]]
 	  name = "NODE_HOME"
     description = "path the Node.js installation"

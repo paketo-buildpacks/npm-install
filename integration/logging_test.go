@@ -93,11 +93,12 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 			Expect(logs).To(ContainLines(
 				MatchRegexp(extenderBuildStrEscaped + `      Completed in (\d+\.\d+|\d{3})`),
 			))
+			modulePath := fmt.Sprintf("/layers/%s/launch-modules/node_modules", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"))
 			Expect(logs).To(ContainLines(
 				extenderBuildStr+"  Configuring launch environment",
 				extenderBuildStr+"    NODE_PROJECT_PATH   -> \"/workspace\"",
 				extenderBuildStr+"    NPM_CONFIG_LOGLEVEL -> \"error\"",
-				fmt.Sprintf(extenderBuildStr+"    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+				fmt.Sprintf(extenderBuildStr+"    PATH                -> \"%s/.bin_local:$PATH:%s/.bin\"", modulePath, modulePath),
 			))
 		})
 
@@ -137,10 +138,11 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 				Expect(logs).To(ContainLines(
 					MatchRegexp(extenderBuildStrEscaped + `      Completed in (\d+\.\d+|\d{3})`),
 				))
+				modulePath := fmt.Sprintf("/layers/%s/build-modules/node_modules", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"))
 				Expect(logs).To(ContainLines(
 					extenderBuildStr+"  Configuring build environment",
 					extenderBuildStr+"    NODE_ENV -> \"development\"",
-					fmt.Sprintf(extenderBuildStr+"    PATH     -> \"$PATH:/layers/%s/build-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+					fmt.Sprintf(extenderBuildStr+"    PATH     -> \"%s/.bin_local:$PATH:%s/.bin\"", modulePath, modulePath),
 					extenderBuildStr+"",
 					fmt.Sprintf(extenderBuildStr+`  Generating SBOM for /layers/%s/build-modules`, strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					MatchRegexp(extenderBuildStrEscaped+`      Completed in (\d+)(\.\d+)?(ms|s)`),
@@ -149,11 +151,12 @@ func testLogging(t *testing.T, context spec.G, it spec.S) {
 					extenderBuildStr+"  Executing launch environment install process",
 					extenderBuildStr+"    Running 'npm prune'",
 				))
+				modulePath = fmt.Sprintf("/layers/%s/launch-modules/node_modules", strings.ReplaceAll(settings.Buildpack.ID, "/", "_"))
 				Expect(logs).To(ContainLines(
 					extenderBuildStr+"  Configuring launch environment",
 					extenderBuildStr+"    NODE_PROJECT_PATH   -> \"/workspace\"",
 					extenderBuildStr+"    NPM_CONFIG_LOGLEVEL -> \"error\"",
-					fmt.Sprintf(extenderBuildStr+"    PATH                -> \"$PATH:/layers/%s/launch-modules/node_modules/.bin\"", strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
+					fmt.Sprintf(extenderBuildStr+"    PATH                -> \"%s/.bin_local:$PATH:%s/.bin\"", modulePath, modulePath),
 					extenderBuildStr+"",
 					fmt.Sprintf(extenderBuildStr+`  Generating SBOM for /layers/%s/launch-modules`, strings.ReplaceAll(settings.Buildpack.ID, "/", "_")),
 					MatchRegexp(extenderBuildStrEscaped+`      Completed in (\d+)(\.\d+)?(ms|s)`),

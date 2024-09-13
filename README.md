@@ -38,6 +38,12 @@ file that looks like the following:
     launch = true
 ```
 
+## Configuration
+
+| Environment Variable          | Description                                                                                                                                                               |
+|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `$BP_NPM_VERSION`     | If set, this custom version of `npm` will be used instead of the one provided by the `nodejs` installation.                                                                       |
+
 ## Usage
 
 To package this buildpack for consumption:

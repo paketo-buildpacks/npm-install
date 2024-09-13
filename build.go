@@ -1,11 +1,15 @@
 package npminstall
 
 import (
+	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/paketo-buildpacks/libnodejs"
+	"github.com/paketo-buildpacks/packit/v2/pexec"
 	"github.com/paketo-buildpacks/packit/v2/sbom"
 
 	"github.com/paketo-buildpacks/packit/v2"
@@ -77,6 +81,34 @@ func Build(entryResolver EntryResolver,
 		projectPath, err := libnodejs.FindProjectPath(context.WorkingDir)
 		if err != nil {
 			return packit.BuildResult{}, err
+		}
+
+		npmVersion, found := environment.Lookup("BP_NPM_VERSION")
+		if found {
+			logger.Process("Installling custom npm version %s", npmVersion)
+			args := []string{"install", fmt.Sprintf("npm@%s", npmVersion)}
+			logger.Subprocess("Running 'npm %s'", strings.Join(args, " "))
+
+			err = pexec.NewExecutable("npm").Execute(pexec.Execution{
+				Args:   args,
+				Dir:    projectPath,
+				Stdout: logger.ActionWriter,
+				Stderr: logger.ActionWriter,
+			})
+			if err != nil {
+				return packit.BuildResult{}, fmt.Errorf("update of npm failed: %w", err)
+			}
+			moduleBinPath := filepath.Join(projectPath, "node_modules", ".bin")
+			localBinPath := filepath.Join(projectPath, "node_modules", ".bin_local")
+			err = os.Mkdir(localBinPath, os.ModePerm)
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
+			err = os.Link(path.Join(moduleBinPath, "npm"), filepath.Join(localBinPath, "npm"))
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
+			os.Setenv("PATH", fmt.Sprintf("%s:%s:%s", filepath.Join(localBinPath), os.Getenv("PATH"), moduleBinPath))
 		}
 
 		npmCacheLayer, err := context.Layers.Get(LayerNameCache)
@@ -154,8 +186,9 @@ func Build(entryResolver EntryResolver,
 				if globalNpmrcPath != "" {
 					layer.BuildEnv.Default("NPM_CONFIG_GLOBALCONFIG", globalNpmrcPath)
 				}
-				path := filepath.Join(layer.Path, "node_modules", ".bin")
-				layer.BuildEnv.Append("PATH", path, string(os.PathListSeparator))
+				nodeModulesPath := filepath.Join(layer.Path, "node_modules")
+				layer.BuildEnv.Append("PATH", filepath.Join(nodeModulesPath, ".bin"), string(os.PathListSeparator))
+				layer.BuildEnv.Prepend("PATH", filepath.Join(nodeModulesPath, ".bin_local"), string(os.PathListSeparator))
 				layer.BuildEnv.Override("NODE_ENV", "development")
 
 				logger.EnvironmentVariables(layer)
@@ -270,8 +303,9 @@ func Build(entryResolver EntryResolver,
 
 				layer.LaunchEnv.Default("NPM_CONFIG_LOGLEVEL", "error")
 				layer.LaunchEnv.Default("NODE_PROJECT_PATH", projectPath)
-				path := filepath.Join(layer.Path, "node_modules", ".bin")
-				layer.LaunchEnv.Append("PATH", path, string(os.PathListSeparator))
+				nodeModulesPath := filepath.Join(layer.Path, "node_modules")
+				layer.LaunchEnv.Append("PATH", filepath.Join(nodeModulesPath, ".bin"), string(os.PathListSeparator))
+				layer.LaunchEnv.Prepend("PATH", filepath.Join(nodeModulesPath, ".bin_local"), string(os.PathListSeparator))
 
 				logger.EnvironmentVariables(layer)
 
