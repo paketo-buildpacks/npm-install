@@ -40,9 +40,10 @@ file that looks like the following:
 
 ## Configuration
 
-| Environment Variable          | Description                                                                                                                                                               |
-|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `$BP_NPM_VERSION`     | If set, this custom version of `npm` will be used instead of the one provided by the `nodejs` installation.                                                                       |
+| Environment Variable        | Description                                                                                                                                                               |
+|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `$BP_NPM_VERSION`           | If set, this custom version of `npm` will be used instead of the one provided by the `nodejs` installation.                                                               |
+| `$BP_KEEP_NODE_BUILD_CACHE` | If set to `true` (default `false`), the folder `node_modules/.cache` will not be removed after the build, but will be readonly at runtime.                                |
 
 ## Usage
 
