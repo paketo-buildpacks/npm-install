@@ -32,6 +32,11 @@ api = "0.7"
     name = "BP_NPM_VERSION"
     description = "configures a custom npm version"
 
+	[[metadata.configurations]]
+    name = "BP_KEEP_NODE_BUILD_CACHE"
+    default = "false"
+    description = "keep the 'node_modules/.cache' folder after the build (will be readonly at runtime)'"
+
   [[metadata.configurations]]
 	  name = "NODE_HOME"
     description = "path the Node.js installation"
@@ -44,6 +49,7 @@ api = "0.7"
     name = "NPM_CONFIG_LOGLEVEL"
     default = "error"
     description = "configures npm output verbosity"
+
 
 [[stacks]]
   id = "*"

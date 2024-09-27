@@ -284,16 +284,19 @@ func Build(entryResolver EntryResolver,
 					return packit.BuildResult{}, err
 				}
 
-				linkName := filepath.Join(layer.Path, "node_modules", ".cache")
-				err = os.RemoveAll(linkName)
-				if err != nil {
-					return packit.BuildResult{}, err
-				}
+				keepBuildCache, _ := environment.Lookup("BP_KEEP_NODE_BUILD_CACHE")
+				if keepBuildCache != "true" {
+					linkName := filepath.Join(layer.Path, "node_modules", ".cache")
+					err = os.RemoveAll(linkName)
+					if err != nil {
+						return packit.BuildResult{}, err
+					}
 
-				cacheFolder := filepath.Join(os.TempDir(), NODE_MODULES_CACHE)
-				err = os.Symlink(cacheFolder, linkName)
-				if err != nil {
-					return packit.BuildResult{}, err
+					cacheFolder := filepath.Join(os.TempDir(), NODE_MODULES_CACHE)
+					err = os.Symlink(cacheFolder, linkName)
+					if err != nil {
+						return packit.BuildResult{}, err
+					}
 				}
 
 				if build {
