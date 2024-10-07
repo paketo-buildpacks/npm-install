@@ -18,6 +18,8 @@ import (
 	"github.com/paketo-buildpacks/packit/v2/scribe"
 )
 
+const NODE_MODULES_CACHE = "node_modules_cache"
+
 //go:generate faux --interface BuildManager --output fakes/build_manager.go
 type BuildManager interface {
 	Resolve(workingDir string) (BuildProcess, bool, error)
@@ -280,6 +282,21 @@ func Build(entryResolver EntryResolver,
 				err = linker.Link(filepath.Join(projectPath, "node_modules"), filepath.Join(targetLayerPath, "node_modules"))
 				if err != nil {
 					return packit.BuildResult{}, err
+				}
+
+				keepBuildCache, _ := environment.Lookup("BP_KEEP_NODE_BUILD_CACHE")
+				if keepBuildCache != "true" {
+					linkName := filepath.Join(layer.Path, "node_modules", ".cache")
+					err = os.RemoveAll(linkName)
+					if err != nil {
+						return packit.BuildResult{}, err
+					}
+
+					cacheFolder := filepath.Join(os.TempDir(), NODE_MODULES_CACHE)
+					err = os.Symlink(cacheFolder, linkName)
+					if err != nil {
+						return packit.BuildResult{}, err
+					}
 				}
 
 				if build {

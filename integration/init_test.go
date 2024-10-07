@@ -126,6 +126,7 @@ func TestIntegration(t *testing.T) {
 	suite("EmptyNodeModules", testEmptyNodeModules)
 	suite("Logging", testLogging)
 	suite("NativeModules", testNativeModules)
+	suite("NodeModulesCache", testReact)
 	suite("NoNodeModules", testNoNodeModules)
 	suite("Npmrc", testNpmrc)
 	suite("PackageLockMismatch", testPackageLockMismatch)
