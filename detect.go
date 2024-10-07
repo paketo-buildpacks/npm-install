@@ -39,6 +39,10 @@ func Detect() packit.DetectFunc {
 		}
 		version := pkg.GetVersion()
 
+		_, nodeGypInDep := pkg.Dependencies["node-gyp"]
+		_, nodeGypInDevDep := pkg.DevDependencies["node-gyp"]
+		pythonNeeded := nodeGypInDep || nodeGypInDevDep
+
 		nodeDependency := packit.BuildPlanRequirement{
 			Name: Node,
 			Metadata: BuildPlanMetadata{
@@ -54,21 +58,36 @@ func Detect() packit.DetectFunc {
 			}
 		}
 
-		return packit.DetectResult{
+		npmDependency := packit.BuildPlanRequirement{
+			Name: Npm,
+			Metadata: BuildPlanMetadata{
+				Build: true,
+			},
+		}
+
+		cPythonDependency := packit.BuildPlanRequirement{
+			Name: Cpython,
+			Metadata: BuildPlanMetadata{
+				Build: true,
+			},
+		}
+
+		result := packit.DetectResult{
 			Plan: packit.BuildPlan{
 				Provides: []packit.BuildPlanProvision{
 					{Name: NodeModules},
 				},
 				Requires: []packit.BuildPlanRequirement{
 					nodeDependency,
-					{
-						Name: Npm,
-						Metadata: BuildPlanMetadata{
-							Build: true,
-						},
-					},
+					npmDependency,
 				},
 			},
-		}, nil
+		}
+
+		if pythonNeeded {
+			result.Plan.Requires = append(result.Plan.Requires, cPythonDependency)
+		}
+
+		return result, nil
 	}
 }

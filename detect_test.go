@@ -63,6 +63,47 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		}))
 
 	})
+	context("when the package.json declares a node-gyp dependency", func() {
+		it.Before(func() {
+			Expect(os.WriteFile(filePath, []byte(`{
+				"dependencies": {
+						"node-gyp": "1.2.3"
+				}
+			}`), 0600)).To(Succeed())
+		})
+
+		it("returns a plan requesting cpython", func() {
+			result, err := detect(packit.DetectContext{
+				WorkingDir: workingDir,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Plan).To(Equal(packit.BuildPlan{
+				Provides: []packit.BuildPlanProvision{
+					{Name: npminstall.NodeModules},
+				},
+				Requires: []packit.BuildPlanRequirement{
+					{
+						Name: npminstall.Node,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+					{
+						Name: npminstall.Npm,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+					{
+						Name: npminstall.Cpython,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+				},
+			}))
+		})
+	})
 
 	context("when the package.json does not declare a node engine version", func() {
 		it.Before(func() {
