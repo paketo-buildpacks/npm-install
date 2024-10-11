@@ -42,7 +42,13 @@ func Run(executablePath, appDir string, symlinkResolver npminstall.SymlinkResolv
 		return err
 	}
 
-	return createSymlink(filepath.Join(layerPath, "node_modules"), linkPath)
+	err = createSymlink(filepath.Join(layerPath, "node_modules"), linkPath)
+	if err != nil {
+		return err
+	}
+
+	cacheFolder := filepath.Join(os.TempDir(), npminstall.NODE_MODULES_CACHE)
+	return os.Mkdir(cacheFolder, os.ModePerm)
 }
 
 func resolveWorkspaceModules(symlinkResolver npminstall.SymlinkResolver, appDir, layerPath string) error {
