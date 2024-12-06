@@ -159,10 +159,15 @@ function buildpackage::create() {
 
     cd $cwd
   else
+    mkdir ${BUILD_DIR}/cnbdir
+    tar -xvf ${BUILD_DIR}/buildpack.tgz -C ${BUILD_DIR}/cnbdir
+
     pack \
       buildpack package "${output}" \
-        --path "${BUILD_DIR}/buildpack.tgz" \
+        --path ${BUILD_DIR}/cnbdir \
         --format file
+
+    rm -rf ${BUILD_DIR}/cnbdir
   fi
 }
 
