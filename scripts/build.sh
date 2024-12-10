@@ -5,6 +5,7 @@ set -o pipefail
 
 readonly PROGDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly BUILDPACKDIR="$(cd "${PROGDIR}/.." && pwd)"
+readonly AVAILABLE_TARGETS=("linux/amd64" "linux/arm64")
 
 function main() {
   while [[ "${#}" != 0 ]]; do
@@ -44,33 +45,40 @@ USAGE
 
 function run::build() {
   if [[ -f "${BUILDPACKDIR}/run/main.go" ]]; then
-    pushd "${BUILDPACKDIR}/bin" > /dev/null || return
-      printf "%s" "Building run... "
+    pushd "${BUILDPACKDIR}" > /dev/null || return
+      for target in "${AVAILABLE_TARGETS[@]}"; do
+        platform=$(echo "${target}" | cut -d '/' -f1)
+        arch=$(echo "${target}" | cut -d'/' -f2)
 
-      GOOS=linux \
-      CGO_ENABLED=0 \
-        go build \
-          -ldflags="-s -w" \
-          -o "run" \
-            "${BUILDPACKDIR}/run"
+        echo "Building run... for platform: ${platform} and arch: ${arch}"
 
-      echo "Success!"
+        GOOS=$platform \
+        GOARCH=$arch \
+        CGO_ENABLED=0 \
+          go build \
+            -ldflags="-s -w" \
+            -o "${platform}/${arch}/bin/run" \
+              "${BUILDPACKDIR}/run"
 
-      names=("detect")
+          echo "Success!"
 
-      if [ -f "${BUILDPACKDIR}/extension.toml" ]; then
-        names+=("generate")
-      else
-        names+=("build")
-      fi
+          names=("detect")
 
-      for name in "${names[@]}"; do
-        printf "%s" "Linking ${name}... "
+          if [ -f "${BUILDPACKDIR}/extension.toml" ]; then
+            names+=("generate")
+          else
+            names+=("build")
+          fi
 
-        ln -sf "run" "${name}"
+        for name in "${names[@]}"; do
+          printf "%s" "Linking ${name}... "
 
-        echo "Success!"
+          ln -fs "run" "${platform}/${arch}/bin/${name}"
+
+          echo "Success!"
+        done
       done
+
     popd > /dev/null || return
   fi
 }
@@ -80,21 +88,26 @@ function cmd::build() {
     local name
     for src in "${BUILDPACKDIR}"/cmd/*; do
       name="$(basename "${src}")"
+     for target in "${AVAILABLE_TARGETS[@]}"; do
+        platform=$(echo "${target}" | cut -d '/' -f1)
+        arch=$(echo "${target}" | cut -d'/' -f2)
 
-      if [[ -f "${src}/main.go" ]]; then
-        printf "%s" "Building ${name}... "
+        if [[ -f "${src}/main.go" ]]; then
+          echo "Building ${name}... for platform: ${platform} and arch: ${arch}"
 
-        GOOS="linux" \
-        CGO_ENABLED=0 \
-          go build \
-            -ldflags="-s -w" \
-            -o "${BUILDPACKDIR}/bin/${name}" \
-              "${src}/main.go"
+          GOOS=$platform \
+          GOARCH=$arch \
+          CGO_ENABLED=0 \
+            go build \
+              -ldflags="-s -w" \
+              -o "${BUILDPACKDIR}/${platform}/${arch}/bin/${name}" \
+                "${src}/main.go"
 
-        echo "Success!"
-      else
-        printf "%s" "Skipping ${name}... "
-      fi
+          echo "Success!"
+        else
+          printf "%s" "Skipping ${name}... "
+        fi
+      done
     done
   fi
 }
