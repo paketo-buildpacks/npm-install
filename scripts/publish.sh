@@ -116,7 +116,9 @@ function buildpack::publish() {
 
   which pack
 
+  ## CWIP fix below path to math the buildpack archive
   mkdir ${BUILD_DIR}/cnbdir
+  cp ${buildpack_archive} ${BUILD_DIR}/buildpack.tgz
   tar -xvf ${BUILD_DIR}/buildpack.tgz -C ${BUILD_DIR}/cnbdir
 
   pack \
@@ -126,6 +128,7 @@ function buildpack::publish() {
     --publish
 
   rm -rf ${BUILD_DIR}/cnbdir
+  rm -rf ${BUILD_DIR}/buildpack.tgz
 }
 
 main "${@:-}"
