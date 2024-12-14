@@ -5,7 +5,6 @@ set -o pipefail
 
 readonly ROOT_DIR="$(cd "$(dirname "${0}")/.." && pwd)"
 readonly BIN_DIR="${ROOT_DIR}/.bin"
-readonly BUILD_DIR="${ROOT_DIR}/build"
 
 # shellcheck source=SCRIPTDIR/.util/tools.sh
 source "${ROOT_DIR}/scripts/.util/tools.sh"
@@ -58,8 +57,8 @@ function main {
   fi
 
   if [[ -z "${buildpack_archive:-}" ]]; then
-    util::print::info "Using default buildpack archive path: ${BUILD_DIR}/buildpack.tgz"
-    buildpack_archive="${BUILD_DIR}/buildpack.tgz"
+    util::print::info "Using default buildpack archive path: ${ROOT_DIR}/build/buildpack.tgz"
+    buildpack_archive="${ROOT_DIR}/build/buildpack.tgz"
   fi
 
   repo::prepare
@@ -82,7 +81,7 @@ Packages a buildpack or an extension into a buildpackage .cnb file.
 
 OPTIONS
   -h, --help                          Prints the command usage
-  -b, --buildpack-archive <filepath>  Path to the buildpack arhive (default: ${BUILD_DIR}/buildpack.tgz) (optional)
+  -b, --buildpack-archive <filepath>  Path to the buildpack arhive (default: ${ROOT_DIR}/build/buildpack.tgz) (optional)
   -i, --image-ref <ref>               List of image reference to publish to (required)
   -t, --token <token>                 Token used to download assets from GitHub (e.g. jam, pack, etc) (optional)
 USAGE
@@ -92,7 +91,6 @@ function repo::prepare() {
   util::print::title "Preparing repo..."
 
   mkdir -p "${BIN_DIR}"
-  mkdir -p "${BUILD_DIR}"
 
   export PATH="${BIN_DIR}:${PATH}"
 }
@@ -112,23 +110,20 @@ function buildpack::publish() {
   image_ref="${1}"
   buildpack_type="${2}"
 
-  util::print::title "Publishing ${buildpack_type}... ${image_ref}"
+  util::print::title "Publishing ${buildpack_type}..."
 
-  which pack
+  util::print::info "Extracting archive..."
+  tmp_dir=$(mktemp -d -p $ROOT_DIR)
+  tar -xvf $buildpack_archive -C $tmp_dir
 
-  ## CWIP fix below path to math the buildpack archive
-  mkdir ${BUILD_DIR}/cnbdir
-  cp ${buildpack_archive} ${BUILD_DIR}/buildpack.tgz
-  tar -xvf ${BUILD_DIR}/buildpack.tgz -C ${BUILD_DIR}/cnbdir
-
+  util::print::info "Publishing ${buildpack_type} to ${image_ref}"
   pack \
     buildpack package $image_ref \
-    --path ${BUILD_DIR}/cnbdir \
+    --path $tmp_dir \
     --format image \
     --publish
 
-  rm -rf ${BUILD_DIR}/cnbdir
-  rm -rf ${BUILD_DIR}/buildpack.tgz
+  rm -rf $tmp_dir
 }
 
 main "${@:-}"
