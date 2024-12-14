@@ -2,7 +2,7 @@
 .DS_Store
 .idea
 /build
-bin/
-linux/
-darwin/
-windows/
+/bin
+/linux
+/darwin
+/windows
