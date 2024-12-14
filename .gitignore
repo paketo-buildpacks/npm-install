@@ -3,7 +3,7 @@
 .idea
 /.bin
 /build
-bin/
-linux/
-darwin/
-windows/
+/bin
+/linux
+/darwin
+/windows
