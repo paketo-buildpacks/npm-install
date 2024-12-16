@@ -106,9 +106,9 @@ jobs:
           --buildpack-archive ./buildpack.tgz \
           --image-ref "${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}"
 
-        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_minor }}"
-        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_major }}"
-        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:latest"
+        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_minor }}" --multi-arch all
+        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_major }}" --multi-arch all
+        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:latest" --multi-arch all
         echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
         echo "digest=$(sudo skopeo inspect "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" | jq -r .Digest)" >> "$GITHUB_OUTPUT"
 
@@ -117,10 +117,10 @@ jobs:
       run: |
         echo "${GCR_PASSWORD}" | sudo skopeo login --username "${GCR_USERNAME}" --password-stdin "${GCR_REGISTRY}"
 
-        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${{ steps.push.outputs.image }}" "docker://${GCR_REGISTRY}/${{ github.repository }}:${{ steps.event.outputs.tag_full }}"
-        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${{ steps.push.outputs.image }}" "docker://${GCR_REGISTRY}/${{ github.repository }}:${{ steps.event.outputs.tag_minor }}"
-        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${{ steps.push.outputs.image }}" "docker://${GCR_REGISTRY}/${{ github.repository }}:${{ steps.event.outputs.tag_major }}"
-        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${{ steps.push.outputs.image }}" "docker://${GCR_REGISTRY}/${{ github.repository }}:latest"
+        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${{ steps.push.outputs.image }}" "docker://${GCR_REGISTRY}/${{ github.repository }}:${{ steps.event.outputs.tag_full }}" --multi-arch all
+        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${{ steps.push.outputs.image }}" "docker://${GCR_REGISTRY}/${{ github.repository }}:${{ steps.event.outputs.tag_minor }}" --multi-arch all
+        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${{ steps.push.outputs.image }}" "docker://${GCR_REGISTRY}/${{ github.repository }}:${{ steps.event.outputs.tag_major }}" --multi-arch all
+        sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${{ steps.push.outputs.image }}" "docker://${GCR_REGISTRY}/${{ github.repository }}:latest" --multi-arch all
 
     - name: Register with CNB Registry
       uses: docker://ghcr.io/buildpacks/actions/registry/request-add-entry:main
