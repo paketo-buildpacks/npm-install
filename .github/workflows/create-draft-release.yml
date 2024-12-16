@@ -61,6 +61,12 @@ jobs:
     name: Release
     runs-on: ubuntu-22.04
     needs: integration
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+
     steps:
     - name: Setup Go
       uses: actions/setup-go@v3
@@ -128,6 +134,20 @@ jobs:
         token: ${{ secrets.PAKETO_BOT_GITHUB_TOKEN }}
         buildpack_type: ${{ steps.get_buildpack_type.outputs.buildpack_type }}
         buildpackage_path: ${{ steps.get_buildpack_path.outputs.path }}
+
+    - name: Get Image Digest
+      id: image_digest
+
+      run: |
+        image_name="localhost:5000/npm-install:latest"
+
+        ./scripts/publish.sh \
+          --buildpack-archive ./build/buildpack.tgz \
+          --image-ref $image_name
+
+        digest=$(sudo skopeo inspect "docker://${image_name}" --tls-verify=false | jq -r .Digest)
+        echo $digest
+        echo $digest >> "$GITHUB_OUTPUT"
 
     - name: Create release assets
       id: create_release_assets
