@@ -137,7 +137,6 @@ jobs:
 
     - name: Get Image Digest
       id: image_digest
-
       run: |
         image_name="localhost:5000/npm-install:latest"
 
@@ -145,9 +144,14 @@ jobs:
           --buildpack-archive ./build/buildpack.tgz \
           --image-ref $image_name
 
-        digest=$(sudo skopeo inspect "docker://${image_name}" --tls-verify=false | jq -r .Digest)
-        echo $digest
-        echo $digest >> "$GITHUB_OUTPUT"
+        echo "digest=$(sudo skopeo inspect "docker://${image_name}" --tls-verify=false | jq -r .Digest)" >> "$GITHUB_OUTPUT"
+
+    - name: Set Correct Image Digest on the Release notes
+      run: |
+          printf '${{ steps.create-release-notes.outputs.release_body }}' \
+            | sed -E \
+              "s/\*\*Digest:\*\* \`sha256:[a-f0-9]{64}\`/\*\*Digest:\*\* \`${{ steps.image_digest.outputs.digest }}\`/" \
+              > ./release_notes
 
     - name: Create release assets
       id: create_release_assets
@@ -194,7 +198,7 @@ jobs:
         tag_name: v${{ steps.tag.outputs.tag }}
         target_commitish: ${{ github.sha }}
         name: v${{ steps.tag.outputs.tag }}
-        body: ${{ steps.create-release-notes.outputs.release_body }}
+        body_filepath: "./release_notes"
         draft: true
         assets: ${{ steps.create_release_assets.outputs.release_assets }}
 
