@@ -1,2 +1,5 @@
 CODEOWNERS
 workflows/update-dependencies-from-metadata.yml
+workflows/push-buildpackage.yml
+workflows/create-draft-release.yml
+scripts/publish.sh

@@ -11,8 +11,19 @@ api = "0.7"
     uri = "https://github.com/paketo-buildpacks/npm-install/blob/main/LICENSE"
 
 [metadata]
-  include-files = ["bin/build", "bin/detect", "bin/run", "bin/setup-symlinks", "buildpack.toml"]
-  pre-package = "./scripts/build.sh"
+  include-files = [
+    "buildpack.toml",
+    "linux/amd64/bin/build",
+    "linux/amd64/bin/detect",
+    "linux/amd64/bin/run",
+    "linux/amd64/bin/setup-symlinks",
+    "linux/arm64/bin/build",
+    "linux/arm64/bin/detect",
+    "linux/arm64/bin/run",
+    "linux/arm64/bin/setup-symlinks"
+  ]
+
+  pre-package = "./scripts/build.sh --target linux/amd64 --target linux/arm64"
 
   [[metadata.configurations]]
     name = "BP_DISABLE_SBOM"
@@ -53,3 +64,11 @@ api = "0.7"
 
 [[stacks]]
   id = "*"
+
+[[targets]]
+  os = "linux"
+  arch = "amd64"
+
+[[targets]]
+  os = "linux"
+  arch = "arm64"
