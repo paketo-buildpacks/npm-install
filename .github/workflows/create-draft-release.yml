@@ -153,6 +153,8 @@ jobs:
               "s/\*\*Digest:\*\* \`sha256:[a-f0-9]{64}\`/\*\*Digest:\*\* \`${{ steps.image_digest.outputs.digest }}\`/" \
               > ./release_notes
 
+          printf '${{ steps.image_digest.outputs.digest }}' > ./index-digest.sha256
+
     - name: Create release assets
       id: create_release_assets
       run: |
@@ -162,6 +164,11 @@ jobs:
             "path": "build/buildpack.tgz",
             "name": ($repo_name + "-" + $tag + ".tgz"),
             "content_type": "application/gzip"
+          },
+          {
+            "path": "./index-digest.sha256",
+            "name": ($repo_name + "-" + $tag + "-" + "index-digest.sha256"),
+            "content_type": "text/plain"
           }
         ]')
 

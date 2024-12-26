@@ -11,7 +11,7 @@ env:
 jobs:
   push:
     name: Push
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       GCR_REGISTRY: "gcr.io"
       GCR_PASSWORD: ${{ secrets.GCR_PUSH_BOT_JSON_KEY }}
@@ -36,6 +36,7 @@ jobs:
         echo "tag_major=${MAJOR_VERSION}" >> "$GITHUB_OUTPUT"
         echo "download_tgz_file_url=$(jq -r '.release.assets[] | select(.name | endswith(".tgz")) | .url' "${GITHUB_EVENT_PATH}")" >> "$GITHUB_OUTPUT"
         echo "download_cnb_file_url=$(jq -r --arg tag_full "$FULL_VERSION" '.release.assets[] | select(.name | endswith($tag_full + ".cnb")) | .url' "${GITHUB_EVENT_PATH}")" >> "$GITHUB_OUTPUT"
+        echo "download_sha256_file_url=$(jq -r '.release.assets[] | select(.name | endswith("index-digest.sha256")) | .url' "${GITHUB_EVENT_PATH}")" >> "$GITHUB_OUTPUT"
 
     - name: Download .cnb buildpack
       uses: paketo-buildpacks/github-config/actions/release/download-asset@main
@@ -49,6 +50,13 @@ jobs:
       with:
         url: ${{ steps.event.outputs.download_tgz_file_url }}
         output: "/github/workspace/buildpack.tgz"
+        token: ${{ secrets.PAKETO_BOT_GITHUB_TOKEN }}
+
+    - name: Download .sha digest
+      uses: paketo-buildpacks/github-config/actions/release/download-asset@main
+      with:
+        url: ${{ steps.event.outputs.download_sha256_file_url }}
+        output: "/github/workspace/index-digest.sha256"
         token: ${{ secrets.PAKETO_BOT_GITHUB_TOKEN }}
 
     - name: Parse Configs
@@ -106,11 +114,19 @@ jobs:
           --buildpack-archive ./buildpack.tgz \
           --image-ref "${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}"
 
+        ## Validate that the digest pushed to registry matches with the one mentioned on the readme file
+        pushed_image_index_digest=$(sudo skopeo inspect "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" | jq -r .Digest)
+
+        if [ "$(cat ./index-digest.sha256)" != "$pushed_image_index_digest" ]; then
+          echo "Image index digest pushed to registry does not match with the one mentioned on the readme file"
+          exit 1;
+        fi
+
         sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_minor }}" --multi-arch all
         sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_major }}" --multi-arch all
         sudo skopeo copy "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:latest" --multi-arch all
         echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
-        echo "digest=$(sudo skopeo inspect "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" | jq -r .Digest)" >> "$GITHUB_OUTPUT"
+        echo "digest=$pushed_image_index_digest" >> "$GITHUB_OUTPUT"
 
     - name: Push to GCR
       if: ${{ steps.parse_configs.outputs.push_to_gcr == 'true' }}
