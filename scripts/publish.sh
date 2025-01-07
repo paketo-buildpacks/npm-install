@@ -75,9 +75,9 @@ function main {
 
 function usage() {
   cat <<-USAGE
-package.sh --version <version> [OPTIONS]
+publish.sh --version <version> [OPTIONS]
 
-Packages a buildpack or an extension into a buildpackage .cnb file.
+Publishes a buildpack or an extension in to a registry.
 
 OPTIONS
   -h, --help                          Prints the command usage
