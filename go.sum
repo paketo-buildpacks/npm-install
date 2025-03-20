@@ -717,8 +717,8 @@ github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t
 github.com/DataDog/zstd v1.5.6 h1:LbEglqepa/ipmmQJUDnSsfvA8e8IStVcGaFWDuxvGOY=
 github.com/DataDog/zstd v1.5.6/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
 github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24/go.mod h1:4UJr5HIiMZrwgkSPdsjy2uOQExX/WEILpIrO9UPGuXs=
-github.com/ForestEckhardt/freezer v0.1.0 h1:1Av1G+uJTmhhJGuV8MkVLdiEH8ljuiBaV+Cgy30QbRE=
-github.com/ForestEckhardt/freezer v0.1.0/go.mod h1:fQApI/B3u/Pu6DD4rxmzBJQUBDc9EDu7ieqM6l4JvZA=
+github.com/ForestEckhardt/freezer v0.1.1 h1:ELpuDAAq2oLRXfddigV2TWbFloXu+mYkHjiHe8E9Ljk=
+github.com/ForestEckhardt/freezer v0.1.1/go.mod h1:fQApI/B3u/Pu6DD4rxmzBJQUBDc9EDu7ieqM6l4JvZA=
 github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20191009163259-e802c2cb94ae/go.mod h1:mjwGPas4yKduTyubHvD1Atl9r1rUq8DfVy+gkVvZ+oo=
 github.com/GoogleCloudPlatform/cloudsql-proxy v1.27.0/go.mod h1:bn9iHmAjogMoIPkqBGyJ9R1m9cXGCjBE/cuhBs3oEsQ=
 github.com/GoogleCloudPlatform/docker-credential-gcr v2.0.5+incompatible/go.mod h1:BB1eHdMLYEFuFdBlRMb0N7YGVdM5s6Pt0njxgvfbGGs=
@@ -2653,8 +2653,8 @@ github.com/otiai10/mint v1.3.1/go.mod h1:/yxELlJQ0ufhjUwhshSj+wFjZ78CnZ48/1wtmBH
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
 github.com/paketo-buildpacks/libnodejs v0.3.0 h1:vh2fDuUt/XPPy0ENY3mmRHlb127wVD8d782liVKa9WM=
 github.com/paketo-buildpacks/libnodejs v0.3.0/go.mod h1:V8bTCbjjpthcdrDK2g2KL7c0mHQeZJAfN+hQtPpmGuQ=
-github.com/paketo-buildpacks/occam v0.20.0 h1:R9lFiYBy8xVJLa09+3GV2R9jtPB/4yi4CcscqFTCgAA=
-github.com/paketo-buildpacks/occam v0.20.0/go.mod h1:PyG1KPqnnLweufXS1yGPcAKccUs3oqPFZUjIFO9FOZ0=
+github.com/paketo-buildpacks/occam v0.23.0 h1:zAZC0evlqHE1P7FJ+nqvl+uE5Xh8yb79x5bTdzbSeCA=
+github.com/paketo-buildpacks/occam v0.23.0/go.mod h1:K3Xc13S07hx1+2JEpPq4hIz5B5jEOwqubpazVs187H0=
 github.com/paketo-buildpacks/packit/v2 v2.6.1/go.mod h1:iBArWOfC5xZQF01o+zwnVKS+/hUBuFG+O1jCvzqBujs=
 github.com/paketo-buildpacks/packit/v2 v2.16.0 h1:zy5sszT/awIgpT4NioQolai/0H3ANIXlGW9wCbmwzrQ=
 github.com/paketo-buildpacks/packit/v2 v2.16.0/go.mod h1:LchgmOIDCXSDovrpoyP1J/yQEJq0Ely/vGCdiTp0vtA=
