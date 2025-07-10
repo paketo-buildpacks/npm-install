@@ -13,9 +13,9 @@ These functions are executed via gyp-win-tool when using the ninja generator.
 import os
 import re
 import shutil
-import subprocess
 import stat
 import string
+import subprocess
 import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -219,11 +219,10 @@ class WinTool:
             our_manifest = "%(out)s.manifest" % variables
             # Load and normalize the manifests. mt.exe sometimes removes whitespace,
             # and sometimes doesn't unfortunately.
-            with open(our_manifest) as our_f:
-                with open(assert_manifest) as assert_f:
-                    translator = str.maketrans('', '', string.whitespace)
-                    our_data = our_f.read().translate(translator)
-                    assert_data = assert_f.read().translate(translator)
+            with open(our_manifest) as our_f, open(assert_manifest) as assert_f:
+                translator = str.maketrans("", "", string.whitespace)
+                our_data = our_f.read().translate(translator)
+                assert_data = assert_f.read().translate(translator)
             if our_data != assert_data:
                 os.unlink(out)
 

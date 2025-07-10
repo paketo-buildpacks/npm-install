@@ -117,7 +117,7 @@ func testSimpleApp(t *testing.T, context spec.G, it spec.S) {
 					settings.Buildpacks.NPMInstall.Online,
 					settings.Buildpacks.BuildPlan.Online,
 				).
-				WithEnv(map[string]string{"BP_NPM_VERSION": "10.5", "BP_NODE_VERSION": "20"}).
+				WithEnv(map[string]string{"BP_NPM_VERSION": "10.5", "BP_NODE_VERSION": "22"}).
 				WithPullPolicy(pullPolicy).
 				WithSBOMOutputDir(sbomDir).
 				Execute(name, source)
