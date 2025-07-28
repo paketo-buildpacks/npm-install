@@ -256,8 +256,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					"version": ""
 				},
 				"schema": {
-					"version": "16.0.34",
-					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.34.json"
+					"version": "16.0.36",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.36.json"
 				}
 			}`))
 
@@ -420,8 +420,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					"version": ""
 				},
 				"schema": {
-					"version": "16.0.34",
-					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.34.json"
+					"version": "16.0.36",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.36.json"
 				}
 			}`))
 
@@ -621,8 +621,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					"version": ""
 				},
 				"schema": {
-					"version": "16.0.34",
-					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.34.json"
+					"version": "16.0.36",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.36.json"
 				}
 			}`))
 
@@ -732,8 +732,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					"version": ""
 				},
 				"schema": {
-					"version": "16.0.34",
-					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.34.json"
+					"version": "16.0.36",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.36.json"
 				}
 			}`))
 
