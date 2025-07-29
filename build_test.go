@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	npminstall "github.com/paketo-buildpacks/npm-install"
@@ -240,7 +241,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			content, err = io.ReadAll(syft.Content)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(content)).To(MatchJSON(`{
+			versionPattern := regexp.MustCompile(`\d+\.\d+\.\d+`)
+			contentReplaced := versionPattern.ReplaceAllString(string(content), `x.x.x`)
+			Expect(contentReplaced).To(MatchJSON(`{
 				"artifacts": [],
 				"artifactRelationships": [],
 				"source": {
@@ -256,8 +259,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					"version": ""
 				},
 				"schema": {
-					"version": "16.0.36",
-					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.36.json"
+					"version": "x.x.x",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-x.x.x.json"
 				}
 			}`))
 
@@ -404,7 +407,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			content, err = io.ReadAll(syft.Content)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(content)).To(MatchJSON(`{
+			versionPattern := regexp.MustCompile(`\d+\.\d+\.\d+`)
+			contentReplaced := versionPattern.ReplaceAllString(string(content), `x.x.x`)
+			Expect(contentReplaced).To(MatchJSON(`{
 				"artifacts": [],
 				"artifactRelationships": [],
 				"source": {
@@ -420,8 +425,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					"version": ""
 				},
 				"schema": {
-					"version": "16.0.36",
-					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.36.json"
+					"version": "x.x.x",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-x.x.x.json"
 				}
 			}`))
 
@@ -605,7 +610,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			content, err = io.ReadAll(syft.Content)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(content)).To(MatchJSON(`{
+			versionPattern := regexp.MustCompile(`\d+\.\d+\.\d+`)
+			contentReplaced := versionPattern.ReplaceAllString(string(content), `x.x.x`)
+			Expect(contentReplaced).To(MatchJSON(`{
 				"artifacts": [],
 				"artifactRelationships": [],
 				"source": {
@@ -621,8 +628,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					"version": ""
 				},
 				"schema": {
-					"version": "16.0.36",
-					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.36.json"
+					"version": "x.x.x",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-x.x.x.json"
 				}
 			}`))
 
@@ -716,7 +723,9 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 			content, err = io.ReadAll(syft.Content)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(content)).To(MatchJSON(`{
+			versionPattern = regexp.MustCompile(`\d+\.\d+\.\d+`)
+			contentReplaced = versionPattern.ReplaceAllString(string(content), `x.x.x`)
+			Expect(contentReplaced).To(MatchJSON(`{
 				"artifacts": [],
 				"artifactRelationships": [],
 				"source": {
@@ -732,8 +741,8 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 					"version": ""
 				},
 				"schema": {
-					"version": "16.0.36",
-					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.0.36.json"
+					"version": "x.x.x",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-x.x.x.json"
 				}
 			}`))
 
