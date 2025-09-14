@@ -62,12 +62,17 @@ jobs:
     - name: Parse Configs
       id: parse_configs
       run: |
+        registries_filename="${{ env.REGISTRIES_FILENAME }}"
+
         push_to_dockerhub=true
         push_to_gcr=false
 
-        if [[ -f $REGISTRIES_FILENAME ]]; then
-          if jq 'has("dockerhub")' $REGISTRIES_FILENAME > /dev/null; then
-            push_to_dockerhub=$(jq '.dockerhub' $REGISTRIES_FILENAME)
+        if [[ -f $registries_filename ]]; then
+          if jq 'has("dockerhub")' $registries_filename > /dev/null; then
+            push_to_dockerhub=$(jq '.dockerhub' $registries_filename)
+          fi
+          if jq 'has("GCR")' $registries_filename > /dev/null; then
+            push_to_gcr=$(jq '.GCR' $registries_filename)
           fi
         fi
 
@@ -81,6 +86,15 @@ jobs:
         if [[ "$buidpackTomlVersion" != "$githubReleaseVersion" ]]; then
           echo "Version in buildpack.toml ($buidpackTomlVersion) and github release ($githubReleaseVersion) are not identical"
           exit 1
+        fi
+
+    - name: Get buildpack type
+      id: get_buildpack_type
+      run: |
+        if [ -f "extension.toml" ]; then
+          echo "buildpack_type=extension" >> "$GITHUB_OUTPUT"
+        else
+          echo "buildpack_type=buildpack" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Docker login docker.io
@@ -98,6 +112,7 @@ jobs:
         password: ${{ env.GCR_PASSWORD }}
         registry: ${{ env.GCR_REGISTRY }}
 
+    - uses: buildpacks/github-actions/setup-tools@v5.5.4
     - name: Push to DockerHub
       if: ${{  steps.parse_configs.outputs.push_to_dockerhub == 'true' }}
       id: push
@@ -108,14 +123,18 @@ jobs:
         echo "${DOCKERHUB_PASSWORD}" | sudo skopeo login --username "${DOCKERHUB_USERNAME}" --password-stdin ${DOCKERHUB_REGISTRY}
 
         ./scripts/publish.sh \
-          --buildpack-archive ./buildpack.tgz \
+          --archive-path ./buildpack.tgz \
+          --buildpack-type ${{ steps.get_buildpack_type.outputs.buildpack_type }} \
           --image-ref "${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}"
 
-        ## Validate that the digest pushed to registry matches with the one mentioned on the readme file
-        pushed_image_index_digest=$(sudo skopeo inspect "docker://${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" | jq -r .Digest)
+        ## Validate that the image index digest pushed to registry matches with the one on the release notes
+        pushed_image_index_digest=$(crane digest "${DOCKERHUB_REGISTRY}/${IMAGE}:${{ steps.event.outputs.tag_full }}" | xargs)
+
+        echo "Index digest from release notes: $(cat ./index-digest.sha256)"
+        echo "Index digest pushed to registry: $pushed_image_index_digest"
 
         if [ "$(cat ./index-digest.sha256)" != "$pushed_image_index_digest" ]; then
-          echo "Image index digest pushed to registry does not match with the one mentioned on the readme file"
+          echo "The image index digest pushed to registry does not match the expected digest from release notes"
           exit 1;
         fi
 
@@ -145,7 +164,7 @@ jobs:
 
   failure:
     name: Alert on Failure
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [push]
     if: ${{ always() && needs.push.result == 'failure' }}
     steps:
