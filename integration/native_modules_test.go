@@ -77,6 +77,7 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 					settings.Extensions.UbiNodejsExtension.Online,
 				).
 				WithBuildpacks(
+					settings.Buildpacks.Cpython.Online,
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
 					settings.Buildpacks.BuildPlan.Online,
@@ -144,6 +145,7 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 						settings.Extensions.UbiNodejsExtension.Online,
 					).
 					WithBuildpacks(
+						settings.Buildpacks.Cpython.Online,
 						settings.Buildpacks.NodeEngine.Offline,
 						settings.Buildpacks.NPMInstall.Online,
 						settings.Buildpacks.BuildPlan.Online,

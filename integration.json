@@ -2,11 +2,13 @@
   "builders": [
     "paketobuildpacks/ubi-9-builder-buildpackless",
     "paketobuildpacks/builder-ubi8-buildpackless-base",
-    "paketobuildpacks/builder-jammy-buildpackless-full"
+    "paketobuildpacks/builder-jammy-buildpackless-base",
+    "paketobuildpacks/ubuntu-noble-builder-buildpackless"
   ],
   "ubi-nodejs-extension": "github.com/paketo-buildpacks/ubi-nodejs-extension",
   "build-plan": "github.com/paketo-community/build-plan",
   "nginx": "github.com/paketo-buildpacks/nginx",
   "node-engine": "github.com/paketo-buildpacks/node-engine",
-  "node-run-script": "github.com/paketo-buildpacks/node-run-script"
+  "node-run-script": "github.com/paketo-buildpacks/node-run-script",
+  "cpython": "github.com/paketo-buildpacks/cpython"
 }

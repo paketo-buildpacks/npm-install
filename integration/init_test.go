@@ -37,6 +37,9 @@ var settings struct {
 		NPMList struct {
 			Online string
 		}
+		Cpython struct {
+			Online string
+		}
 	}
 
 	Extensions struct {
@@ -56,6 +59,7 @@ var settings struct {
 		NodeRunScript      string `json:"node-run-script"`
 		NGINX              string `json:"nginx"`
 		UbiNodejsExtension string `json:"ubi-nodejs-extension"`
+		Cpython            string `json:"cpython"`
 	}
 }
 
@@ -87,11 +91,20 @@ func TestIntegration(t *testing.T) {
 	builder, err := pack.Builder.Inspect.Execute()
 	Expect(err).NotTo(HaveOccurred())
 
-	if builder.BuilderName == "paketobuildpacks/builder-ubi8-buildpackless-base" || builder.BuilderName == "paketobuildpacks/ubi-9-builder-buildpackless" {
+	isUbiBuilder := builder.BuilderName == "paketobuildpacks/builder-ubi8-buildpackless-base" || builder.BuilderName == "paketobuildpacks/ubi-9-builder-buildpackless"
+
+	if isUbiBuilder {
 		settings.Extensions.UbiNodejsExtension.Online, err = buildpackStore.Get.
 			Execute(settings.Config.UbiNodejsExtension)
 		Expect(err).ToNot(HaveOccurred())
 	}
+
+	if !isUbiBuilder {
+		settings.Buildpacks.Cpython.Online, err = buildpackStore.Get.
+			Execute(settings.Config.Cpython)
+		Expect(err).ToNot(HaveOccurred())
+	}
+
 	settings.Buildpacks.BuildPlan.Online, err = buildpackStore.Get.
 		Execute(settings.Config.BuildPlan)
 	Expect(err).NotTo(HaveOccurred())
