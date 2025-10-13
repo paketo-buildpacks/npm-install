@@ -8,7 +8,7 @@
   "ubi-nodejs-extension": "github.com/paketo-buildpacks/ubi-nodejs-extension",
   "build-plan": "github.com/paketo-community/build-plan",
   "nginx": "github.com/paketo-buildpacks/nginx",
-  "node-engine": "github.com/paketo-buildpacks/node-engine",
+  "node-engine": "index.docker.io/paketobuildpacks/node-engine",
   "node-run-script": "github.com/paketo-buildpacks/node-run-script",
-  "cpython": "github.com/paketo-buildpacks/cpython"
+  "cpython": "index.docker.io/paketobuildpacks/cpython"
 }

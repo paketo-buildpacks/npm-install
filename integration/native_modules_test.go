@@ -39,8 +39,10 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 			image     occam.Image
 			container occam.Container
 
-			name   string
-			source string
+			name                    string
+			source                  string
+			cpythonBuildpackOnline  string
+			bpNpmIncludeBuildPython string
 		)
 
 		it.Before(func() {
@@ -51,10 +53,14 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "with_native_modules"))
 			Expect(err).NotTo(HaveOccurred())
 
+			cpythonBuildpackOnline = settings.Buildpacks.Cpython.Online
+			bpNpmIncludeBuildPython = "true"
 			if settings.Extensions.UbiNodejsExtension.Online != "" {
 				pullPolicy = "always"
 				extenderBuildStr = "[extender (build)] "
 				extenderBuildStrEscaped = `\[extender \(build\)\] `
+				cpythonBuildpackOnline = ""
+				bpNpmIncludeBuildPython = "false"
 			}
 		})
 
@@ -77,11 +83,14 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 					settings.Extensions.UbiNodejsExtension.Online,
 				).
 				WithBuildpacks(
-					settings.Buildpacks.Cpython.Online,
+					cpythonBuildpackOnline,
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
 					settings.Buildpacks.BuildPlan.Online,
 				).
+				WithEnv(map[string]string{
+					"BP_NPM_INCLUDE_BUILD_PYTHON": bpNpmIncludeBuildPython,
+				}).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -145,11 +154,14 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 						settings.Extensions.UbiNodejsExtension.Online,
 					).
 					WithBuildpacks(
-						settings.Buildpacks.Cpython.Online,
+						settings.Buildpacks.Cpython.Offline,
 						settings.Buildpacks.NodeEngine.Offline,
 						settings.Buildpacks.NPMInstall.Online,
 						settings.Buildpacks.BuildPlan.Online,
 					).
+					WithEnv(map[string]string{
+						"BP_NPM_INCLUDE_BUILD_PYTHON": bpNpmIncludeBuildPython,
+					}).
 					WithNetwork("none").
 					Execute(name, source)
 				Expect(err).NotTo(HaveOccurred())
