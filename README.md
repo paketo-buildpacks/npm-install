@@ -40,10 +40,11 @@ file that looks like the following:
 
 ## Configuration
 
-| Environment Variable        | Description                                                                                                                                                               |
-|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `$BP_NPM_VERSION`           | If set, this custom version of `npm` will be used instead of the one provided by the `nodejs` installation.                                                               |
-| `$BP_KEEP_NODE_BUILD_CACHE` | If set to `true` (default `false`), the folder `node_modules/.cache` will not be removed after the build, but will be readonly at runtime.                                |
+| Environment Variable           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$BP_NPM_VERSION`              | If set, this custom version of `npm` will be used instead of the one provided by the `nodejs` installation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `$BP_KEEP_NODE_BUILD_CACHE`    | If set to `true` (default `false`), the folder `node_modules/.cache` will not be removed after the build, but will be readonly at runtime.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `BP_NODE_INCLUDE_BUILD_PYTHON` | If set, or if set to `true` (default `false`), the [cpython](https://github.com/paketo-buildpacks/cpython) buildpack will participate making Python available on the PATH only during the build. This is required because `npm install` uses `node-gyp` to compile native modules, which requires Python. Note that the `BP_NODE_INCLUDE_BUILD_PYTHON` variable is not necessary for the [builder-jammy-full](https://github.com/paketo-buildpacks/builder-jammy-full) and for the UBI builders ([ubi-8-builder](https://github.com/paketo-buildpacks/builder-ubi8-base), [ubi-9-builder](https://github.com/paketo-buildpacks/ubi-9-builder), etc.), as Python is already available on the PATH. |
 
 ## Usage
 
@@ -69,11 +70,13 @@ This could be useful if your app is a part of a monorepo.
 ## Run Tests
 
 To run all unit tests, run:
+
 ```
 ./scripts/unit.sh
 ```
 
 To run all integration tests, run:
+
 ```
 /scripts/integration.sh
 ```
