@@ -23,6 +23,7 @@ type VersionParser interface {
 
 func Detect() packit.DetectFunc {
 	return func(context packit.DetectContext) (packit.DetectResult, error) {
+		var requirements []packit.BuildPlanRequirement
 
 		projectPath, err := libnodejs.FindProjectPath(context.WorkingDir)
 		if err != nil {
@@ -54,20 +55,40 @@ func Detect() packit.DetectFunc {
 			}
 		}
 
+		requirements = append(requirements, nodeDependency)
+
+		bpNpmIncludeBuildPython, bpNpmIncludeBuildPythonExists := os.LookupEnv("BP_NPM_INCLUDE_BUILD_PYTHON")
+
+		installPython := false
+		if bpNpmIncludeBuildPythonExists && (bpNpmIncludeBuildPython == "" || bpNpmIncludeBuildPython == "true") {
+			installPython = true
+		} else if bpNpmIncludeBuildPythonExists && bpNpmIncludeBuildPython == "false" {
+			installPython = false
+		}
+
+		if installPython {
+			requirements = append(requirements, packit.BuildPlanRequirement{
+				Name: Cpython,
+				Metadata: BuildPlanMetadata{
+					Build:  true,
+					Launch: false,
+				},
+			})
+		}
+
+		requirements = append(requirements, packit.BuildPlanRequirement{
+			Name: Npm,
+			Metadata: BuildPlanMetadata{
+				Build: true,
+			},
+		})
+
 		return packit.DetectResult{
 			Plan: packit.BuildPlan{
 				Provides: []packit.BuildPlanProvision{
 					{Name: NodeModules},
 				},
-				Requires: []packit.BuildPlanRequirement{
-					nodeDependency,
-					{
-						Name: Npm,
-						Metadata: BuildPlanMetadata{
-							Build: true,
-						},
-					},
-				},
+				Requires: requirements,
 			},
 		}, nil
 	}

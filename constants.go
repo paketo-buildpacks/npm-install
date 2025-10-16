@@ -1,6 +1,7 @@
 package npminstall
 
 const (
+	Cpython     = "cpython"
 	NodeModules = "node_modules"
 	Node        = "node"
 	Npm         = "npm"
