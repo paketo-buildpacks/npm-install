@@ -110,6 +110,144 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		})
 	})
 
+	context("when $BP_NPM_INCLUDE_BUILD_PYTHON env variable is present", func() {
+		it.Before(func() {
+			Expect(os.WriteFile(filePath, []byte(`{
+			}`), 0600)).To(Succeed())
+		})
+
+		it.After(func() {
+			os.Unsetenv("BP_NPM_INCLUDE_BUILD_PYTHON")
+		})
+
+		it("has been set to true, it should include cpython buildpack", func() {
+			os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "true")
+
+			result, err := detect(packit.DetectContext{
+				WorkingDir: workingDir,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Plan).To(Equal(packit.BuildPlan{
+				Provides: []packit.BuildPlanProvision{
+					{Name: npminstall.NodeModules},
+				},
+				Requires: []packit.BuildPlanRequirement{
+					{
+						Name: npminstall.Node,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+					{
+						Name: npminstall.Cpython,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build:  true,
+							Launch: false,
+						},
+					},
+					{
+						Name: npminstall.Npm,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+				},
+			}))
+
+		})
+
+		it("has no value, it should include cpython buildpack", func() {
+			os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "")
+
+			result, err := detect(packit.DetectContext{
+				WorkingDir: workingDir,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Plan).To(Equal(packit.BuildPlan{
+				Provides: []packit.BuildPlanProvision{
+					{Name: npminstall.NodeModules},
+				},
+				Requires: []packit.BuildPlanRequirement{
+					{
+						Name: npminstall.Node,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+					{
+						Name: npminstall.Cpython,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build:  true,
+							Launch: false,
+						},
+					},
+					{
+						Name: npminstall.Npm,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+				},
+			}))
+		})
+
+		it("has been set to false, it does not include cpython buildpack", func() {
+			os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "false")
+
+			result, err := detect(packit.DetectContext{
+				WorkingDir: workingDir,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Plan).To(Equal(packit.BuildPlan{
+				Provides: []packit.BuildPlanProvision{
+					{Name: npminstall.NodeModules},
+				},
+				Requires: []packit.BuildPlanRequirement{
+					{
+						Name: npminstall.Node,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+					{
+						Name: npminstall.Npm,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+				},
+			}))
+		})
+
+		it("has been set to a random string, it does not include cpython buildpack", func() {
+			os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "random-string")
+
+			result, err := detect(packit.DetectContext{
+				WorkingDir: workingDir,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Plan).To(Equal(packit.BuildPlan{
+				Provides: []packit.BuildPlanProvision{
+					{Name: npminstall.NodeModules},
+				},
+				Requires: []packit.BuildPlanRequirement{
+					{
+						Name: npminstall.Node,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+					{
+						Name: npminstall.Npm,
+						Metadata: npminstall.BuildPlanMetadata{
+							Build: true,
+						},
+					},
+				},
+			}))
+		})
+	})
+
 	context("failure cases", func() {
 		context("when the package.json parser fails", func() {
 			it.Before(func() {
