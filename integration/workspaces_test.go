@@ -161,18 +161,17 @@ func testWorkspaces(t *testing.T, context spec.G, it spec.S) {
 							settings.Buildpacks.NodeEngine.Online,
 							settings.Buildpacks.NPMInstall.Online,
 							settings.Buildpacks.NodeRunScript.Online,
-							settings.Buildpacks.NGINX.Online,
+							settings.Buildpacks.BuildPlan.Online,
 						).
 						WithEnv(map[string]string{
 							"BP_NODE_RUN_SCRIPTS": "build",
-							"BP_WEB_SERVER":       "nginx",
-							"BP_WEB_SERVER_ROOT":  "build",
 						}).
 						Execute(name, source)
 					Expect(err).NotTo(HaveOccurred())
 
 					container, err = docker.Container.Run.
 						WithPublish("8080").
+						WithCommand("node server-static.js").
 						WithEnv(map[string]string{
 							"PORT": "8080",
 						}).

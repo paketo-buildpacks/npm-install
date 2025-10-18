@@ -21,9 +21,6 @@ var settings struct {
 		BuildPlan struct {
 			Online string
 		}
-		NGINX struct {
-			Online string
-		}
 		NodeEngine struct {
 			Online  string
 			Offline string
@@ -58,7 +55,6 @@ var settings struct {
 		BuildPlan          string `json:"build-plan"`
 		NodeEngine         string `json:"node-engine"`
 		NodeRunScript      string `json:"node-run-script"`
-		NGINX              string `json:"nginx"`
 		UbiNodejsExtension string `json:"ubi-nodejs-extension"`
 		Cpython            string `json:"cpython"`
 	}
@@ -114,10 +110,6 @@ func TestIntegration(t *testing.T) {
 
 	settings.Buildpacks.BuildPlan.Online, err = buildpackStore.Get.
 		Execute(settings.Config.BuildPlan)
-	Expect(err).NotTo(HaveOccurred())
-
-	settings.Buildpacks.NGINX.Online, err = buildpackStore.Get.
-		Execute(settings.Config.NGINX)
 	Expect(err).NotTo(HaveOccurred())
 
 	settings.Buildpacks.NodeEngine.Online, err = buildpackStore.Get.
