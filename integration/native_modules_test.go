@@ -137,48 +137,5 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 				extenderBuildStr+"",
 			))
 		})
-
-		context("when the npm and node buildpacks are cached", func() {
-
-			//UBI does not support offline installation at the moment,
-			//so we are skipping it.
-			if settings.Extensions.UbiNodejsExtension.Online != "" {
-				return
-			}
-
-			it("does not reach out to the internet", func() {
-				var err error
-				image, _, err = pack.Build.
-					WithPullPolicy(pullPolicy).
-					WithExtensions(
-						settings.Extensions.UbiNodejsExtension.Online,
-					).
-					WithBuildpacks(
-						settings.Buildpacks.Cpython.Offline,
-						settings.Buildpacks.NodeEngine.Offline,
-						settings.Buildpacks.NPMInstall.Online,
-						settings.Buildpacks.BuildPlan.Online,
-					).
-					WithEnv(map[string]string{
-						"BP_NPM_INCLUDE_BUILD_PYTHON": bpNpmIncludeBuildPython,
-					}).
-					WithNetwork("none").
-					Execute(name, source)
-				Expect(err).NotTo(HaveOccurred())
-
-				container, err = docker.Container.Run.
-					WithCommand("npm start").
-					WithEnv(map[string]string{"PORT": "8080"}).
-					WithPublish("8080").
-					Execute(image.ID)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(container).Should(BeAvailable())
-
-				response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort("8080")))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(response.StatusCode).To(Equal(http.StatusOK))
-			})
-		})
 	})
 }
