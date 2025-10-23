@@ -22,8 +22,7 @@ var settings struct {
 			Online string
 		}
 		NodeEngine struct {
-			Online  string
-			Offline string
+			Online string
 		}
 		NodeRunScript struct {
 			Online string
@@ -106,11 +105,6 @@ func TestIntegration(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 
 	settings.Buildpacks.NodeEngine.Online, err = buildpackStore.Get.
-		Execute(settings.Config.NodeEngine)
-	Expect(err).ToNot(HaveOccurred())
-
-	settings.Buildpacks.NodeEngine.Offline, err = buildpackStore.Get.
-		WithOfflineDependencies().
 		Execute(settings.Config.NodeEngine)
 	Expect(err).ToNot(HaveOccurred())
 
