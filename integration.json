@@ -5,9 +5,9 @@
     "paketobuildpacks/builder-jammy-buildpackless-base",
     "paketobuildpacks/ubuntu-noble-builder-buildpackless"
   ],
-  "ubi-nodejs-extension": "github.com/paketo-buildpacks/ubi-nodejs-extension",
-  "build-plan": "github.com/paketo-community/build-plan",
+  "ubi-nodejs-extension": "docker.io/paketobuildpacks/ubi-nodejs-extension",
+  "build-plan": "docker.io/paketocommunity/build-plan",
   "node-engine": "index.docker.io/paketobuildpacks/node-engine",
-  "node-run-script": "github.com/paketo-buildpacks/node-run-script",
+  "node-run-script": "docker.io/paketobuildpacks/node-run-script",
   "cpython": "index.docker.io/paketobuildpacks/cpython"
 }
