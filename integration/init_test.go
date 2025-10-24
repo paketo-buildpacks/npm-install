@@ -21,12 +21,8 @@ var settings struct {
 		BuildPlan struct {
 			Online string
 		}
-		NGINX struct {
-			Online string
-		}
 		NodeEngine struct {
-			Online  string
-			Offline string
+			Online string
 		}
 		NodeRunScript struct {
 			Online string
@@ -35,6 +31,9 @@ var settings struct {
 			Online string
 		}
 		NPMList struct {
+			Online string
+		}
+		Cpython struct {
 			Online string
 		}
 	}
@@ -54,8 +53,8 @@ var settings struct {
 		BuildPlan          string `json:"build-plan"`
 		NodeEngine         string `json:"node-engine"`
 		NodeRunScript      string `json:"node-run-script"`
-		NGINX              string `json:"nginx"`
 		UbiNodejsExtension string `json:"ubi-nodejs-extension"`
+		Cpython            string `json:"cpython"`
 	}
 }
 
@@ -87,31 +86,26 @@ func TestIntegration(t *testing.T) {
 	builder, err := pack.Builder.Inspect.Execute()
 	Expect(err).NotTo(HaveOccurred())
 
-	if builder.BuilderName == "paketobuildpacks/builder-ubi8-buildpackless-base" || builder.BuilderName == "paketobuildpacks/ubi-9-builder-buildpackless" {
-		settings.Extensions.UbiNodejsExtension.Online, err = buildpackStore.Get.
-			Execute(settings.Config.UbiNodejsExtension)
-		Expect(err).ToNot(HaveOccurred())
+	isUbiBuilder := builder.BuilderName == "paketobuildpacks/builder-ubi8-buildpackless-base" || builder.BuilderName == "paketobuildpacks/ubi-9-builder-buildpackless"
+
+	if isUbiBuilder {
+		Expect(occam.NewDocker().Pull.Execute(settings.Config.UbiNodejsExtension))
+		settings.Extensions.UbiNodejsExtension.Online = settings.Config.UbiNodejsExtension
 	}
-	settings.Buildpacks.BuildPlan.Online, err = buildpackStore.Get.
-		Execute(settings.Config.BuildPlan)
-	Expect(err).NotTo(HaveOccurred())
 
-	settings.Buildpacks.NGINX.Online, err = buildpackStore.Get.
-		Execute(settings.Config.NGINX)
-	Expect(err).NotTo(HaveOccurred())
+	if !isUbiBuilder {
+		Expect(occam.NewDocker().Pull.Execute(settings.Config.Cpython))
+		settings.Buildpacks.Cpython.Online = settings.Config.Cpython
+	}
 
-	settings.Buildpacks.NodeEngine.Online, err = buildpackStore.Get.
-		Execute(settings.Config.NodeEngine)
-	Expect(err).ToNot(HaveOccurred())
+	Expect(occam.NewDocker().Pull.Execute(settings.Config.BuildPlan))
+	settings.Buildpacks.BuildPlan.Online = settings.Config.BuildPlan
 
-	settings.Buildpacks.NodeEngine.Offline, err = buildpackStore.Get.
-		WithOfflineDependencies().
-		Execute(settings.Config.NodeEngine)
-	Expect(err).ToNot(HaveOccurred())
+	Expect(occam.NewDocker().Pull.Execute(settings.Config.NodeEngine))
+	settings.Buildpacks.NodeEngine.Online = settings.Config.NodeEngine
 
-	settings.Buildpacks.NodeRunScript.Online, err = buildpackStore.Get.
-		Execute(settings.Config.NodeRunScript)
-	Expect(err).ToNot(HaveOccurred())
+	Expect(occam.NewDocker().Pull.Execute(settings.Config.NodeRunScript))
+	settings.Buildpacks.NodeRunScript.Online = settings.Config.NodeRunScript
 
 	settings.Buildpacks.NPMInstall.Online, err = buildpackStore.Get.
 		WithVersion("1.2.3").

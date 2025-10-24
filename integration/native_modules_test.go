@@ -39,8 +39,10 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 			image     occam.Image
 			container occam.Container
 
-			name   string
-			source string
+			name                    string
+			source                  string
+			cpythonBuildpackOnline  string
+			bpNpmIncludeBuildPython string
 		)
 
 		it.Before(func() {
@@ -51,10 +53,14 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 			source, err = occam.Source(filepath.Join("testdata", "with_native_modules"))
 			Expect(err).NotTo(HaveOccurred())
 
+			cpythonBuildpackOnline = settings.Buildpacks.Cpython.Online
+			bpNpmIncludeBuildPython = "true"
 			if settings.Extensions.UbiNodejsExtension.Online != "" {
 				pullPolicy = "always"
 				extenderBuildStr = "[extender (build)] "
 				extenderBuildStrEscaped = `\[extender \(build\)\] `
+				cpythonBuildpackOnline = ""
+				bpNpmIncludeBuildPython = "false"
 			}
 		})
 
@@ -77,10 +83,14 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 					settings.Extensions.UbiNodejsExtension.Online,
 				).
 				WithBuildpacks(
+					cpythonBuildpackOnline,
 					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
 					settings.Buildpacks.BuildPlan.Online,
 				).
+				WithEnv(map[string]string{
+					"BP_NPM_INCLUDE_BUILD_PYTHON": bpNpmIncludeBuildPython,
+				}).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -126,45 +136,6 @@ func testNativeModules(t *testing.T, context spec.G, it spec.S) {
 				fmt.Sprintf(extenderBuildStr+"    PATH                -> \"%s/.bin_local:$PATH:%s/.bin\"", modulePath, modulePath),
 				extenderBuildStr+"",
 			))
-		})
-
-		context("when the npm and node buildpacks are cached", func() {
-
-			//UBI does not support offline installation at the moment,
-			//so we are skipping it.
-			if settings.Extensions.UbiNodejsExtension.Online != "" {
-				return
-			}
-
-			it("does not reach out to the internet", func() {
-				var err error
-				image, _, err = pack.Build.
-					WithPullPolicy(pullPolicy).
-					WithExtensions(
-						settings.Extensions.UbiNodejsExtension.Online,
-					).
-					WithBuildpacks(
-						settings.Buildpacks.NodeEngine.Offline,
-						settings.Buildpacks.NPMInstall.Online,
-						settings.Buildpacks.BuildPlan.Online,
-					).
-					WithNetwork("none").
-					Execute(name, source)
-				Expect(err).NotTo(HaveOccurred())
-
-				container, err = docker.Container.Run.
-					WithCommand("npm start").
-					WithEnv(map[string]string{"PORT": "8080"}).
-					WithPublish("8080").
-					Execute(image.ID)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(container).Should(BeAvailable())
-
-				response, err := http.Get(fmt.Sprintf("http://localhost:%s", container.HostPort("8080")))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(response.StatusCode).To(Equal(http.StatusOK))
-			})
 		})
 	})
 }

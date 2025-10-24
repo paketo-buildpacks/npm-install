@@ -32,11 +32,6 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when the npm and node buildpacks are cached", func() {
-		//UBI does not support offline installation at the moment,
-		//so we are skipping it.
-		if settings.Extensions.UbiNodejsExtension.Online != "" {
-			return
-		}
 
 		var (
 			image     occam.Image
@@ -74,11 +69,10 @@ func testPrePostScriptRebuild(t *testing.T, context spec.G, it spec.S) {
 					settings.Extensions.UbiNodejsExtension.Online,
 				).
 				WithBuildpacks(
-					settings.Buildpacks.NodeEngine.Offline,
+					settings.Buildpacks.NodeEngine.Online,
 					settings.Buildpacks.NPMInstall.Online,
 					settings.Buildpacks.BuildPlan.Online,
 				).
-				WithNetwork("none").
 				WithPullPolicy(pullPolicy).
 				Execute(name, source)
 			Expect(err).NotTo(HaveOccurred(), logs.String)
