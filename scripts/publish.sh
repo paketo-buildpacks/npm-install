@@ -13,18 +13,23 @@ source "${ROOT_DIR}/scripts/.util/tools.sh"
 source "${ROOT_DIR}/scripts/.util/print.sh"
 
 function main {
-  local buildpack_archive image_ref token
+  local archive_path buildpack_type image_ref token
   token=""
 
   while [[ "${#}" != 0 ]]; do
     case "${1}" in
-    --buildpack-archive | -b)
-      buildpack_archive="${2}"
+    --archive-path | -a)
+      archive_path="${2}"
+      shift 2
+      ;;
+
+    --buildpack-type | -bt)
+      buildpack_type="${2}"
       shift 2
       ;;
 
     --image-ref | -i)
-      image_ref+=("${2}")
+      image_ref="${2}"
       shift 2
       ;;
 
@@ -52,38 +57,44 @@ function main {
 
   if [[ -z "${image_ref:-}" ]]; then
     usage
-    echo
     util::print::error "--image-ref is required"
   fi
 
-  if [[ -z "${buildpack_archive:-}" ]]; then
-    util::print::info "Using default buildpack archive path: ${ROOT_DIR}/build/buildpack.tgz"
-    buildpack_archive="${ROOT_DIR}/build/buildpack.tgz"
+  if [[ -z "${buildpack_type:-}" ]]; then
+    usage
+    util::print::error "--buildpack-type is required"
+  fi
+
+  if [[ ${buildpack_type} != "buildpack" && ${buildpack_type} != "extension" ]]; then
+    usage
+    util::print::error "--buildpack-type accepted values: [\"buildpack\",\"extension\"]"
+  fi
+
+  if [[ -z "${archive_path:-}" ]]; then
+    util::print::info "Using default archive path: ${ROOT_DIR}/build/buildpack.tgz"
+    archive_path="${ROOT_DIR}/build/buildpack.tgz"
+  else
+    archive_path="${archive_path}"
   fi
 
   repo::prepare
 
   tools::install "${token}"
 
-  buildpack_type=buildpack
-  if [ -f "${ROOT_DIR}/extension.toml" ]; then
-    buildpack_type=extension
-  fi
-
-  buildpack::publish "${image_ref}" "${buildpack_type}"
+  buildpack::publish "${image_ref}" "${buildpack_type}" "${archive_path}"
 }
 
 function usage() {
   cat <<-USAGE
-publish.sh --version <version> [OPTIONS]
-
 Publishes a buildpack or an extension in to a registry.
 
 OPTIONS
+  -a, --archive-path <filepath>       Path to the buildpack or extension arhive (default: ${ROOT_DIR}/build/buildpack.tgz) (optional)
   -h, --help                          Prints the command usage
-  -b, --buildpack-archive <filepath>  Path to the buildpack arhive (default: ${ROOT_DIR}/build/buildpack.tgz) (optional)
   -i, --image-ref <ref>               List of image reference to publish to (required)
+  -bt --buildpack-type <string>       Type of buildpack to publish (accepted values: buildpack, extension) (required)
   -t, --token <token>                 Token used to download assets from GitHub (e.g. jam, pack, etc) (optional)
+
 USAGE
 }
 
@@ -106,19 +117,21 @@ function tools::install() {
 
 function buildpack::publish() {
 
-  local image_ref buildpack_type
+  local image_ref buildpack_type archive_path
   image_ref="${1}"
   buildpack_type="${2}"
+  archive_path="${3}"
 
   util::print::title "Publishing ${buildpack_type}..."
 
   util::print::info "Extracting archive..."
   tmp_dir=$(mktemp -d -p $ROOT_DIR)
-  tar -xvf $buildpack_archive -C $tmp_dir
+  tar -xvf $archive_path -C $tmp_dir
 
   util::print::info "Publishing ${buildpack_type} to ${image_ref}"
+
   pack \
-    buildpack package $image_ref \
+    ${buildpack_type} package $image_ref \
     --path $tmp_dir \
     --format image \
     --publish
