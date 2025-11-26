@@ -102,7 +102,7 @@ func testNpmrc(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			it.After(func() {
-				os.RemoveAll(binding)
+				Expect(os.RemoveAll(binding)).To(Succeed())
 			})
 
 			it("builds a working OCI image that includes the dev dependency", func() {

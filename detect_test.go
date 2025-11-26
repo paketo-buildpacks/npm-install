@@ -117,12 +117,11 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it.After(func() {
-			os.Unsetenv("BP_NPM_INCLUDE_BUILD_PYTHON")
+			Expect(os.Unsetenv("BP_NPM_INCLUDE_BUILD_PYTHON")).To(Succeed())
 		})
 
 		it("has been set to true, it should include cpython buildpack", func() {
-			os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "true")
-
+			Expect(os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "true")).To(Succeed())
 			result, err := detect(packit.DetectContext{
 				WorkingDir: workingDir,
 			})
@@ -157,7 +156,7 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it("has no value, it should include cpython buildpack", func() {
-			os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "")
+			Expect(os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "")).To(Succeed())
 
 			result, err := detect(packit.DetectContext{
 				WorkingDir: workingDir,
@@ -192,7 +191,7 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it("has been set to false, it does not include cpython buildpack", func() {
-			os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "false")
+			Expect(os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "false")).To(Succeed())
 
 			result, err := detect(packit.DetectContext{
 				WorkingDir: workingDir,
@@ -220,7 +219,7 @@ func testDetect(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it("has been set to a random string, it does not include cpython buildpack", func() {
-			os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "random-string")
+			Expect(os.Setenv("BP_NPM_INCLUDE_BUILD_PYTHON", "random-string")).To(Succeed())
 
 			result, err := detect(packit.DetectContext{
 				WorkingDir: workingDir,
