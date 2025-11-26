@@ -38,7 +38,11 @@ func (r RebuildBuildProcess) ShouldRun(workingDir string, metadata map[string]in
 	if err != nil {
 		return false, "", fmt.Errorf("failed to execute npm get user-agent: %w", err)
 	}
-	defer os.Remove(cachedNodeVersion)
+	defer func() {
+		if removeErr := os.Remove(cachedNodeVersion); removeErr != nil {
+			r.logger.Subprocess("Warning: failed to remove temporary file %s: %s", cachedNodeVersion, removeErr)
+		}
+	}()
 
 	sum, err := r.summer.Sum(filepath.Join(workingDir, "node_modules"), cachedNodeVersion)
 	if err != nil {

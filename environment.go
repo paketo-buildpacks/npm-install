@@ -13,12 +13,19 @@ type Environment struct {
 	store map[string]string
 }
 
-func ParseEnvironment(path string, variables []string) (Environment, error) {
+func ParseEnvironment(path string, variables []string) (env Environment, err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return Environment{}, fmt.Errorf("failed to read \"buildpack.toml\": %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			// if there is already an error, it takes priority to avoid overwriting it.
+			if err == nil {
+				err = fmt.Errorf("failed to close \"buildpack.toml\": %w", closeErr)
+			}
+		}
+	}()
 
 	var configuration struct {
 		Metadata struct {

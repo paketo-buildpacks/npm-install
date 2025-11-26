@@ -26,12 +26,18 @@ func NewLinkedModuleResolver(linker Symlinker) LinkedModuleResolver {
 	}
 }
 
-func (r LinkedModuleResolver) ParseLockfile(lockfilePath string) (Lockfile, error) {
+func (r LinkedModuleResolver) ParseLockfile(lockfilePath string) (lockfile Lockfile, err error) {
 	file, err := os.Open(lockfilePath)
 	if err != nil {
 		return Lockfile{}, fmt.Errorf(`failed to open "package-lock.json": %w`, err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			if err == nil {
+				err = fmt.Errorf(`failed to close "package-lock.json": %w`, closeErr)
+			}
+		}
+	}()
 
 	parsedLockfile := Lockfile{}
 
