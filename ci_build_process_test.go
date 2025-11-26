@@ -48,8 +48,12 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		executable = &fakes.Executable{}
 		executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 			executions = append(executions, execution)
-			fmt.Fprintln(execution.Stdout, "stdout output")
-			fmt.Fprintln(execution.Stderr, "stderr output")
+			if _, err := fmt.Fprintln(execution.Stdout, "stdout output"); err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(execution.Stderr, "stderr output"); err != nil {
+				return err
+			}
 			return nil
 		}
 
@@ -261,8 +265,12 @@ func testCIBuildProcess(t *testing.T, context spec.G, it spec.S) {
 			context("when the executable fails", func() {
 				it.Before(func() {
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
-						fmt.Fprintln(execution.Stdout, "ci failure on stdout")
-						fmt.Fprintln(execution.Stderr, "ci failure on stderr")
+						if _, err := fmt.Fprintln(execution.Stdout, "ci failure on stdout"); err != nil {
+							return err
+						}
+						if _, err := fmt.Fprintln(execution.Stderr, "ci failure on stderr"); err != nil {
+							return err
+						}
 						return errors.New("failed to execute")
 					}
 				})

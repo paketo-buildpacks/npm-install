@@ -57,8 +57,12 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 		executable = &fakes.Executable{}
 		executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 			executions = append(executions, execution)
-			fmt.Fprintln(execution.Stdout, "stdout output")
-			fmt.Fprintln(execution.Stderr, "stderr output")
+			if _, err := fmt.Fprintln(execution.Stdout, "stdout output"); err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(execution.Stderr, "stderr output"); err != nil {
+				return err
+			}
 			return nil
 		}
 
@@ -315,8 +319,12 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it("returns an error", func() {
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "list") {
-							fmt.Fprintln(execution.Stdout, "stdout output")
-							fmt.Fprintln(execution.Stderr, "stderr output")
+							if _, err := fmt.Fprintln(execution.Stdout, "stdout output"); err != nil {
+								return err
+							}
+							if _, err := fmt.Fprintln(execution.Stderr, "stderr output"); err != nil {
+								return err
+							}
 							return errors.New("exit status 1")
 						}
 
@@ -351,8 +359,12 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it.Before(func() {
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "preinstall") {
-							fmt.Fprintln(execution.Stderr, "pre-install on stdout")
-							fmt.Fprintln(execution.Stdout, "pre-install on stderr")
+							if _, err := fmt.Fprintln(execution.Stderr, "pre-install on stdout"); err != nil {
+								return err
+							}
+							if _, err := fmt.Fprintln(execution.Stdout, "pre-install on stderr"); err != nil {
+								return err
+							}
 							return fmt.Errorf("an actual error")
 						}
 
@@ -375,8 +387,12 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it.Before(func() {
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "rebuild") {
-							fmt.Fprintln(execution.Stderr, "rebuild error on stdout")
-							fmt.Fprintln(execution.Stdout, "rebuild error on stderr")
+							if _, err := fmt.Fprintln(execution.Stderr, "rebuild error on stdout"); err != nil {
+								return err
+							}
+							if _, err := fmt.Fprintln(execution.Stdout, "rebuild error on stderr"); err != nil {
+								return err
+							}
 							return errors.New("failed to rebuild")
 						}
 
@@ -399,8 +415,12 @@ func testRebuildBuildProcess(t *testing.T, context spec.G, it spec.S) {
 				it.Before(func() {
 					executable.ExecuteCall.Stub = func(execution pexec.Execution) error {
 						if strings.Contains(strings.Join(execution.Args, " "), "postinstall") {
-							fmt.Fprintln(execution.Stderr, "postinstall on stdout")
-							fmt.Fprintln(execution.Stdout, "postinstall on stderr")
+							if _, err := fmt.Fprintln(execution.Stderr, "postinstall on stdout"); err != nil {
+								return err
+							}
+							if _, err := fmt.Fprintln(execution.Stdout, "postinstall on stderr"); err != nil {
+								return err
+							}
 							return fmt.Errorf("an actual error")
 						}
 
