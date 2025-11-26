@@ -110,7 +110,10 @@ func Build(entryResolver EntryResolver,
 			if err != nil {
 				return packit.BuildResult{}, err
 			}
-			os.Setenv("PATH", fmt.Sprintf("%s:%s:%s", filepath.Join(localBinPath), os.Getenv("PATH"), moduleBinPath))
+			err = os.Setenv("PATH", fmt.Sprintf("%s:%s:%s", filepath.Join(localBinPath), os.Getenv("PATH"), moduleBinPath))
+			if err != nil {
+				return packit.BuildResult{}, err
+			}
 		}
 
 		npmCacheLayer, err := context.Layers.Get(LayerNameCache)
