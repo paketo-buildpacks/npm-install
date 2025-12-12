@@ -62,7 +62,6 @@ jobs:
       run: ./scripts/integration.sh --builder ${{ matrix.builder }} --token ${{ github.token }}
       env:
         TMPDIR: "${{ runner.temp }}"
-        GIT_TOKEN: ${{ github.token }}
 
   roundup:
     name: Integration Tests
