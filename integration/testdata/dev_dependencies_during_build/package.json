@@ -15,7 +15,7 @@
     "url": ""
   },
   "engines": {
-    "node": "~22"
+    "node": "~24"
   },
   "devDependencies": {
     "chalk": "^5.0.0"
