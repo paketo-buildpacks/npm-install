@@ -9,7 +9,7 @@
   "license": "BSD-2-Clause",
   "dependencies": {
     "logfmt": "~1.1.2",
-    "express": "~4.0.0",
+    "express": "~5.2.1",
     "chalk-cli": "~3.0.0"
   },
   "engines" : { "node" : "~>24" }
