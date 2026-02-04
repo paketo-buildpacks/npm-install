@@ -1,5 +1,6 @@
 {
   "builders": [
+    "paketobuildpacks/ubi-10-builder-buildpackless",
     "paketobuildpacks/ubi-9-builder-buildpackless",
     "paketobuildpacks/builder-ubi8-buildpackless-base",
     "paketobuildpacks/builder-jammy-buildpackless-base",
