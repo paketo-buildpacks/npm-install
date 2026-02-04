@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -85,25 +86,23 @@ func TestIntegration(t *testing.T) {
 	builder, err := pack.Builder.Inspect.Execute()
 	Expect(err).NotTo(HaveOccurred())
 
-	isUbiBuilder := builder.BuilderName == "paketobuildpacks/builder-ubi8-buildpackless-base" || builder.BuilderName == "paketobuildpacks/ubi-9-builder-buildpackless"
+	isUbiBuilder := regexp.MustCompile(`ubi`).MatchString(builder.BuilderName)
 
 	if isUbiBuilder {
-		Expect(occam.NewDocker().Pull.Execute(settings.Config.UbiNodejsExtension))
+		Expect(occam.NewDocker().Pull.Execute(settings.Config.UbiNodejsExtension)).To(Succeed())
 		settings.Extensions.UbiNodejsExtension.Online = settings.Config.UbiNodejsExtension
-	}
-
-	if !isUbiBuilder {
-		Expect(occam.NewDocker().Pull.Execute(settings.Config.Cpython))
+	} else {
+		Expect(occam.NewDocker().Pull.Execute(settings.Config.Cpython)).To(Succeed())
 		settings.Buildpacks.Cpython.Online = settings.Config.Cpython
 	}
 
-	Expect(occam.NewDocker().Pull.Execute(settings.Config.BuildPlan))
+	Expect(occam.NewDocker().Pull.Execute(settings.Config.BuildPlan)).To(Succeed())
 	settings.Buildpacks.BuildPlan.Online = settings.Config.BuildPlan
 
-	Expect(occam.NewDocker().Pull.Execute(settings.Config.NodeEngine))
+	Expect(occam.NewDocker().Pull.Execute(settings.Config.NodeEngine)).To(Succeed())
 	settings.Buildpacks.NodeEngine.Online = settings.Config.NodeEngine
 
-	Expect(occam.NewDocker().Pull.Execute(settings.Config.NodeRunScript))
+	Expect(occam.NewDocker().Pull.Execute(settings.Config.NodeRunScript)).To(Succeed())
 	settings.Buildpacks.NodeRunScript.Online = settings.Config.NodeRunScript
 
 	settings.Buildpacks.NPMInstall.Online, err = buildpackStore.Get.

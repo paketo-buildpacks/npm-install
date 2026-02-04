@@ -16,8 +16,5 @@
   "repository": {
     "type": "git",
     "url": ""
-  },
-  "engines": {
-    "node": "~24"
   }
 }
