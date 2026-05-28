@@ -54,6 +54,7 @@ type Symlinker interface {
 
 //go:generate faux --interface SymlinkResolver --output fakes/symlink_resolver.go
 type SymlinkResolver interface {
+	WithoutCopying() SymlinkResolver
 	ParseLockfile(lockfilePath string) (Lockfile, error)
 	Copy(lockfilePath, sourceLayerPath, targetLayerPath string) error
 	Resolve(lockfilePath, layerPath string) error
@@ -357,6 +358,11 @@ func Build(entryResolver EntryResolver,
 				logger.Process("Reusing cached layer %s", layer.Path)
 				if !build {
 					err = linker.Link(filepath.Join(projectPath, "node_modules"), filepath.Join(layer.Path, "node_modules"))
+					if err != nil {
+						return packit.BuildResult{}, err
+					}
+
+					err = symlinkResolver.WithoutCopying().Resolve(filepath.Join(projectPath, "package-lock.json"), layer.Path)
 					if err != nil {
 						return packit.BuildResult{}, err
 					}

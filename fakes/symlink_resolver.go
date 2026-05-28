@@ -44,6 +44,14 @@ type SymlinkResolver struct {
 		}
 		Stub func(string, string) error
 	}
+	WithoutCopyingCall struct {
+		mutex     sync.Mutex
+		CallCount int
+		Returns   struct {
+			SymlinkResolver npminstall.SymlinkResolver
+		}
+		Stub func() npminstall.SymlinkResolver
+	}
 }
 
 func (f *SymlinkResolver) Copy(param1 string, param2 string, param3 string) error {
@@ -78,4 +86,13 @@ func (f *SymlinkResolver) Resolve(param1 string, param2 string) error {
 		return f.ResolveCall.Stub(param1, param2)
 	}
 	return f.ResolveCall.Returns.Error
+}
+func (f *SymlinkResolver) WithoutCopying() npminstall.SymlinkResolver {
+	f.WithoutCopyingCall.mutex.Lock()
+	defer f.WithoutCopyingCall.mutex.Unlock()
+	f.WithoutCopyingCall.CallCount++
+	if f.WithoutCopyingCall.Stub != nil {
+		return f.WithoutCopyingCall.Stub()
+	}
+	return f.WithoutCopyingCall.Returns.SymlinkResolver
 }
