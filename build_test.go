@@ -844,6 +844,7 @@ func testBuild(t *testing.T, context spec.G, it spec.S) {
 
 	context("when the build process should not run", func() {
 		it.Before(func() {
+			symlinkResolver.WithoutCopyingCall.Returns.SymlinkResolver = symlinkResolver
 			buildProcess.ShouldRunCall.Returns.Run = false
 			entryResolver.MergeLayerTypesCall.Returns.Launch = true
 			Expect(os.MkdirAll(filepath.Join(workingDir, "node_modules"), os.ModePerm))

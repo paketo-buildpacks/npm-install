@@ -452,58 +452,62 @@ func testCaching(t *testing.T, context spec.G, it spec.S) {
 	})
 
 	context("when the app has workspaces", func() {
-		it("ensures the workspaces are linked correctly", func() {
-			var err error
-			source, err = occam.Source(filepath.Join("testdata", "workspaces", "commonjs"))
-			Expect(err).NotTo(HaveOccurred())
+		tc := func(name string) func() {
+			return func() {
+				var err error
+				source, err = occam.Source(filepath.Join("testdata", "workspaces", name))
+				Expect(err).NotTo(HaveOccurred())
 
-			build := pack.Build.
-				WithPullPolicy(pullPolicy).
-				WithExtensions(
-					settings.Extensions.UbiNodejsExtension.Online,
-				).
-				WithBuildpacks(
-					settings.Buildpacks.NodeEngine.Online,
-					settings.Buildpacks.NPMInstall.Online,
-					settings.Buildpacks.BuildPlan.Online,
-				)
+				build := pack.Build.
+					WithPullPolicy(pullPolicy).
+					WithExtensions(
+						settings.Extensions.UbiNodejsExtension.Online,
+					).
+					WithBuildpacks(
+						settings.Buildpacks.NodeEngine.Online,
+						settings.Buildpacks.NPMInstall.Online,
+						settings.Buildpacks.BuildPlan.Online,
+					)
 
-			firstImage, logs, err := build.Execute(name, source)
-			Expect(err).NotTo(HaveOccurred(), logs.String)
+				firstImage, logs, err := build.Execute(name, source)
+				Expect(err).NotTo(HaveOccurred(), logs.String)
 
-			imageIDs[firstImage.ID] = struct{}{}
+				imageIDs[firstImage.ID] = struct{}{}
 
-			Expect(firstImage.Buildpacks[1].Key).To(Equal(settings.Buildpack.ID))
+				Expect(firstImage.Buildpacks[1].Key).To(Equal(settings.Buildpack.ID))
 
-			container, err := docker.Container.Run.
-				WithCommand("node server.js").
-				WithEnv(map[string]string{"PORT": "8080"}).
-				WithPublish("8080").
-				Execute(firstImage.ID)
-			Expect(err).NotTo(HaveOccurred())
+				container, err := docker.Container.Run.
+					WithCommand("node server.js").
+					WithEnv(map[string]string{"PORT": "8080"}).
+					WithPublish("8080").
+					Execute(firstImage.ID)
+				Expect(err).NotTo(HaveOccurred())
 
-			containerIDs[container.ID] = struct{}{}
+				containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable())
+				Eventually(container).Should(BeAvailable())
 
-			secondImage, logs, err := build.Execute(name, source)
-			Expect(err).NotTo(HaveOccurred(), logs.String)
+				secondImage, logs, err := build.Execute(name, source)
+				Expect(err).NotTo(HaveOccurred(), logs.String)
 
-			imageIDs[secondImage.ID] = struct{}{}
+				imageIDs[secondImage.ID] = struct{}{}
 
-			Expect(secondImage.Buildpacks[1].Key).To(Equal(settings.Buildpack.ID))
+				Expect(secondImage.Buildpacks[1].Key).To(Equal(settings.Buildpack.ID))
 
-			container, err = docker.Container.Run.
-				WithCommand("node server.js").
-				WithEnv(map[string]string{"PORT": "8080"}).
-				WithPublish("8080").
-				Execute(secondImage.ID)
-			Expect(err).NotTo(HaveOccurred())
+				container, err = docker.Container.Run.
+					WithCommand("node server.js").
+					WithEnv(map[string]string{"PORT": "8080"}).
+					WithPublish("8080").
+					Execute(secondImage.ID)
+				Expect(err).NotTo(HaveOccurred())
 
-			containerIDs[container.ID] = struct{}{}
+				containerIDs[container.ID] = struct{}{}
 
-			Eventually(container).Should(BeAvailable())
-			Expect(secondImage.ID).To(Equal(firstImage.ID))
-		})
+				Eventually(container).Should(BeAvailable())
+				Expect(secondImage.ID).To(Equal(firstImage.ID))
+			}
+		}
+		it("ensures the commonjs workspaces are linked correctly", tc("commonjs"))
+		it("ensures the ecmascript workspaces are linked correctly", tc("ecmascript"))
 	})
 }
