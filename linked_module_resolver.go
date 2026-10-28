@@ -17,13 +17,19 @@ type Lockfile struct {
 }
 
 type LinkedModuleResolver struct {
-	linker Symlinker
+	linker   Symlinker
+	linkOnly bool
 }
 
 func NewLinkedModuleResolver(linker Symlinker) LinkedModuleResolver {
 	return LinkedModuleResolver{
 		linker: linker,
 	}
+}
+
+func (r LinkedModuleResolver) WithoutCopying() SymlinkResolver {
+	r.linkOnly = true
+	return r
 }
 
 func (r LinkedModuleResolver) ParseLockfile(lockfilePath string) (lockfile Lockfile, err error) {
@@ -90,14 +96,16 @@ func (r LinkedModuleResolver) Resolve(lockfilePath, layerPath string) error {
 			source := filepath.Join(dir, pkg.Resolved)
 			destination := filepath.Join(layerPath, pkg.Resolved)
 
-			err = os.MkdirAll(filepath.Dir(destination), os.ModePerm)
-			if err != nil {
-				return fmt.Errorf("failed to setup linked module directory scaffolding: %w", err)
-			}
+			if !r.linkOnly {
+				err = os.MkdirAll(filepath.Dir(destination), os.ModePerm)
+				if err != nil {
+					return fmt.Errorf("failed to setup linked module directory scaffolding: %w", err)
+				}
 
-			err = fs.Copy(source, destination)
-			if err != nil {
-				return fmt.Errorf("failed to copy linked module directory to layer path: %w", err)
+				err = fs.Copy(source, destination)
+				if err != nil {
+					return fmt.Errorf("failed to copy linked module directory to layer path: %w", err)
+				}
 			}
 
 			err = r.linker.WithPath(pkg.Resolved).Link(source, destination)
